@@ -3,55 +3,55 @@
     <!-- GENERIC MESSAGES -->
     <!-- Button Labels -->
     <string name="button_ok">Ok</string>
-    <string name="button_confirm">Confirm</string>
-    <string name="button_cancel">Cancel</string>
-    <string name="button_switch_to_grid_layout">Show as grid</string>
-    <string name="button_switch_to_list_layout">Show as list</string>
-    <string name="button_open_sort_by">Sort by…</string>
+    <string name="button_confirm">Confirmer</string>
+    <string name="button_cancel">Annuler</string>
+    <string name="button_switch_to_grid_layout">Afficher sous forme de grille</string>
+    <string name="button_switch_to_list_layout">Afficher sous forme de Liste</string>
+    <string name="button_open_sort_by">Trier par…</string>
     <string name="button_open_connexion_center">Manage connexion</string>
-    <string name="button_clear_transfer_list">Clear transfer list</string>
+    <string name="button_clear_transfer_list">Vider la liste de transferts</string>
     <!-- Navigation labels -->
-    <string name="action_home">Home</string>
-    <string name="action_browse">Browse</string>
-    <string name="action_open_workspaces">Workspaces</string>
-    <string name="action_open_offline_roots">Offline Files</string>
-    <string name="action_open_bookmarks">Bookmarks</string>
-    <string name="action_open_transfers">Transfers</string>
-    <string name="action_open_about">About</string>
-    <string name="action_search">Search</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_clear_cache">Clear Cache</string>
+    <string name="action_home">Page d\'accueil</string>
+    <string name="action_browse">Parcourir</string>
+    <string name="action_open_workspaces">Espaces de travail</string>
+    <string name="action_open_offline_roots">Fichiers hors ligne</string>
+    <string name="action_open_bookmarks">Favoris</string>
+    <string name="action_open_transfers">Transferts</string>
+    <string name="action_open_about">A propos</string>
+    <string name="action_search">Recherche</string>
+    <string name="action_settings">Paramètres</string>
+    <string name="action_clear_cache">Vider le cache</string>
     <string name="action_open_sample">(Tmp) Open sample</string>
     <!-- Main Menu (left drawer) -->
     <!-- Header -->
-    <string name="exit_description">Exit the application</string>
-    <string name="switch_account_description">Choose another remote server</string>
-    <string name="logo_description">Pydio application logo</string>
+    <string name="exit_description">Quitter l\'application</string>
+    <string name="switch_account_description">Choisir un autre serveur distant</string>
+    <string name="logo_description">Logo de l\'application Pydio</string>
     <!-- Section titles -->
-    <string name="my_workspaces">My Workspaces</string>
-    <string name="quick_access">Quick Access</string>
-    <string name="nav_open">Open</string>
-    <string name="nav_close">Close</string>
+    <string name="my_workspaces">Mes espaces de travail</string>
+    <string name="quick_access">Raccourcis</string>
+    <string name="nav_open">Ouvrir</string>
+    <string name="nav_close">Fermer</string>
     <!-- PAGE SPECIFIC MESSAGES -->
     <!-- Welcome Page -->
-    <string name="welcome_title">Welcome in Pydio!</string>
-    <string name="welcome_subtitle">A light Cells client for Android</string>
-    <string name="welcome_text">All your data on your device, everywhere, at any time!</string>
-    <string name="welcome_no_account_instructions">First, configure your connection to your remote Pydio server:</string>
-    <string name="welcome_add_account_button">Configure a connection</string>
+    <string name="welcome_title">Bienvenue chez Pydio!</string>
+    <string name="welcome_subtitle">Un client léger pour Android</string>
+    <string name="welcome_text">Toutes vos données sur votre appareil, partout, à tout moment !</string>
+    <string name="welcome_no_account_instructions">Tout d\'abord, configurez votre connexion à votre serveur Pydio distant :</string>
+    <string name="welcome_add_account_button">Configurer une connexion</string>
     <!-- About Page -->
     <string name="about_page_version_title">Pydio</string>
-    <string name="about_version_title">Pydio Client for Android</string>
-    <string name="about_help_title">Troubleshooting</string>
-    <string name="about_page_copyright">Pydio is a trademark of Abstrium SAS.</string>
-    <string name="version_name_display">Version name: %s</string>
-    <string name="version_code_display">Version code: %s</string>
-    <string name="version_date_display">Version date: %s</string>
-    <string name="about_page_get_help">If you cannot get this application to work correctly, please send an email with a complete description of the problem you are facing so that we can help you.</string>
-    <string name="help_button_support">Contact Pydio Support</string>
+    <string name="about_version_title">Client Pydio pour Android</string>
+    <string name="about_help_title">Obtenir de l\'aide</string>
+    <string name="about_page_copyright">Pydio est une marque déposée par Abstrium SAS.</string>
+    <string name="version_name_display">Nom de version : %s</string>
+    <string name="version_code_display">Code de version : %s</string>
+    <string name="version_date_display">Date de version : %s</string>
+    <string name="about_page_get_help">Si vous n\'arrivez pas à faire fonctionner cette application correctement, veuillez envoyer un courriel avec une description complète du problème que vous rencontrez afin que nous puissions vous aider.</string>
+    <string name="help_button_support">Contacter l’assistance Pydio</string>
     <!-- Ask URL dialog -->
-    <string name="ask_url_title">Register a new account</string>
-    <string name="ask_url_desc">Please, enter your server address</string>
+    <string name="ask_url_title">Enregistrer un nouveau compte</string>
+    <string name="ask_url_desc">Veuillez saisir l\'adresse du serveur</string>
     <string name="ask_url_help">Provide an URL like https://files.example.com</string>
     <string name="oauth_callback_waiting">Authentication process has been launched</string>
     <string name="oauth_callback_cancel">Cancel</string>
