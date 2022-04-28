@@ -54,7 +54,7 @@
     <!-- Authentication process  -->
     <string name="ask_url_title">Enregistrer un nouveau compte</string>
     <string name="ask_url_desc">Veuillez saisir l\'adresse du serveur</string>
-    <string name="ask_url_example">e.g: https://files.example.com</string>
+    <string name="ask_url_example">par ex. : https://files.example.com</string>
     <string name="oauth_callback_waiting">Le processus d\'authentification a été lancé</string>
     <string name="oauth_callback_cancel">Annuler</string>
     <string name="invalid_tls_certificate">Certificat non valide</string>
@@ -79,7 +79,7 @@
     <string name="account_details_desc">Description du compte</string>
     <!--    <string name="oauth_code_flow_title">Code flow processor</string>-->
     <!-- Browse management -->
-    <string name="ws_list_subtitle">Choose a workspace to browse</string>
+    <string name="ws_list_subtitle">Choisir un espace de travail à parcourir</string>
     <string name="browse_list_desc">Parcourir les serveurs distants</string>
     <string name="browse_list_none">Vide</string>
     <string name="recycle_bin_label">Corbeille</string>
@@ -106,7 +106,7 @@
     <string name="choose_target_for_move_title">Déplacer vers…</string>
     <!-- Target choice -->
     <string name="choose_target_subtitle">Sélectionnez un emplacement</string>
-    <string name="pick_up_session">Choose an account</string>
+    <string name="pick_up_session">Sélectionner un compte</string>
     <string name="pick_up_workspace">Sélectionner un espace de travail</string>
     <string name="pick_up_folder">Choisir un dossier cible</string>
     <!--Transfers -->
@@ -156,7 +156,7 @@
     <!-- Dialogs -->
     <string name="choose_external_app_title">Ouvrir avec…</string>
     <string name="confirm_account_deletion_title">Supprimer le compte\n%s ?</string>
-    <string name="confirm_account_deletion_desc">It will forget the connection information for your remote server and also delete all cached data and files.</string>
+    <string name="confirm_account_deletion_desc">Cela effacera les informations de connexion de votre serveur distant et supprimera également toutes les données et fichiers relatifs à ce compte du cache.</string>
     <string name="confirm_account_logout_title">Se déconnecter de\n%s ?</string>
     <string name="confirm_account_logout_desc">Cela effacera vos identifiants pour ce serveur : vous devrez vous re-identifier pour vous connecter.</string>
     <string name="my_account">Mon Compte</string>
@@ -188,23 +188,23 @@
     <string name="switch_account">Changer de compte</string>
     <string name="switch_workspace">Changer d\'espace de travail</string>
     <string name="parent_folder">Dossier parent</string>
-    <string name="order_by_title">Sort order</string>
-    <string name="pref_category_title_recycler">Customise lists (when applicable)</string>
-    <string name="choose_list_layout">Type of layout</string>
-    <string name="use_larger_grid">Use larger grid</string>
-    <string name="pref_category_title_metered">Limitations on metered network</string>
-    <string name="pref_metered_dl_thumbs_title">Download thumbs</string>
-    <string name="pref_metered_dl_thumbs_desc">Also retrieve thumbnails when on metered network</string>
-    <string name="pref_metered_dl_files_title">Download offline files</string>
-    <string name="pref_metered_dl_files_desc">Also download offline files when on metered network</string>
-    <string name="pref_category_title_offline">Customise offline synchronisation</string>
-    <string name="pref_offline_constraint_wifi_title">On wifi only</string>
-    <string name="pref_offline_constraint_wifi_desc">Only launch background synchronisation when on WIFI</string>
-    <string name="pref_offline_constraint_charging_title">When charging</string>
-    <string name="pref_offline_constraint_charging_desc">Only launch sync when the device is charging</string>
-    <string name="pref_category_title_feedback">Feedback and help</string>
-    <string name="pref_feedback_send_title">Send feedback</string>
-    <string name="pref_feedback_send_desc">Report technical issues or suggest new features</string>
-    <string name="choose_list_offline_frequency_title">Sync frequency</string>
-    <string name="choose_list_offline_frequency_desc">Choose a frequency for background synchronisation</string>
+    <string name="order_by_title">Ordre de tri</string>
+    <string name="pref_category_title_recycler">Personnaliser les listes (si applicable)</string>
+    <string name="choose_list_layout">Type de mise en page</string>
+    <string name="use_larger_grid">Utiliser une grille plus grande</string>
+    <string name="pref_category_title_metered">Limitations sur les réseaux tarifés/limités</string>
+    <string name="pref_metered_dl_thumbs_title">Télécharger les vignettes</string>
+    <string name="pref_metered_dl_thumbs_desc">Récupérer également les vignettes lorsque le réseau est limité</string>
+    <string name="pref_metered_dl_files_title">Télécharger les fichiers hors ligne</string>
+    <string name="pref_metered_dl_files_desc">Télécharger également les fichiers hors ligne lorsque le réseau est limité</string>
+    <string name="pref_category_title_offline">Personnaliser la synchronisation hors ligne</string>
+    <string name="pref_offline_constraint_wifi_title">Seulement lorsqu\'un wifi est disponible</string>
+    <string name="pref_offline_constraint_wifi_desc">Lancer la synchronisation en arrière-plan uniquement en WIFI</string>
+    <string name="pref_offline_constraint_charging_title">Lorsque l\'appareil est en charge</string>
+    <string name="pref_offline_constraint_charging_desc">Lancer la synchronisation uniquement lorsque l\'appareil est en charge</string>
+    <string name="pref_category_title_feedback">Commentaires et aide</string>
+    <string name="pref_feedback_send_title">Envoyer des commentaires</string>
+    <string name="pref_feedback_send_desc">Signaler un problème technique ou suggérer de nouvelles fonctionnalités</string>
+    <string name="choose_list_offline_frequency_title">Fréquence de synchronisation</string>
+    <string name="choose_list_offline_frequency_desc">Choisissez une fréquence pour la synchronisation en arrière-plan</string>
 </resources>
