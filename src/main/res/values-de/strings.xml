@@ -83,10 +83,10 @@
     <string name="account_logged_in_as_label">Eingeloggt als %s</string>
     <string name="category_cells">Zellen</string>
     <string name="category_workspaces">Arbeitsumgebungen</string>
-    <string name="no_internet">No internet connection</string>
+    <string name="no_internet">Keine Internetverbindung</string>
     <string name="empty_content_message">Noch kein Inhalt vorhanden</string>
-    <string name="empty_folder">This folder is empty</string>
-    <string name="loading_message">Please wait while loading content…</string>
+    <string name="empty_folder">Dieser Ordner ist leer</string>
+    <string name="loading_message">Bitte warten Sie, während der Inhalt geladen wird…</string>
     <plurals name="selected_count">
         <item quantity="one">%d Element ausgewählt</item>
         <item quantity="other">%d Elemente ausgewählt</item>
@@ -173,7 +173,7 @@
     </plurals>
     <string name="confirm_permanent_deletion_title">Dauerhafte Löschung bestätigen</string>
     <string name="confirm_permanent_deletion_desc">%s wird endgültig gelöscht</string>
-    <string name="confirm_empty_recycle_message">This empties the recycle bin for %s: all trashed content will be definitively deleted.</string>
+    <string name="confirm_empty_recycle_message">Damit wird der Papierkorb für %s geleert, alle Inhalte werden endgültig gelöscht.</string>
     <string name="rename_dialog_title">Umbenennen</string>
     <string name="rename_dialog_message">Bitte geben Sie einen neuen Namen für: \n%s ein</string>
     <string name="rename_dialog_confirm_button">Umbenennen</string>
@@ -197,14 +197,14 @@
     <string name="choose_list_offline_frequency_title">Synchronisationsfrequenz</string>
     <string name="choose_list_offline_frequency_desc">Wählen Sie eine Frequenz für die Hintergrundsynchronisation</string>
     <!-- Accessibility various content -->
-    <string name="node_add_button_description">Create or import</string>
+    <string name="node_add_button_description">Erstellen oder importieren</string>
     <string name="exit_description">Die Anwendung beenden</string>
     <string name="switch_account_description">Einen anderen Remote-Server wählen</string>
     <string name="logo_description">Pydio Anwendungslogo</string>
     <string name="loading_description">Aktuelles Element wird aktualisiert</string>
     <string name="thumb_description">Inhaltsvorschau</string>
     <string name="folder_icon_description">Ordnericon</string>
-    <string name="empty_content_icon_description">Empty list icon</string>
+    <string name="empty_content_icon_description">Leeres Listensymbol</string>
     <string name="switch_account">Konto wechseln</string>
     <string name="switch_workspace">Arbeitsumgebung wechseln</string>
     <string name="parent_folder">Übergeordneter Ordner</string>
