@@ -83,10 +83,10 @@
     <string name="account_logged_in_as_label">Connecté en tant que %s</string>
     <string name="category_cells">Cellules</string>
     <string name="category_workspaces">Espaces de travail</string>
-    <string name="no_internet">No internet connection</string>
+    <string name="no_internet">Aucune connexion internet</string>
     <string name="empty_content_message">Aucun contenu n\'est disponible actuellement</string>
-    <string name="empty_folder">This folder is empty</string>
-    <string name="loading_message">Please wait while loading content…</string>
+    <string name="empty_folder">Ce dossier est vide</string>
+    <string name="loading_message">Veuillez patienter pendant le chargement…</string>
     <plurals name="selected_count">
         <item quantity="one">%d élément sélectionné</item>
         <item quantity="other">%d éléments sélectionnés</item>
@@ -173,7 +173,7 @@
     </plurals>
     <string name="confirm_permanent_deletion_title">Confirmer la suppression définitive</string>
     <string name="confirm_permanent_deletion_desc">%s sera supprimé définitivement</string>
-    <string name="confirm_empty_recycle_message">This empties the recycle bin for %s: all trashed content will be definitively deleted.</string>
+    <string name="confirm_empty_recycle_message">Cela va vider la corbeille pour %s, tout le contenu mis à la corbeille sera définitivement supprimé.</string>
     <string name="rename_dialog_title">Renommer</string>
     <string name="rename_dialog_message">Veuillez saisir un nouveau nom pour:\n%s</string>
     <string name="rename_dialog_confirm_button">Renommer</string>
@@ -197,14 +197,14 @@
     <string name="choose_list_offline_frequency_title">Fréquence de synchronisation</string>
     <string name="choose_list_offline_frequency_desc">Choisissez une fréquence pour la synchronisation en arrière-plan</string>
     <!-- Accessibility various content -->
-    <string name="node_add_button_description">Create or import</string>
+    <string name="node_add_button_description">Créer ou importer</string>
     <string name="exit_description">Quitter l\'application</string>
     <string name="switch_account_description">Choisir un autre serveur distant</string>
     <string name="logo_description">Logo de l\'application Pydio</string>
     <string name="loading_description">L\'élément courant est en cours d\'actualisation</string>
     <string name="thumb_description">Aperçu du contenu</string>
     <string name="folder_icon_description">Icône de dossier</string>
-    <string name="empty_content_icon_description">Empty list icon</string>
+    <string name="empty_content_icon_description">Icône de liste vide</string>
     <string name="switch_account">Changer de compte</string>
     <string name="switch_workspace">Changer d\'espace de travail</string>
     <string name="parent_folder">Dossier parent</string>
