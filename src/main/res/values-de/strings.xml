@@ -83,6 +83,8 @@
     <string name="account_logged_in_as_label">Eingeloggt als %s</string>
     <string name="category_cells">Zellen</string>
     <string name="category_workspaces">Arbeitsumgebungen</string>
+    <string name="last_check">Last check</string>
+    <string name="last_check_never">never</string>
     <string name="no_internet">Keine Internetverbindung</string>
     <string name="empty_content_message">Noch kein Inhalt vorhanden</string>
     <string name="empty_folder">Dieser Ordner ist leer</string>
