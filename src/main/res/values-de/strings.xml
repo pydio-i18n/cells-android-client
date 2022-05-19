@@ -11,7 +11,7 @@
     <string name="button_open_connection_center">Verbindung verwalten</string>
     <string name="button_clear_transfer_list">Übertragungsliste löschen</string>
     <string name="button_resync_all">Re-sync</string>
-    <string name="button_skip">Re-sync</string>
+    <string name="button_skip">Skip</string>
     <!-- Navigation labels -->
     <string name="action_home">Startseite</string>
     <string name="action_browse">Durchsuchen</string>
