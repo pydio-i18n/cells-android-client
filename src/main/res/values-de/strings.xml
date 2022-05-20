@@ -14,6 +14,7 @@
     <string name="button_skip">Skip</string>
     <!-- Navigation labels -->
     <string name="action_home">Startseite</string>
+    <string name="action_choose_account">Choose an account</string>
     <string name="action_browse">Durchsuchen</string>
     <string name="action_open_workspaces">Arbeitsumgebungen</string>
     <string name="action_open_offline_roots">Offline-Dateien</string>
