@@ -45,14 +45,26 @@ class JobService(runtimeDB: RuntimeDB) {
     ): Long {
         val newJob = RJob.create(owner, template, label, parentId)
         newJob.total = maxSteps
+        newJob.updateTimestamp = currentTimestamp()
         return jobDao.insert(newJob)
     }
 
     suspend fun launched(jobId: Long): String? = withContext(Dispatchers.IO) {
-        val newJob = jobDao.getById(jobId) ?: return@withContext "Could not find job with ID $jobId"
-        newJob.status = AppNames.JOB_STATUS_PROCESSING
-        newJob.startTimestamp = currentTimestamp()
-        jobDao.update(newJob)
+        val job = jobDao.getById(jobId) ?: return@withContext "Could not find job with ID $jobId"
+        job.status = AppNames.JOB_STATUS_PROCESSING
+        job.startTimestamp = currentTimestamp()
+        job.updateTimestamp = currentTimestamp()
+
+        jobDao.update(job)
+        return@withContext null
+    }
+
+    suspend fun failed(jobId: Long, errMessage: String): String? = withContext(Dispatchers.IO) {
+        val job = jobDao.getById(jobId) ?: return@withContext "Could not find job with ID $jobId"
+        job.status = AppNames.JOB_STATUS_ERROR
+        job.doneTimestamp = currentTimestamp()
+        job.status = errMessage
+        jobDao.update(job)
         return@withContext null
     }
 
@@ -66,9 +78,14 @@ class JobService(runtimeDB: RuntimeDB) {
         return jobDao.getRunningForTemplate(template)
     }
 
+    fun listRootJobs(): LiveData<List<RJob>> {
+        return jobDao.getRootJobs()
+    }
+
     fun incrementProgress(job: RJob, increment: Long, message: String?) {
         job.progress = job.progress + increment
         message?.let { job.progressMessage = message }
+        job.updateTimestamp = currentTimestamp()
         jobDao.update(job)
     }
 
@@ -79,10 +96,17 @@ class JobService(runtimeDB: RuntimeDB) {
     fun done(job: RJob, message: String?, lastProgressMsg: String?) {
         job.status = AppNames.JOB_STATUS_DONE
         job.doneTimestamp = currentTimestamp()
+        job.updateTimestamp = currentTimestamp()
         job.progress = job.total
         job.message = message
         job.progressMessage = lastProgressMsg
         jobDao.update(job)
+    }
+
+    /* MANAGE LOGS */
+
+    fun listLogs(): LiveData<List<RLog>> {
+        return logDao.getLiveLogs()
     }
 
     // Shortcut for logging

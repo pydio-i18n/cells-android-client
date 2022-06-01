@@ -53,7 +53,10 @@ class AuthService(authDB: AuthDB) {
             val serverID = StateID(url.id).id
             val server = sessionFactory.getServer(serverID)
             // TODO Do we want to try to re-register the server when it is unknown from the SessionFactory
-                ?: return@withContext null
+                ?: let {
+                    Log.e(logTag, "could not get server $serverID for SessionFactory with url ${url.id}")
+                    return@withContext null
+                }
 
             val oAuthState = generateOAuthState()
             val uri: Uri = generateUriData(server.oAuthConfig, oAuthState)
@@ -114,6 +117,7 @@ class AuthService(authDB: AuthDB) {
         transport: CellsTransport,
         token: Token
     ): String {
+
         val idToken = IdToken.parse(encoder, token.idToken)
         val accountID = StateID(idToken.claims.name, transport.server.url())
         val jwtCredentials = JWTCredentials(accountID.username, token)
