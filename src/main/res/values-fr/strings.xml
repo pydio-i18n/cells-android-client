@@ -21,8 +21,8 @@
     <string name="action_open_offline_roots">Fichiers hors ligne</string>
     <string name="action_open_bookmarks">Favoris</string>
     <string name="action_open_transfers">Transferts</string>
-    <string name="action_open_jobs">Background Jobs</string>
-    <string name="action_open_logs">Logs</string>
+    <string name="action_open_jobs">Tâches de fond</string>
+    <string name="action_open_logs">Journal</string>
     <string name="action_open_about">A propos</string>
     <string name="action_search">Recherche</string>
     <string name="action_settings">Paramètres</string>
@@ -114,13 +114,13 @@
     <string name="search_hint">Aide pour la recherche</string>
     <!--Offline -->
     <string name="sync_in_progress">En cours de synchronisation…</string>
-    <string name="sync_downloading">Downloading files…</string>
+    <string name="sync_downloading">Téléchargement des fichiers…</string>
     <string name="sync_tree_walking">Parcours de l\'arbre pour trouver des changements…</string>
     <string name="sync_already_running">Une synchronisation est déjà en cours. Veuillez patienter avant d\'en lancer une nouvelle</string>
     <!-- Job Management -->
-    <string name="job_list_title">Background jobs</string>
+    <string name="job_list_title">Tâches de fond</string>
     <!-- Log Management -->
-    <string name="log_list_title">Background job logs</string>
+    <string name="log_list_title">Journaux des tâches</string>
     <!-- Transfer Management -->
     <string name="transfer_list_title">Transferts en cours</string>
     <string name="choose_target_for_share_title">Partager avec…</string>
@@ -206,8 +206,8 @@
     <string name="download_wait_message">Téléchargement en cours, veuillez patienter…</string>
     <!-- Settings -->
     <string name="pref_category_title_recycler">Personnaliser les listes (si applicable)</string>
-    <string name="pref_choose_list_layout">Type of layout</string>
-    <string name="pref_use_larger_grid">Use larger grid</string>
+    <string name="pref_choose_list_layout">Type de mise en page</string>
+    <string name="pref_use_larger_grid">Utiliser une grille plus grande</string>
     <string name="pref_category_title_metered">Limitations sur les réseaux tarifés/limités</string>
     <string name="pref_metered_dl_thumbs_title">Télécharger les vignettes</string>
     <string name="pref_metered_dl_thumbs_desc">Récupérer également les vignettes lorsque le réseau est limité</string>
@@ -221,11 +221,11 @@
     <string name="pref_category_title_feedback">Commentaires et aide</string>
     <string name="pref_feedback_send_title">Envoyer des commentaires</string>
     <string name="pref_feedback_send_desc">Signaler un problème technique ou suggérer de nouvelles fonctionnalités</string>
-    <string name="pref_category_title_troubleshooting">Troubleshooting</string>
-    <string name="pref_troubleshooting_show_list_desc">Gives access to more pages to help troubleshooting background jobs</string>
-    <string name="pref_troubleshooting_show_list_title">Show runtime tables</string>
-    <string name="pref_choose_list_offline_frequency_title">Sync frequency</string>
-    <string name="pref_choose_list_offline_frequency_desc">Choose a frequency for background synchronisation</string>
+    <string name="pref_category_title_troubleshooting">Obtenir de l\'aide</string>
+    <string name="pref_troubleshooting_show_list_desc">Donne accès à plus de pages pour aider au dépannage des tâches de fond</string>
+    <string name="pref_troubleshooting_show_list_title">Afficher les tables de diagnostic</string>
+    <string name="pref_choose_list_offline_frequency_title">Fréquence de synchronisation</string>
+    <string name="pref_choose_list_offline_frequency_desc">Choisissez une fréquence pour la synchronisation en arrière-plan</string>
     <!-- Accessibility various content -->
     <string name="node_add_button_description">Créer ou importer</string>
     <string name="exit_description">Quitter l\'application</string>
