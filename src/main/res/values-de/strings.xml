@@ -21,8 +21,8 @@
     <string name="action_open_offline_roots">Offline-Dateien</string>
     <string name="action_open_bookmarks">Favoriten</string>
     <string name="action_open_transfers">Übertragungen</string>
-    <string name="action_open_jobs">Background Jobs</string>
-    <string name="action_open_logs">Logs</string>
+    <string name="action_open_jobs">Hintergrundjobs</string>
+    <string name="action_open_logs">Protokolle</string>
     <string name="action_open_about">Über Pydio</string>
     <string name="action_search">Suchen</string>
     <string name="action_settings">Einstellungen</string>
@@ -114,13 +114,13 @@
     <string name="search_hint">Suchtipp</string>
     <!--Offline -->
     <string name="sync_in_progress">Synchronisierung…</string>
-    <string name="sync_downloading">Downloading files…</string>
+    <string name="sync_downloading">Dateien werden heruntergeladen…</string>
     <string name="sync_tree_walking">Durchsuchen des Baums nach Änderungen…</string>
     <string name="sync_already_running">Ein Synchronisierungsprozess läuft bereits. Bitte warten Sie, bevor Sie einen neuen starten</string>
     <!-- Job Management -->
-    <string name="job_list_title">Background jobs</string>
+    <string name="job_list_title">Hintergrundprozesse</string>
     <!-- Log Management -->
-    <string name="log_list_title">Background job logs</string>
+    <string name="log_list_title">Hintergrund-Job-Logs</string>
     <!-- Transfer Management -->
     <string name="transfer_list_title">Aktuelle Übertragungen</string>
     <string name="choose_target_for_share_title">Teilen mit…</string>
@@ -206,8 +206,8 @@
     <string name="download_wait_message">Wird heruntergeladen, bitte warten…</string>
     <!-- Settings -->
     <string name="pref_category_title_recycler">Listen anpassen (falls zutreffend)</string>
-    <string name="pref_choose_list_layout">Type of layout</string>
-    <string name="pref_use_larger_grid">Use larger grid</string>
+    <string name="pref_choose_list_layout">Layout-Typ</string>
+    <string name="pref_use_larger_grid">Größeres Raster verwenden</string>
     <string name="pref_category_title_metered">Einschränkungen im gemessenen Netzwerk</string>
     <string name="pref_metered_dl_thumbs_title">Daumen herunterladen</string>
     <string name="pref_metered_dl_thumbs_desc">Thumbnails auch im gemessenen Netzwerk abrufen</string>
@@ -221,11 +221,11 @@
     <string name="pref_category_title_feedback">Feedback und Hilfe</string>
     <string name="pref_feedback_send_title">Feedback senden</string>
     <string name="pref_feedback_send_desc">Technische Probleme melden oder neue Funktionen vorschlagen</string>
-    <string name="pref_category_title_troubleshooting">Troubleshooting</string>
-    <string name="pref_troubleshooting_show_list_desc">Gives access to more pages to help troubleshooting background jobs</string>
-    <string name="pref_troubleshooting_show_list_title">Show runtime tables</string>
-    <string name="pref_choose_list_offline_frequency_title">Sync frequency</string>
-    <string name="pref_choose_list_offline_frequency_desc">Choose a frequency for background synchronisation</string>
+    <string name="pref_category_title_troubleshooting">Fehlerbehebung</string>
+    <string name="pref_troubleshooting_show_list_desc">Gibt Zugriff auf weitere Seiten, um Hintergrund-Jobs zu beheben</string>
+    <string name="pref_troubleshooting_show_list_title">Diagnose-Seiten anzeigen</string>
+    <string name="pref_choose_list_offline_frequency_title">Synchronisationsfrequenz</string>
+    <string name="pref_choose_list_offline_frequency_desc">Wählen Sie eine Frequenz für die Hintergrundsynchronisation</string>
     <!-- Accessibility various content -->
     <string name="node_add_button_description">Erstellen oder importieren</string>
     <string name="exit_description">Die Anwendung beenden</string>
