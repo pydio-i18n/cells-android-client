@@ -6,8 +6,8 @@
         <item>Par nom (de Z à A)</item>
         <item>Date de modification (les plus anciens d\'abord)</item>
         <item>Date de modification (les plus récents d\'abord)</item>
-        <item>Size (smallest first)</item>
-        <item>Size (largest first)</item>
+        <item>Taille (les plus petits d\'abord)</item>
+        <item>Taille (les plus gros d\'abord)</item>
     </string-array>
     <!--        <item>Type (A to Z)</item>-->
     <!--        <item>Type (Z to A)</item>-->
