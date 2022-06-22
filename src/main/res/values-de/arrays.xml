@@ -6,8 +6,8 @@
         <item>Dateiname (Z bis A)</item>
         <item>Geändert (älteste zuerst)</item>
         <item>Geändert (neueste zuerst)</item>
-        <item>Size (smallest first)</item>
-        <item>Size (largest first)</item>
+        <item>Größe (kleinste zuerst)</item>
+        <item>Größe (größte zuerst)</item>
     </string-array>
     <!--        <item>Type (A to Z)</item>-->
     <!--        <item>Type (Z to A)</item>-->
