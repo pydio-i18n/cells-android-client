@@ -2,64 +2,64 @@
 <resources>
     <!-- GENERIC MESSAGES -->
     <!-- Button Labels -->
-    <string name="button_ok">OK</string>
-    <string name="button_confirm">Confirm</string>
-    <string name="button_cancel">Cancel</string>
-    <string name="button_switch_to_grid_layout">Show as grid</string>
-    <string name="button_switch_to_list_layout">Show as list</string>
-    <string name="button_open_sort_by">Sort by…</string>
-    <string name="button_open_filter_by">Filter by…</string>
-    <string name="button_open_connection_center">Manage connection</string>
-    <string name="button_clear_list">Clear list</string>
-    <string name="button_resync_all">Re-sync</string>
-    <string name="button_skip">Skip</string>
+    <string name="button_ok">ОК</string>
+    <string name="button_confirm">Подтвердить</string>
+    <string name="button_cancel">Отмена</string>
+    <string name="button_switch_to_grid_layout">В виде сетки</string>
+    <string name="button_switch_to_list_layout">В виде списка</string>
+    <string name="button_open_sort_by">Сортировка…</string>
+    <string name="button_open_filter_by">Фильтрация…</string>
+    <string name="button_open_connection_center">Управление подключениями</string>
+    <string name="button_clear_list">Очистить список</string>
+    <string name="button_resync_all">Пересинхронизировать</string>
+    <string name="button_skip">Пропустить</string>
     <!-- Navigation labels -->
-    <string name="action_home">Home</string>
-    <string name="action_open_app">Open App</string>
-    <string name="action_choose_account">Choose an account</string>
-    <string name="action_browse">Browse</string>
-    <string name="action_open_workspaces">Workspaces</string>
-    <string name="action_open_offline_roots">Offline Files</string>
-    <string name="action_open_bookmarks">Bookmarks</string>
-    <string name="action_open_transfers">Transfers</string>
-    <string name="action_open_jobs">Background Jobs</string>
-    <string name="action_open_logs">Logs</string>
-    <string name="action_open_about">About</string>
-    <string name="action_search">Search</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_clear_cache">Clear Cache</string>
+    <string name="action_home">Главная</string>
+    <string name="action_open_app">Открыть приложение</string>
+    <string name="action_choose_account">Выбрать аккаунт</string>
+    <string name="action_browse">Обзор</string>
+    <string name="action_open_workspaces">Рабочие области</string>
+    <string name="action_open_offline_roots">Оффлайн файлы</string>
+    <string name="action_open_bookmarks">Закладки</string>
+    <string name="action_open_transfers">Загрузки</string>
+    <string name="action_open_jobs">Фоновые процессы</string>
+    <string name="action_open_logs">Журналы</string>
+    <string name="action_open_about">О программе</string>
+    <string name="action_search">Поиск</string>
+    <string name="action_settings">Настройки</string>
+    <string name="action_clear_cache">Очистить кэш</string>
     <!-- Main Menu (left drawer) -->
     <!-- Section titles -->
-    <string name="my_workspaces">My Workspaces</string>
-    <string name="quick_access">Quick Access</string>
-    <string name="my_account">My Account</string>
-    <string name="nav_open">Open</string>
-    <string name="nav_close">Close</string>
+    <string name="my_workspaces">Мои рабочие области</string>
+    <string name="quick_access">Быстрый доступ</string>
+    <string name="my_account">Мой аккаунт</string>
+    <string name="nav_open">Открыть</string>
+    <string name="nav_close">Закрыть</string>
     <!-- Various -->
-    <string name="generic_error_message">Unexpected error…</string>
+    <string name="generic_error_message">Непредвиденная ошибка…</string>
     <!-- PAGE SPECIFIC MESSAGES -->
     <!-- Welcome Page -->
-    <string name="welcome_title">Welcome in Pydio!</string>
-    <string name="welcome_subtitle">A light Cells client for Android</string>
-    <string name="welcome_text">All your data on your device, everywhere, at any time!</string>
-    <string name="welcome_no_account_instructions">First, configure your connection to your remote Pydio server:</string>
-    <string name="welcome_add_account_button">Configure a connection</string>
+    <string name="welcome_title">Добро пожаловать в Pydio!</string>
+    <string name="welcome_subtitle">Легкий клиент Cells для Android</string>
+    <string name="welcome_text">Все ваши данные на вашем устройстве, везде и всегда!</string>
+    <string name="welcome_no_account_instructions">Сначала настройте подключение к удаленному серверу Pydio:</string>
+    <string name="welcome_add_account_button">Настроить подключение</string>
     <!-- About Page -->
     <string name="about_page_version_title">Pydio</string>
-    <string name="about_version_title">Pydio Client for Android</string>
-    <string name="about_help_title">Troubleshooting</string>
-    <string name="about_page_copyright">Pydio is a trademark of Abstrium SAS.</string>
-    <string name="version_name_display">Version name: %s</string>
-    <string name="version_code_display">Version code: %s</string>
-    <string name="version_date_display">Version date: %s</string>
+    <string name="about_version_title">Pydio клиент для Android</string>
+    <string name="about_help_title">Устранение проблем</string>
+    <string name="about_page_copyright">Pydio является торговой маркой Abstrium SAS.</string>
+    <string name="version_name_display">Имя версии: %s</string>
+    <string name="version_code_display">Код версии: %s</string>
+    <string name="version_date_display">Дата версии: %s</string>
     <string name="about_page_get_help">If you cannot get this application to work correctly, please send an email with a complete description of the problem you are facing so that we can help you.</string>
-    <string name="help_button_support">Contact Pydio Support</string>
-    <string name="open_website_button">More info on pydio.com</string>
+    <string name="help_button_support">Связаться с поддержкой Pydio</string>
+    <string name="open_website_button">Больше информации на pydio.com</string>
     <!-- Authentication process  -->
-    <string name="ask_url_title">Register a new account</string>
-    <string name="ask_url_desc">Please, enter your server address</string>
-    <string name="ask_url_example">e.g: https://files.example.com</string>
-    <string name="oauth_callback_waiting">Authentication process has been launched</string>
+    <string name="ask_url_title">Зарегистрировать новый аккаунт</string>
+    <string name="ask_url_desc">Пожалуйста, введите адрес сервера</string>
+    <string name="ask_url_example">например: https://files.example.com</string>
+    <string name="oauth_callback_waiting">Запущен процесс аутентификации</string>
     <string name="oauth_callback_cancel">Cancel</string>
     <string name="invalid_tls_certificate">Invalid certificate</string>
     <string name="confirm_skip_verify_title">Invalid certificate</string>
@@ -256,5 +256,5 @@
     <string name="switch_account">Switch account</string>
     <string name="switch_workspace">Switch workspace</string>
     <string name="parent_folder">Parent folder</string>
-    <string name="order_by_title">Sort order</string>
+    <string name="order_by_title">Порядок сортировки</string>
 </resources>
