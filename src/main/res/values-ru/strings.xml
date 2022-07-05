@@ -76,7 +76,7 @@
     <string name="auth_err_expired">Срок действия учетных данных истек</string>
     <string name="auth_err_no_token">Неверные учетные данные</string>
     <!-- Account management -->
-    <string name="account_list_title">Мои аккаунты</string>
+    <string name="account_list_title">Мои Аккаунты</string>
     <string name="account_list_desc">Управление зарегистрированными серверами</string>
     <string name="account_list_none">Аккаунты еще не настроены…</string>
     <string name="account_details_title">Информация об аккаунте</string>
@@ -92,8 +92,8 @@
     <string name="category_workspaces">Рабочие области</string>
     <string name="last_check">Последняя проверка</string>
     <string name="last_check_never">никогда</string>
-    <string name="loading_message">Загрузка содержимого. Подождите…</string>
-    <string name="no_internet">Нет подключения к Интернету</string>
+    <string name="loading_message">Пожалуйста, дождитесь загрузки…</string>
+    <string name="no_internet">Нет подключения к интернету</string>
     <string name="server_unreachable">Нет соединения с сервером…</string>
     <string name="empty_cache">Невозможно отобразить содержимое</string>
     <string name="cannot_download_file">Не удается загрузить файл</string>
@@ -120,18 +120,18 @@
     <!--Offline -->
     <string name="sync_in_progress">Синхронизация…</string>
     <string name="sync_downloading">Загрузка файлов…</string>
-    <string name="sync_tree_walking">Walking the tree to look for changes…</string>
+    <string name="sync_tree_walking">Обход дерева в поисках изменений…</string>
     <string name="sync_already_running">Процесс синхронизации уже запущен, пожалуйста, подождите перед запуском нового</string>
     <!-- Job Management -->
     <string name="job_list_title">Фоновые процессы</string>
     <string name="filter_by_status_title">Фильтр по статусу</string>
     <string name="filter_by_status_show_all_label">Показать все (без фильтра)</string>
     <string name="filter_by_status_new_label">Новое</string>
-    <string name="filter_by_status_processing_label">Processing</string>
-    <string name="filter_by_status_cancelled_label">Cancelled</string>
-    <string name="filter_by_status_done_label">Done</string>
-    <string name="filter_by_status_error_label">Error</string>
-    <string name="filter_by_status_timeout_label">Timeout</string>
+    <string name="filter_by_status_processing_label">В процессе</string>
+    <string name="filter_by_status_cancelled_label">Отменено</string>
+    <string name="filter_by_status_done_label">Готово</string>
+    <string name="filter_by_status_error_label">Ошибка</string>
+    <string name="filter_by_status_timeout_label">Таймаут</string>
     <string name="job_sort_by_title">Sort by</string>
     <string name="job_sort_by_creation_ts_desc_label">Creation (newest first)</string>
     <string name="job_sort_by_creation_ts_asc_label">Creation (oldest first)</string>
