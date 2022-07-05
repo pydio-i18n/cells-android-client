@@ -218,7 +218,7 @@
     <string name="rename_dialog_title">Renommer</string>
     <string name="rename_dialog_message">Veuillez saisir un nouveau nom pour:\n%s</string>
     <string name="rename_dialog_confirm_button">Renommer</string>
-    <string name="download_wait_message">Téléchargement en cours, veuillez patienter…</string>
+    <string name="download_wait_message">Téléchargement en cours, veuillez patienter…</string>
     <!-- Settings -->
     <string name="pref_category_title_recycler">Personnaliser les listes (si applicable)</string>
     <string name="pref_choose_list_layout">Type de mise en page</string>
