@@ -30,9 +30,9 @@
     <string name="action_clear_cache">Очистить кэш</string>
     <!-- Main Menu (left drawer) -->
     <!-- Section titles -->
-    <string name="my_workspaces">Мои рабочие области</string>
-    <string name="quick_access">Быстрый доступ</string>
-    <string name="my_account">Мой аккаунт</string>
+    <string name="my_workspaces">Мои Рабочие Области</string>
+    <string name="quick_access">Быстрый Доступ</string>
+    <string name="my_account">Мой Аккаунт</string>
     <string name="nav_open">Открыть</string>
     <string name="nav_close">Закрыть</string>
     <!-- Various -->
@@ -107,7 +107,7 @@
         <item quantity="one">%d элемент выбран</item>
         <item quantity="few">%d items selected</item>
         <item quantity="many">%d items selected</item>
-        <item quantity="other">%d items selected</item>
+        <item quantity="other">%d элементов выбрано</item>
     </plurals>
     <!-- Local modification status -->
     <string name="in_progress_deleting">Удаление…</string>
@@ -139,34 +139,34 @@
     <string name="log_list_title">Background job logs</string>
     <!-- Transfer Management -->
     <string name="transfer_list_title">Current transfers</string>
-    <string name="choose_target_for_share_title">Share to…</string>
-    <string name="choose_target_for_copy_title">Copy to…</string>
-    <string name="choose_target_for_move_title">Move to…</string>
+    <string name="choose_target_for_share_title">Поделиться…</string>
+    <string name="choose_target_for_copy_title">Копировать…</string>
+    <string name="choose_target_for_move_title">Переместить…</string>
     <!-- Target choice -->
-    <string name="choose_target_subtitle">Select a location</string>
-    <string name="pick_up_session">Choose an account</string>
-    <string name="pick_up_workspace">Choose a target workspace</string>
-    <string name="pick_up_folder">Choose a target folder</string>
+    <string name="choose_target_subtitle">Выберите место</string>
+    <string name="pick_up_session">Выберите аккаунт</string>
+    <string name="pick_up_workspace">Выберите рабочую область</string>
+    <string name="pick_up_folder">Выберите целевую папку</string>
     <!--Transfers -->
-    <string name="relaunch_transfer">Re-launch transfer</string>
-    <string name="delete_record">Delete record</string>
+    <string name="relaunch_transfer">Перезапустить передачу</string>
+    <string name="delete_record">Удалить запись</string>
     <!-- Migration-->
-    <string name="migration_message">Migrating legacy data, please wait…</string>
-    <string name="post_migration_title">Successfully Upgraded to New Version!</string>
+    <string name="migration_message">Миграция старых данных, подождите…</string>
+    <string name="post_migration_title">Успешно обновлено до новой версии!</string>
     <string name="post_migration_sync_message">You have one or more items marked as offline, this migration requires a full re-download now. Do you want to proceed? You can skip it and synchronize later.</string>
     <!-- More menus -->
-    <string name="open_more_menu">Choose an action to apply to the selected items</string>
-    <string name="more_button_description">Show more actions for this element</string>
-    <string name="open_in_workspaces">Open location</string>
-    <string name="open_parent_in_workspaces">Open parent location</string>
-    <string name="force_resync">Synchronise</string>
-    <string name="force_resync_desc">Launch synchronisation with remote server now</string>
-    <string name="open_with">Open with…</string>
-    <string name="download_to_device">Download to device</string>
-    <string name="rename">Rename…</string>
-    <string name="copy_to">Copy to…</string>
-    <string name="move_to">Move to…</string>
-    <string name="public_link">Public link</string>
+    <string name="open_more_menu">Выберите действие для выбранных элементов</string>
+    <string name="more_button_description">Больше действий для этого элемента</string>
+    <string name="open_in_workspaces">Открыть расположение</string>
+    <string name="open_parent_in_workspaces">Открыть родительское расположение</string>
+    <string name="force_resync">Синхронизировать</string>
+    <string name="force_resync_desc">Запустить синхронизацию с удаленным сервером</string>
+    <string name="open_with">Открыть с помощью…</string>
+    <string name="download_to_device">Скачать на устройство</string>
+    <string name="rename">Переименовать…</string>
+    <string name="copy_to">Копировать…</string>
+    <string name="move_to">Переместить…</string>
+    <string name="public_link">Публичная ссылка</string>
     <string name="public_link_content_desc">Create or delete a public link for this element</string>
     <string name="keep_offline">Keep offline</string>
     <string name="keep_offline_content_desc">Keep this element offline</string>
