@@ -65,7 +65,7 @@
     <string name="confirm_skip_verify_title">Недействительный сертификат</string>
     <string name="confirm_skip_verify_desc">Если вы знаете, что делаете, вы можете пропустить шаг проверки сертификата TLS</string>
     <string name="button_i_understand_the_risks">Хорошо, я понимаю риски</string>
-    <string name="p8_credentials_title">Pydio 8 (устаревшая версия)</string>
+    <string name="p8_credentials_title">Pydio 8</string>
     <string name="p8_credentials_desc">Введите ваши учетные данные</string>
     <string name="oauth_code_flow_desc">Обработка, пожалуйста подождите.</string>
     <!-- Manage connection -->
@@ -103,6 +103,7 @@
     <string name="empty_folder">Эта папка пуста</string>
     <string name="empty_content_message">Здесь пока ничего нет</string>
     <string name="no_bookmark_for_account">Для этого аккаунта не задано ни одной закладки…</string>
+    <string name="no_offline_root_for_account">No folder has been tagged to be kept offline for this account…</string>
     <plurals name="selected_count">
         <item quantity="one">%d элемент выбран</item>
         <item quantity="few">%d items selected</item>
