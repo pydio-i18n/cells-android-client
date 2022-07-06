@@ -103,6 +103,7 @@
     <string name="empty_folder">Эта папка пуста</string>
     <string name="empty_content_message">Здесь пока ничего нет</string>
     <string name="no_bookmark_for_account">Для этого аккаунта не задано ни одной закладки…</string>
+    <string name="no_transfer_for_account">There is currently no transfer list to show</string>
     <string name="no_offline_root_for_account">Нет папок помеченных как оффлайн для данного аккаунта…</string>
     <plurals name="selected_count">
         <item quantity="one">%d элемент выбран</item>
