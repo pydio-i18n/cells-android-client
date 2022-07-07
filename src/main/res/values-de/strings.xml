@@ -103,7 +103,7 @@
     <string name="empty_folder">Dieser Ordner ist leer</string>
     <string name="empty_content_message">Noch kein Inhalt vorhanden</string>
     <string name="no_bookmark_for_account">Für dieses Konto wurde kein Lesezeichen definiert…</string>
-    <string name="no_transfer_for_account">There is currently no transfer list to show</string>
+    <string name="no_transfer_for_account">There is no recent transfer to show</string>
     <string name="no_offline_root_for_account">Es wurde kein Ordner markiert, der für dieses Konto offline gehalten werden soll…</string>
     <plurals name="selected_count">
         <item quantity="one">%d Element ausgewählt</item>
