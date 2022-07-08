@@ -23,8 +23,8 @@
         <item>Tous les quarts d\'heure</item>
     </string-array>
     <string-array name="network_type_labels">
-        <item>Unmetered</item>
-        <item>Not Roaming</item>
-        <item>Connected (run as soon as we can reach the server, no matter the network type)</item>
+        <item>Non limité</item>
+        <item>Pas en itinérance</item>
+        <item>Connecté (dès que le serveur peut être atteint, sans prendre en compte le type de réseau)</item>
     </string-array>
 </resources>
