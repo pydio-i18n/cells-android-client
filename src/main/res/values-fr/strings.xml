@@ -240,7 +240,7 @@
     <string name="pref_offline_constraint_idle_title">Inactif</string>
     <string name="pref_offline_constraint_idle_desc">Lorsque l\'appareil est inactif (nécessite Android 6+)</string>
     <string name="pref_offline_constraint_batt_not_low_title">Lorsque la batterie n\'est pas faible</string>
-    <string name="pref_offline_constraint_batt_not_low_desc">When the battery is not low</string>
+    <string name="pref_offline_constraint_batt_not_low_desc">Lorsque la batterie n\'est pas faible</string>
     <string name="pref_category_title_feedback">Commentaires et aide</string>
     <string name="pref_feedback_send_title">Envoyer des commentaires</string>
     <string name="pref_feedback_send_desc">Signaler un problème technique ou suggérer de nouvelles fonctionnalités</string>
