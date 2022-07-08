@@ -225,7 +225,7 @@
     <string name="pref_choose_list_layout">Type de mise en page</string>
     <string name="pref_use_larger_grid">Utiliser une grille plus grande</string>
     <string name="pref_category_title_metered">Limitations sur les réseaux tarifés/limités</string>
-    <string name="pref_apply_metered_limits_title">Apply limitations</string>
+    <string name="pref_apply_metered_limits_title">Appliquer les limitations</string>
     <string name="pref_apply_metered_limits_desc">Warning: turning this off will skip all limitations when on a metered network. This might lead to raising costs</string>
     <string name="pref_metered_dl_thumbs_title">Télécharger les vignettes</string>
     <string name="pref_metered_dl_thumbs_desc">Récupérer également les vignettes lorsque le réseau est limité</string>
