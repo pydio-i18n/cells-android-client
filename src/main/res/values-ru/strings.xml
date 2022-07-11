@@ -94,6 +94,8 @@
     <string name="last_check_never">никогда</string>
     <string name="loading_message">Пожалуйста, дождитесь загрузки…</string>
     <string name="no_internet">Нет подключения к интернету</string>
+    <string name="metered_connection">On a metered connection</string>
+    <string name="roaming_connection">Using a roaming connection</string>
     <string name="server_unreachable">Нет соединения с сервером…</string>
     <string name="empty_cache">Невозможно отобразить содержимое</string>
     <string name="cannot_download_file">Не удается загрузить файл</string>
@@ -224,6 +226,8 @@
     <string name="rename_dialog_message">Please enter a new name for:\n%s</string>
     <string name="rename_dialog_confirm_button">Rename</string>
     <string name="download_wait_message">Загрузка, пожалуйста подождите…</string>
+    <string name="confirm_download_title">Confirm download</string>
+    <string name="confirm_download_desc">This file is large (%s) and you are on a metered network. Are you sure you want to proceed?</string>
     <!-- Settings -->
     <string name="pref_category_title_recycler">Customise lists (when applicable)</string>
     <string name="pref_choose_list_layout">Type of layout</string>
