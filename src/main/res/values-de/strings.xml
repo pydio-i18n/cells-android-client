@@ -94,6 +94,8 @@
     <string name="last_check_never">nie</string>
     <string name="loading_message">Bitte warten Sie, während der Inhalt geladen wird…</string>
     <string name="no_internet">Keine Internetverbindung</string>
+    <string name="metered_connection">On a metered connection</string>
+    <string name="roaming_connection">Using a roaming connection</string>
     <string name="server_unreachable">Keine Verbindung zum Server…</string>
     <string name="empty_cache">Ordnerinhalt kann nicht aufgelistet werden</string>
     <string name="cannot_download_file">Datei kann nicht heruntergeladen werden</string>
@@ -220,6 +222,8 @@
     <string name="rename_dialog_message">Bitte geben Sie einen neuen Namen für: \n%s ein</string>
     <string name="rename_dialog_confirm_button">Umbenennen</string>
     <string name="download_wait_message">Wird heruntergeladen, bitte warten…</string>
+    <string name="confirm_download_title">Confirm download</string>
+    <string name="confirm_download_desc">This file is large (%s) and you are on a metered network. Are you sure you want to proceed?</string>
     <!-- Settings -->
     <string name="pref_category_title_recycler">Listen anpassen (falls zutreffend)</string>
     <string name="pref_choose_list_layout">Layout-Typ</string>
