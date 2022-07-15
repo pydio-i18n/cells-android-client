@@ -4,8 +4,8 @@
         <item>Kanonické (A až Z, složky první)</item>
         <item>Název souboru (A až Z)</item>
         <item>Název souboru (Z až A)</item>
-        <item>Modified (oldest first)</item>
-        <item>Modified (newest first)</item>
+        <item>Upraveno (od nejstarších)</item>
+        <item>Upraveno (od nejnovějších)</item>
         <item>Velikost (od nejmenších)</item>
         <item>Velikost (od největších)</item>
     </string-array>
