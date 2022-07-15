@@ -41,7 +41,7 @@
     <!-- Welcome Page -->
     <string name="welcome_title">Vítejte v Pydio!</string>
     <string name="welcome_subtitle">Nenáročný klient pro Cells určený pro systém Android</string>
-    <string name="welcome_text">Všechna vaše data na vašem zařízení, kdekoliv, kdykoli!</string>
+    <string name="welcome_text">Všechna vaše data na vašem zařízení – kdekoliv a kdykoli!</string>
     <string name="welcome_no_account_instructions">Nejprve nastavte připojení na vámi využívaný Pydio server:</string>
     <string name="welcome_add_account_button">Nastavit připojení</string>
     <!-- About Page -->
@@ -52,7 +52,7 @@
     <string name="version_name_display">Název verze: %s</string>
     <string name="version_code_display">Číslo verze: %s</string>
     <string name="version_date_display">Datum verze: %s</string>
-    <string name="about_page_get_help">Pokud nemůžete tuto aplikaci přimět k řádnému fungování, prosím pošlete e-mail s úplným popisem problému, kterému čelíte, abychom vám mohli pomoci.</string>
+    <string name="about_page_get_help">Pokud nemůžete tuto aplikaci přimět ke správnému fungování, prosím pošlete e-mail s úplným popisem problému, kterému čelíte, abychom vám mohli pomoci.</string>
     <string name="help_button_support">Kontaktovat podporu Pydio</string>
     <string name="open_website_button">Další informace na pydio.com</string>
     <!-- Authentication process  -->
@@ -69,8 +69,8 @@
     <string name="p8_credentials_desc">Zadejte své přihlašovací údaje</string>
     <string name="oauth_code_flow_desc">Zpracovává se, čekejte prosím.</string>
     <!-- Manage connection -->
-    <string name="no_connection_title">Připojení spadlo</string>
-    <string name="no_connection_status">Nelze se připojit k %1$s jako %2$s: %3$s</string>
+    <string name="no_connection_title">Spojení se přerušilo</string>
+    <string name="no_connection_status">Nedaří se připojit k %1$s jako %2$s: %3$s</string>
     <string name="launch_auth">Znovu ověřit</string>
     <string name="auth_ok">Účet je připojen</string>
     <string name="auth_err_expired">Platnost přihlašovacích údajů skončila</string>
@@ -81,7 +81,7 @@
     <string name="account_list_none">Zatím nebyl nastaven žádný účet…</string>
     <!-- Browse management -->
     <string name="ws_list_subtitle">Vyberte pracovní prostor, který procházet</string>
-    <string name="browse_list_desc">Procházet servery</string>
+    <string name="browse_list_desc">Procházet vámi využívané servery</string>
     <string name="browse_list_none">Prázdné</string>
     <string name="recycle_bin_label">Koš</string>
     <string name="account_server_label">Server: %s</string>
@@ -91,8 +91,8 @@
     <string name="last_check">Naposledy zkontrolováno</string>
     <string name="last_check_never">nikdy</string>
     <string name="loading_message">Počkejte na načtení obsahu…</string>
-    <string name="no_internet">Žádné připojení k internetu</string>
-    <string name="metered_connection">Na připojeních s účtovanými daty</string>
+    <string name="no_internet">Není k dispozici připojení k Internetu</string>
+    <string name="metered_connection">Na připojení s účtovanými daty</string>
     <string name="roaming_connection">Použití roamingového připojení</string>
     <string name="server_unreachable">Není spojení se serverem…</string>
     <string name="empty_cache">Nedaří se vypsat obsah složky</string>
@@ -101,9 +101,9 @@
     <string name="cannot_search_remote">Nedaří se provést hledání</string>
     <string name="no_result_for_search">Pro „%s“ nic nenalezeno</string>
     <string name="empty_folder">Tato složka je prázdná</string>
-    <string name="empty_content_message">Zatím žádný obsah</string>
+    <string name="empty_content_message">Zatím zde není žádný obsah</string>
     <string name="no_bookmark_for_account">Pro tento účet nebyla definována žádná záložka…</string>
-    <string name="no_transfer_for_account">Není k dispozici žádný nedávný přenos, který by bylo možné zobrazit</string>
+    <string name="no_transfer_for_account">Není k dispozici žádný nedávný přenos, proto není co zobrazit</string>
     <string name="no_offline_root_for_account">Nebyla označena žádná složka, aby byla pro tento účet uchovávána offline…</string>
     <plurals name="selected_count">
         <item quantity="one">vybrána %d položka</item>
@@ -121,7 +121,7 @@
     <string name="sync_in_progress">Synchronizace…</string>
     <string name="sync_downloading">Stahování souborů…</string>
     <string name="sync_tree_walking">Procházení stromu a zjišťování změn…</string>
-    <string name="sync_already_running">Synchronizace už právě probíhá. Počkejte jejího dokončení než budete spouštět další</string>
+    <string name="sync_already_running">Synchronizace už právě probíhá. Vyčkejte jejího dokončení než budete spouštět další</string>
     <!-- Job Management -->
     <string name="job_list_title">Úlohy na pozadí</string>
     <string name="filter_by_status_title">Filtrovat podle stavu</string>
@@ -136,9 +136,9 @@
     <string name="job_sort_by_creation_ts_desc_label">Vytvoření (od nejnovějších)</string>
     <string name="job_sort_by_creation_ts_asc_label">Vytvoření (od nejstarších)</string>
     <!-- Log Management -->
-    <string name="log_list_title">Záznamy událostí z úlohy na pozadí</string>
+    <string name="log_list_title">Záznamy událostí z úloh na pozadí</string>
     <!-- Transfer Management -->
-    <string name="transfer_list_title">Stávající přenosy</string>
+    <string name="transfer_list_title">Nyní probíhající přenosy</string>
     <string name="choose_target_for_share_title">Nasdílet uživateli…</string>
     <string name="choose_target_for_copy_title">Zkopírovat do…</string>
     <string name="choose_target_for_move_title">Přesunout do…</string>
@@ -151,7 +151,7 @@
     <string name="relaunch_transfer">Znovu spustit přenos</string>
     <string name="delete_record">Smazat záznam</string>
     <!-- Migration-->
-    <string name="migration_message">Jsou přesouvána starší data – čekejte prosím…</string>
+    <string name="migration_message">Migrace starých dat – čekejte prosím…</string>
     <string name="post_migration_title">Úspěšně zaktualizováno na novou verzi!</string>
     <string name="post_migration_sync_message">Máte jednu nebo více položek označených jako offline, tato migrace nyní vyžaduje úplné opětovné stažení. Chcete pokračovat? Můžete jej přeskočit a synchronizovat později.</string>
     <!-- More menus -->
@@ -160,7 +160,7 @@
     <string name="open_in_workspaces">Otevřít umístění</string>
     <string name="open_parent_in_workspaces">Otevřít nadřazenou složku</string>
     <string name="force_resync">Synchronizovat</string>
-    <string name="force_resync_desc">Spustit synchronizaci se vzdáleným serverem</string>
+    <string name="force_resync_desc">Spustit synchronizaci se serverem</string>
     <string name="open_with">Otevřít v…</string>
     <string name="download_to_device">Stáhnout do zařízení</string>
     <string name="rename">Přejmenovat…</string>
@@ -239,13 +239,13 @@
     <string name="pref_on_metered_ask_before_dl_files_title">Před stažením se zeptat</string>
     <string name="on_metered_ask_before_dl_files_greater_than_title">Pokud je soubor větší než (v MB)</string>
     <string name="on_metered_ask_before_dl_files_greater_than_desc">Zeptat se před stažením, pokud je cílový soubor větší než (v MB)</string>
-    <string name="pref_category_title_offline">Synchronizace bez Internetu</string>
+    <string name="pref_category_title_offline">Synchronizace pro offline</string>
     <string name="pref_offline_constraint_wifi_title">Spustit synchronizaci, když je síť</string>
-    <string name="pref_offline_constraint_wifi_desc">Vyberte typ sítě, který omezí, když můžeme spustit synchronizaci</string>
+    <string name="pref_offline_constraint_wifi_desc">Vyberte typ sítě, který omezí, kdy je možné spouštět synchronizaci</string>
     <string name="pref_offline_constraint_charging_title">Při nabíjení</string>
     <string name="pref_offline_constraint_charging_desc">Synchronizovat pouze při nabíjení zařízení</string>
     <string name="pref_offline_constraint_idle_title">Při nečinnosti</string>
-    <string name="pref_offline_constraint_idle_desc">Když je zařízení v nečinnosti (funguje pro Android 6+)</string>
+    <string name="pref_offline_constraint_idle_desc">When the device is idle (works for Android 6+)</string>
     <string name="pref_offline_constraint_batt_not_low_title">Když akumulátor není vybitý</string>
     <string name="pref_offline_constraint_batt_not_low_desc">Když akumulátor není vybitý</string>
     <string name="pref_category_title_feedback">Zpětná vazba a nápověda</string>
