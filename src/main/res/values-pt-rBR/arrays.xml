@@ -23,8 +23,8 @@
         <item>A cada 15 minutos</item>
     </string-array>
     <string-array name="network_type_labels">
-        <item>Unmetered</item>
-        <item>Not Roaming</item>
-        <item>Connected (run as soon as we can reach the server, no matter the network type)</item>
+        <item>Não medida</item>
+        <item>Não está em roaming</item>
+        <item>Conectado (executado o mais rápido possível no servidor, independentemente do tipo de rede)</item>
     </string-array>
 </resources>
