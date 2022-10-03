@@ -3,64 +3,64 @@
     <!-- GENERIC MESSAGES -->
     <!-- Button Labels -->
     <string name="button_ok">OK</string>
-    <string name="button_confirm">Confirm</string>
-    <string name="button_cancel">Cancel</string>
-    <string name="button_switch_to_grid_layout">Show as grid</string>
-    <string name="button_switch_to_list_layout">Show as list</string>
-    <string name="button_open_sort_by">Sort by…</string>
-    <string name="button_open_filter_by">Filter by…</string>
-    <string name="button_open_connection_center">Manage connection</string>
-    <string name="button_clear_list">Clear list</string>
-    <string name="button_resync_all">Re-sync</string>
-    <string name="button_skip">Skip</string>
+    <string name="button_confirm">Confirmar</string>
+    <string name="button_cancel">Cancelar</string>
+    <string name="button_switch_to_grid_layout">Exibir em grade</string>
+    <string name="button_switch_to_list_layout">Exibir em lista</string>
+    <string name="button_open_sort_by">Ordenar por…</string>
+    <string name="button_open_filter_by">Filtrar por…</string>
+    <string name="button_open_connection_center">Gerenciar conexões</string>
+    <string name="button_clear_list">Limpar lista</string>
+    <string name="button_resync_all">Re-sincronizar</string>
+    <string name="button_skip">Pular</string>
     <!-- Navigation labels -->
-    <string name="action_home">Home</string>
-    <string name="action_open_app">Open App</string>
-    <string name="action_choose_account">Choose an account</string>
-    <string name="action_browse">Browse</string>
-    <string name="action_open_workspaces">Workspaces</string>
-    <string name="action_open_offline_roots">Offline Files</string>
-    <string name="action_open_bookmarks">Bookmarks</string>
-    <string name="action_open_transfers">Transfers</string>
-    <string name="action_open_jobs">Background Jobs</string>
+    <string name="action_home">Início</string>
+    <string name="action_open_app">Abrir App</string>
+    <string name="action_choose_account">Selecione uma conta</string>
+    <string name="action_browse">Navegar</string>
+    <string name="action_open_workspaces">Espaços de trabalho</string>
+    <string name="action_open_offline_roots">Arquivos offline</string>
+    <string name="action_open_bookmarks">Marcadores</string>
+    <string name="action_open_transfers">Transferências</string>
+    <string name="action_open_jobs">Tarefas em Segundo Plano</string>
     <string name="action_open_logs">Logs</string>
-    <string name="action_open_about">About</string>
-    <string name="action_search">Search</string>
-    <string name="action_settings">Settings</string>
-    <string name="action_clear_cache">Clear Cache</string>
+    <string name="action_open_about">Sobre</string>
+    <string name="action_search">Buscar</string>
+    <string name="action_settings">Configurações</string>
+    <string name="action_clear_cache">Limpar cache</string>
     <!-- Main Menu (left drawer) -->
     <!-- Section titles -->
-    <string name="my_workspaces">My Workspaces</string>
-    <string name="quick_access">Quick Access</string>
-    <string name="my_account">My Account</string>
-    <string name="nav_open">Open</string>
-    <string name="nav_close">Close</string>
+    <string name="my_workspaces">Meu Espaço de Trabalho</string>
+    <string name="quick_access">Acesso Rápido</string>
+    <string name="my_account">Minha Conta</string>
+    <string name="nav_open">Abrir</string>
+    <string name="nav_close">Fechar</string>
     <!-- Various -->
-    <string name="generic_error_message">Unexpected error…</string>
+    <string name="generic_error_message">Erro inesperado...</string>
     <!-- PAGE SPECIFIC MESSAGES -->
     <!-- Welcome Page -->
-    <string name="welcome_title">Welcome in Pydio!</string>
-    <string name="welcome_subtitle">A light Cells client for Android</string>
-    <string name="welcome_text">All your data on your device, everywhere, at any time!</string>
-    <string name="welcome_no_account_instructions">First, configure your connection to your remote Pydio server:</string>
-    <string name="welcome_add_account_button">Configure a connection</string>
+    <string name="welcome_title">Bem-vindo ao Pydio!</string>
+    <string name="welcome_subtitle">Um cliente leve do Cells para Android</string>
+    <string name="welcome_text">Todos os dados no seu dispositivo, em todos os lugares, a qualquer momento!</string>
+    <string name="welcome_no_account_instructions">Primeiro, configure sua conexão com seu servidor remoto do Pydio:</string>
+    <string name="welcome_add_account_button">Configurar uma conexão</string>
     <!-- About Page -->
     <string name="about_page_version_title">Pydio</string>
-    <string name="about_version_title">Pydio Client for Android</string>
-    <string name="about_help_title">Troubleshooting</string>
-    <string name="about_page_copyright">Pydio is a trademark of Abstrium SAS.</string>
-    <string name="version_name_display">Version name: %s</string>
-    <string name="version_code_display">Version code: %s</string>
-    <string name="version_date_display">Version date: %s</string>
-    <string name="about_page_get_help">If you cannot get this application to work correctly, please send an email with a complete description of the problem you are facing so that we can help you.</string>
-    <string name="help_button_support">Contact Pydio Support</string>
-    <string name="open_website_button">More info on pydio.com</string>
+    <string name="about_version_title">Cliente do Pydio para Android</string>
+    <string name="about_help_title">Resolução de problemas</string>
+    <string name="about_page_copyright">Pydio é uma marca comercial de Abstrium SAS.</string>
+    <string name="version_name_display">Nome da Versão: %s</string>
+    <string name="version_code_display">Código da Versão: %s</string>
+    <string name="version_date_display">Data da versão: %s</string>
+    <string name="about_page_get_help">Se você não conseguir fazer este aplicativo funcionar corretamente, por favor, envie um e-mail com uma descrição completa do problema que você está enfrentando para que possamos ajudá-lo.</string>
+    <string name="help_button_support">Contatar o Suporte da Pydio</string>
+    <string name="open_website_button">Mais informações em pydio.com</string>
     <!-- Authentication process  -->
-    <string name="ask_url_title">Register a new account</string>
-    <string name="ask_url_desc">Please, enter your server address</string>
-    <string name="ask_url_example">e.g: https://files.example.com</string>
-    <string name="oauth_callback_waiting">Authentication process has been launched</string>
-    <string name="oauth_callback_cancel">Cancel</string>
+    <string name="ask_url_title">Cadastrar uma nova conta</string>
+    <string name="ask_url_desc">Digite seu endereço residencial</string>
+    <string name="ask_url_example">ex.: https://files.example.com</string>
+    <string name="oauth_callback_waiting">O processo de autenticação foi iniciado</string>
+    <string name="oauth_callback_cancel">Cancelar</string>
     <string name="invalid_tls_certificate">Invalid certificate</string>
     <string name="confirm_skip_verify_title">Invalid certificate</string>
     <string name="confirm_skip_verify_desc">If you know what you are doing, you can choose to skip TLS certificate validation step</string>
