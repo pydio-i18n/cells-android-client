@@ -103,69 +103,69 @@
     <string name="empty_folder">Esta pasta está vazia</string>
     <string name="empty_content_message">Nenhum conteúdo aqui ainda</string>
     <string name="no_bookmark_for_account">Nenhum marcador foi definido para esta conta…</string>
-    <string name="no_transfer_for_account">There is no recent transfer to show</string>
-    <string name="no_offline_root_for_account">No folder has been tagged to be kept offline for this account…</string>
+    <string name="no_transfer_for_account">Não há transferência recente para mostrar</string>
+    <string name="no_offline_root_for_account">Nenhuma pasta foi marcada para ser mantida offline para esta conta…</string>
     <plurals name="selected_count">
-        <item quantity="one">%d item selected</item>
-        <item quantity="other">%d items selected</item>
+        <item quantity="one">%d item selecionado</item>
+        <item quantity="other">%d itens selecionados</item>
     </plurals>
     <!-- Local modification status -->
-    <string name="in_progress_deleting">Deleting…</string>
-    <string name="in_progress_renaming">Renaming…</string>
-    <string name="in_progress_moving">Moving…</string>
-    <string name="in_progress_restoring">Restoring…</string>
+    <string name="in_progress_deleting">Excluindo…</string>
+    <string name="in_progress_renaming">Renomeando…</string>
+    <string name="in_progress_moving">Movendo…</string>
+    <string name="in_progress_restoring">Restaurando…</string>
     <!-- Search -->
     <!--Offline -->
-    <string name="sync_in_progress">Synchronising…</string>
-    <string name="sync_downloading">Downloading files…</string>
-    <string name="sync_tree_walking">Walking the tree to look for changes…</string>
-    <string name="sync_already_running">A synchronisation process is already running, please wait before launching a new one</string>
+    <string name="sync_in_progress">Sincronizando…</string>
+    <string name="sync_downloading">Baixando arquivos…</string>
+    <string name="sync_tree_walking">Caminhando pela árvore para procurar por mudanças…</string>
+    <string name="sync_already_running">Um processo de sincronização já está em execução, por favor aguarde antes de iniciar um novo</string>
     <!-- Job Management -->
-    <string name="job_list_title">Background jobs</string>
-    <string name="filter_by_status_title">Filter by status</string>
-    <string name="filter_by_status_show_all_label">Show all (no filter)</string>
-    <string name="filter_by_status_new_label">New</string>
-    <string name="filter_by_status_processing_label">Processing</string>
-    <string name="filter_by_status_cancelled_label">Cancelled</string>
-    <string name="filter_by_status_done_label">Done</string>
-    <string name="filter_by_status_error_label">Error</string>
-    <string name="filter_by_status_timeout_label">Timeout</string>
-    <string name="job_sort_by_title">Sort by</string>
-    <string name="job_sort_by_creation_ts_desc_label">Creation (newest first)</string>
-    <string name="job_sort_by_creation_ts_asc_label">Creation (oldest first)</string>
+    <string name="job_list_title">Tarefas em segundo plano</string>
+    <string name="filter_by_status_title">Filtrar por status</string>
+    <string name="filter_by_status_show_all_label">Mostrar tudo (sem filtro)</string>
+    <string name="filter_by_status_new_label">Novo</string>
+    <string name="filter_by_status_processing_label">Processando</string>
+    <string name="filter_by_status_cancelled_label">Cancelado</string>
+    <string name="filter_by_status_done_label">Feito</string>
+    <string name="filter_by_status_error_label">Erro</string>
+    <string name="filter_by_status_timeout_label">Tempo esgotado</string>
+    <string name="job_sort_by_title">Classificar por</string>
+    <string name="job_sort_by_creation_ts_desc_label">Criação (mais recente primeiro)</string>
+    <string name="job_sort_by_creation_ts_asc_label">Criação (mais antigo primeiro)</string>
     <!-- Log Management -->
-    <string name="log_list_title">Background job logs</string>
+    <string name="log_list_title">Logs de jobs em segundo plano</string>
     <!-- Transfer Management -->
-    <string name="transfer_list_title">Current transfers</string>
-    <string name="choose_target_for_share_title">Share to…</string>
-    <string name="choose_target_for_copy_title">Copy to…</string>
-    <string name="choose_target_for_move_title">Move to…</string>
+    <string name="transfer_list_title">Transferências atuais</string>
+    <string name="choose_target_for_share_title">Compartilhar com…</string>
+    <string name="choose_target_for_copy_title">Copiar para…</string>
+    <string name="choose_target_for_move_title">Mover para…</string>
     <!-- Target choice -->
-    <string name="choose_target_subtitle">Select a location</string>
-    <string name="pick_up_session">Choose an account</string>
-    <string name="pick_up_workspace">Choose a target workspace</string>
-    <string name="pick_up_folder">Choose a target folder</string>
+    <string name="choose_target_subtitle">Selecione um local</string>
+    <string name="pick_up_session">Escolha uma conta</string>
+    <string name="pick_up_workspace">Escolha um espaço de trabalho alvo</string>
+    <string name="pick_up_folder">Escolha uma pasta de destino</string>
     <!--Transfers -->
-    <string name="relaunch_transfer">Re-launch transfer</string>
-    <string name="delete_record">Delete record</string>
+    <string name="relaunch_transfer">Reiniciar transferência</string>
+    <string name="delete_record">Apagar registro</string>
     <!-- Migration-->
-    <string name="migration_message">Migrating legacy data, please wait…</string>
-    <string name="post_migration_title">Successfully Upgraded to New Version!</string>
-    <string name="post_migration_sync_message">You have one or more items marked as offline, this migration requires a full re-download now. Do you want to proceed? You can skip it and synchronize later.</string>
+    <string name="migration_message">Migrando dados legados, por favor aguarde…</string>
+    <string name="post_migration_title">Atualizado com sucesso para a nova versão!</string>
+    <string name="post_migration_sync_message">Você tem um ou mais itens marcados como off-line. Essa migração requer uma nova descarga completa agora. Você quer prosseguir? Você pode ignorá-lo e sincronizar mais tarde.</string>
     <!-- More menus -->
-    <string name="open_more_menu">Choose an action to apply to the selected items</string>
-    <string name="more_button_description">Show more actions for this element</string>
-    <string name="open_in_workspaces">Open location</string>
-    <string name="open_parent_in_workspaces">Open parent location</string>
-    <string name="force_resync">Synchronise</string>
-    <string name="force_resync_desc">Launch synchronisation with remote server now</string>
-    <string name="open_with">Open with…</string>
-    <string name="download_to_device">Download to device</string>
-    <string name="rename">Rename…</string>
-    <string name="copy_to">Copy to…</string>
-    <string name="move_to">Move to…</string>
-    <string name="public_link">Public link</string>
-    <string name="public_link_content_desc">Create or delete a public link for this element</string>
+    <string name="open_more_menu">Escolha uma ação para aplicar aos itens selecionados</string>
+    <string name="more_button_description">Mostrar mais ações para este elemento</string>
+    <string name="open_in_workspaces">Abrir localização</string>
+    <string name="open_parent_in_workspaces">Abrir localização pai</string>
+    <string name="force_resync">Sincronizar</string>
+    <string name="force_resync_desc">Iniciar sincronização com o servidor remoto agora</string>
+    <string name="open_with">Abrir com…</string>
+    <string name="download_to_device">Baixar para o dispositivo</string>
+    <string name="rename">Renomear…</string>
+    <string name="copy_to">Copiar para…</string>
+    <string name="move_to">Mover para…</string>
+    <string name="public_link">Link público</string>
+    <string name="public_link_content_desc">Criar ou apagar um link público para este elemento</string>
     <string name="keep_offline">Keep offline</string>
     <string name="keep_offline_content_desc">Keep this element offline</string>
     <string name="bookmark">Bookmark</string>
