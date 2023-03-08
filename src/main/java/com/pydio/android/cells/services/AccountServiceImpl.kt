@@ -18,6 +18,7 @@ import com.pydio.cells.api.Client
 import com.pydio.cells.api.Credentials
 import com.pydio.cells.api.ErrorCodes
 import com.pydio.cells.api.SDKException
+import com.pydio.cells.api.SdkNames
 import com.pydio.cells.api.Server
 import com.pydio.cells.api.ServerURL
 import com.pydio.cells.transport.StateID
@@ -46,43 +47,66 @@ class AccountServiceImpl(
     private val sessionViewDao: SessionViewDao = accountDB.sessionViewDao()
     private val workspaceDao: WorkspaceDao = accountDB.workspaceDao()
 
-    override fun getClient(stateId: StateID): Client {
-        return sessionFactory.getUnlockedClient(stateId.accountId)
+    override fun getClient(stateID: StateID): Client {
+        return sessionFactory.getUnlockedClient(stateID.accountId)
     }
 
-    override suspend fun isLegacy(stateId: StateID): Boolean {
-        return accountDao.getAccount(stateId.accountId)?.isLegacy ?: false
-    }
-
-    override suspend fun isRemoteCells(stateId: StateID): Boolean {
-        return !isLegacy(stateId)
-    }
-
-    override suspend fun getSession(stateId: StateID): RSessionView? {
-        return sessionViewDao.getSession(stateId.accountId)
-    }
+    // Expose LiveData for the ViewModels
 
     override fun getLiveSessions() = sessionViewDao.getLiveSessions()
 
-    override fun getLiveSession(accountID: String): LiveData<RSessionView?> =
-        sessionViewDao.getLiveSession(accountID)
+    @Deprecated("Rather use method with the StateID")
+    override fun getLiveSession(accountId: String): LiveData<RSessionView?> =
+        sessionViewDao.getLiveSession(accountId)
 
-    override fun getLiveWorkspaces(accountID: String): LiveData<List<RWorkspace>> =
-        workspaceDao.getLiveWorkspaces(accountID)
+    override fun getLiveSession(accountID: StateID): LiveData<RSessionView?> =
+        sessionViewDao.getLiveSession(accountID.id)
+
+    override fun getLiveWorkspaces(accountId: String): LiveData<List<RWorkspace>> =
+        workspaceDao.getLiveWorkspaces(accountId)
+
+    override fun getLiveWorkspace(stateID: StateID): LiveData<RWorkspace> =
+        workspaceDao.getLiveWorkspace(stateID.id)
+
+    override fun getLiveWsByType(type: String, accountID: String)
+            : LiveData<List<RWorkspace>> {
+        return if (type == SdkNames.WS_TYPE_CELL) {
+            workspaceDao.getLiveCells(accountID)
+        } else {
+            workspaceDao.getLiveNotCells(accountID)
+        }
+    }
 
     override val liveActiveSessionView: LiveData<RSessionView?> =
         sessionViewDao.getLiveActiveSession(AppNames.LIFECYCLE_STATE_FOREGROUND)
 
     override val liveSessionViews: LiveData<List<RSessionView>> = sessionViewDao.getLiveSessions()
 
+    // Direct communication with the backend
+
+    override suspend fun isLegacy(stateId: StateID): Boolean = withContext(Dispatchers.IO) {
+        return@withContext accountDao.getAccount(stateId.accountId)?.isLegacy ?: false
+    }
+
+    override suspend fun isRemoteCells(stateId: StateID): Boolean = withContext(Dispatchers.IO) {
+        return@withContext !isLegacy(stateId)
+    }
+
+    override suspend fun getActiveSession(): RSessionView? = withContext(Dispatchers.IO) {
+        return@withContext sessionViewDao.getActiveSession(AppNames.LIFECYCLE_STATE_FOREGROUND)
+    }
+
+    override suspend fun getSession(stateID: StateID): RSessionView? = withContext(Dispatchers.IO) {
+        return@withContext sessionViewDao.getSession(stateID.accountId)
+    }
+
     @Throws(SDKException::class)
-    override suspend fun signUp(serverURL: ServerURL, credentials: Credentials): String {
+    override suspend fun signUp(serverURL: ServerURL, credentials: Credentials): StateID {
         sessionFactory.registerAccountCredentials(serverURL, credentials)
         val server = sessionFactory.getServer(serverURL.id)
             ?: throw SDKException("could not sign up: unknown server with id ${serverURL.id}")
         // At this point we assume we have been connected or an error has already been thrown
-        val state = registerAccount(credentials.username, server, AppNames.AUTH_STATUS_CONNECTED)
-        return state.id
+        return registerAccount(credentials.username, server, AppNames.AUTH_STATUS_CONNECTED)
     }
 
     override suspend fun registerAccount(
@@ -107,13 +131,18 @@ class AccountServiceImpl(
         return state
     }
 
-    override fun listSessionViews(includeLegacy: Boolean): List<RSessionView> {
-        return if (includeLegacy) {
-            sessionViewDao.getSessions()
-        } else {
-            sessionViewDao.getCellsSessions()
-        }
+    override suspend fun getWorkspace(stateID: StateID): RWorkspace? = withContext(Dispatchers.IO) {
+        workspaceDao.getWorkspace(stateID.id)
     }
+
+    override suspend fun listSessionViews(includeLegacy: Boolean): List<RSessionView> =
+        withContext(Dispatchers.IO) {
+            return@withContext if (includeLegacy) {
+                sessionViewDao.getSessions()
+            } else {
+                sessionViewDao.getCellsSessions()
+            }
+        }
 
     /**
      * Performs a check on all accounts that are listed as connected
@@ -130,19 +159,27 @@ class AccountServiceImpl(
                     }
                     if (networkService.isConnected()) {
                         try {
-                            // TODO rather use an API health check
-//                            val currClient =
-                            sessionFactory.getUnlockedClient(account.accountID)
-//                            if (!currClient.stillAuthenticated()) {
-//                                // TODO implement finer status check (unauthorized, expired...)
-//                                account.authStatus = AppNames.AUTH_STATUS_UNAUTHORIZED
-//                                accountDao.update(account)
-//                                changes++
-//                            }
+                            // TODO rather use an API health check and implement finer status check (unauthorized, expired...)
+                            // sessionFactory.getUnlockedClient(account.accountID)
+                            val currClient = sessionFactory.getUnlockedClient(account.accountID)
+                            if (!currClient.stillAuthenticated()) {
+                                Log.e(logTag, "${account.accountID} is not connected anymore")
+                                account.authStatus = AppNames.AUTH_STATUS_NO_CREDS
+                                accountDao.update(account)
+                                val updatedAccount = accountDao.getAccount(account.accountID)
+                                Log.e(logTag, "After update, status: ${updatedAccount?.authStatus}")
+                                changes++
+                            }
                         } catch (e: SDKException) {
-                            // TODO insure we do not miss anything
-                            Log.e(logTag, "Got an error #${e.code} for ${account.accountID}")
-                            e.printStackTrace()
+                            Log.e(logTag, "${account.accountID} is not connected: err #${e.code}")
+                            account.authStatus = AppNames.AUTH_STATUS_NO_CREDS
+                            accountDao.update(account)
+                            val updatedAccount = accountDao.getAccount(account.accountID)
+                            Log.e(logTag, "After update, status: ${updatedAccount?.authStatus}")
+//
+//                            Log.e(logTag, "Got an error #${e.code} for ${account.accountID}")
+//                            e.printStackTrace()
+                            changes++
                         }
                     } else {
                         Log.w(
@@ -171,54 +208,64 @@ class AccountServiceImpl(
         fileService.prepareTree(StateID.fromId(account.accountID))
     }
 
-    override suspend fun forgetAccount(accountId: String): String? = withContext(Dispatchers.IO) {
-        val stateId = StateID.fromId(accountId)
-        Log.d(logTag, "### About to forget $stateId")
+    @Deprecated("Rather use method with the StateID")
+    override suspend fun forgetAccount(accountId: String): String? {
+        return forgetAccount(StateID.fromId(accountId))
+    }
+
+    override suspend fun forgetAccount(accountID: StateID): String? = withContext(Dispatchers.IO) {
+        //val stateId = StateID.fromId(accountId)
+        Log.i(logTag, "### About to forget $accountID")
         try {
-            val oldAccount = accountDao.getAccount(accountId)
+            val oldAccount = accountDao.getAccount(accountID.id)
                 ?: return@withContext null // nothing to forget
 
-            val dirName = treeNodeRepository.sessions[accountId]?.dirName
-                ?: throw IllegalStateException("No record found for $stateId")
+            val dirName = treeNodeRepository.sessions[accountID.id]?.dirName
+                ?: throw IllegalStateException("No record found for $accountID")
 
             // Downloaded files
-            fileService.cleanAllLocalFiles(stateId, dirName)
+            fileService.cleanAllLocalFiles(accountID, dirName)
             // Credentials
-            authService.forgetCredentials(stateId, oldAccount.isLegacy)
+            authService.forgetCredentials(accountID, oldAccount.isLegacy)
             // Remove rows in the account tables
-            sessionDao.forgetSession(accountId)
-            workspaceDao.forgetAccount(accountId)
-            accountDao.forgetAccount(accountId)
-            treeNodeRepository.closeNodeDb(stateId.accountId)
+            sessionDao.forgetSession(accountID.id)
+            workspaceDao.forgetAccount(accountID.id)
+            accountDao.forgetAccount(accountID.id)
+            treeNodeRepository.closeNodeDb(accountID.accountId)
 
             // Update local caches
             treeNodeRepository.refreshSessionCache()
 
-            Log.i(logTag, "### $stateId has been forgotten")
+            Log.i(logTag, "### $accountID has been forgotten")
             return@withContext null
         } catch (e: Exception) {
-            val msg = "Could not delete account ${StateID.fromId(accountId)}"
+            val msg = "Could not delete account $accountID"
             logException(logTag, msg, e)
             return@withContext msg
         }
     }
 
-    override suspend fun logoutAccount(accountID: String): String? = withContext(Dispatchers.IO) {
+    @Deprecated("Rather use method with the StateID")
+    override suspend fun logoutAccount(accountId: String): String? {
+        return logoutAccount(StateID.fromId(accountId))
+    }
+
+    override suspend fun logoutAccount(accountID: StateID): String? = withContext(Dispatchers.IO) {
         try {
-            accountDao.getAccount(accountID)?.let {
+            accountDao.getAccount(accountID.id)?.let {
                 Log.i(logTag, "About to logout $accountID")
                 Log.i(logTag, "Calling stack:")
                 Thread.dumpStack()
                 // There is also a token that is generated for P8:
                 // In case of legacy server, we have to discard a row in **both** tables
 
-                authService.forgetCredentials(StateID.fromId(accountID), it.isLegacy)
+                authService.forgetCredentials(accountID, it.isLegacy)
                 it.authStatus = AppNames.AUTH_STATUS_NO_CREDS
                 accountDao.update(it)
                 return@withContext null
             }
         } catch (e: Exception) {
-            val msg = "Could not delete credentials for ${StateID.fromId(accountID)}"
+            val msg = "Could not delete credentials for $accountID}"
             logException(logTag, msg, e)
             return@withContext msg
         }
@@ -228,42 +275,49 @@ class AccountServiceImpl(
      * Sets the lifecycle_state of a given session to "foreground".
      * WARNING: no check is done on the passed accountID.
      */
-    override suspend fun openSession(accountID: String) {
+    @Deprecated("Rather use method with the StateID")
+    override suspend fun openSession(accountId: String) {
+        return withContext(Dispatchers.IO) {
+            openSession(StateID.fromId(accountId))
+        }
+    }
+
+    override suspend fun openSession(accountID: StateID): RSessionView? {
         return withContext(Dispatchers.IO) {
 
-            // First put other opened sessions in the background
+            // Check if a session with this ISD exists
+            val newSession = sessionDao.getSession(accountID.id)
+                ?: run {
+                    Log.e(logTag, "No session found for $accountID")
+                    return@withContext null
+                }
+
+            // Put other opened sessions in background
             val tmpSessions = sessionDao.listAllForegroundSessions()
             for (currSession in tmpSessions) {
                 currSession.lifecycleState = AppNames.LIFECYCLE_STATE_BACKGROUND
                 sessionDao.update(currSession)
             }
 
-            val openSession = sessionDao.getSession(accountID)
-
-            if (openSession == null) {
-                // should never happen
-                Log.e(logTag, "No session found for $accountID")
-//                openSession = fromAccountID(accountID)
-//                accountDB.sessionDao().insert(openSession)
-            } else {
-                openSession.lifecycleState = AppNames.LIFECYCLE_STATE_FOREGROUND
-                sessionDao.update(openSession)
-            }
+            // Update session state and return corresponding session view
+            newSession.lifecycleState = AppNames.LIFECYCLE_STATE_FOREGROUND
+            sessionDao.update(newSession)
+            return@withContext getSession(accountID)
         }
     }
 
-    override suspend fun isClientConnected(stateID: String): Boolean = withContext(Dispatchers.IO) {
-        val isConnected = networkService.isConnected()
-        val accountID = StateID.fromId(stateID).accountId
-        accountDao.getAccount(accountID)?.let {
-            return@withContext isConnected && it.authStatus == AppNames.AUTH_STATUS_CONNECTED
-        }
-        return@withContext false
-    }
-
-    override suspend fun refreshWorkspaceList(accountIDStr: String): Pair<Int, String?> =
+    override suspend fun isClientConnected(stateID: StateID): Boolean =
         withContext(Dispatchers.IO) {
-            val accountID = StateID.fromId(accountIDStr)
+            val isConnected = networkService.isConnected()
+            val accountID = stateID.account()
+            accountDao.getAccount(accountID.id)?.let {
+                return@withContext isConnected && it.authStatus == AppNames.AUTH_STATUS_CONNECTED
+            }
+            return@withContext false
+        }
+
+    override suspend fun refreshWorkspaceList(accountID: StateID): Pair<Int, String?> =
+        withContext(Dispatchers.IO) {
             try {
                 val client: Client = getClient(accountID)
                 val wsDiff = WorkspaceDiff(accountID, client)

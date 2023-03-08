@@ -26,11 +26,17 @@ interface TransferDao {
     @Query("SELECT * FROM transfers WHERE encoded_state = :stateId LIMIT 1")
     fun getByState(stateId: String): RTransfer?
 
-    @Query("SELECT * FROM transfers WHERE transfer_id = :transferId LIMIT 1")
-    fun getById(transferId: Long): RTransfer?
+    @Query("SELECT * FROM transfers WHERE transfer_id IN (:ids)")
+    fun getCurrents(ids: Set<Long>): LiveData<List<RTransfer>>
 
-    @Query("SELECT * FROM transfers WHERE transfer_id = :transferId LIMIT 1")
-    fun getLiveById(transferId: Long): LiveData<RTransfer?>
+    @Query("SELECT * FROM transfers WHERE transfer_id = :transferID LIMIT 1")
+    fun getById(transferID: Long): RTransfer?
+
+    @Query("SELECT * FROM transfers WHERE job_id = :jobID")
+    fun getByJobId(jobID: Long): LiveData<List<RTransfer>>
+
+    @Query("SELECT * FROM transfers WHERE transfer_id = :transferID LIMIT 1")
+    fun getLiveById(transferID: Long): LiveData<RTransfer?>
 
     @Query("SELECT * FROM transfers WHERE encoded_state = :encodedState LIMIT 1")
     fun getLiveByState(encodedState: String): LiveData<RTransfer?>
@@ -50,20 +56,23 @@ interface TransferDao {
     @Query("DELETE FROM transfers WHERE done_ts > 0")
     fun clearTerminatedTransfers()
 
-    @Query("DELETE FROM transfers WHERE transfer_id = :transferId")
-    fun deleteTransfer(transferId: Long)
+    @Query("DELETE FROM transfers WHERE transfer_id = :transferID")
+    fun deleteTransfer(transferID: Long)
 
     @RawQuery(observedEntities = [RTransfer::class])
     fun transferQuery(query: SupportSQLiteQuery): LiveData<List<RTransfer>>
 
     // TRANSFER CANCELLATION
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(cancellation: RTransferCancellation)
 
-    @Query("SELECT * FROM transfer_cancellation WHERE transfer_id = :transferId LIMIT 1")
-    fun hasBeenCancelled(transferId: Long): RTransferCancellation?
+    @Query("SELECT * FROM transfer_cancellation WHERE transfer_id = :transferID LIMIT 1")
+    fun hasBeenCancelled(transferID: Long): RTransferCancellation?
 
-    @Query("DELETE FROM transfer_cancellation WHERE transfer_id = :transferId")
-    fun deleteCancellation(transferId: Long)
+    @Query("DELETE FROM transfer_cancellation WHERE transfer_id = :transferID")
+    fun deleteCancellation(transferID: Long)
 
+    @Query("DELETE FROM transfer_cancellation WHERE transfer_id = :transferID")
+    fun ackCancellation(transferID: Long)
 }

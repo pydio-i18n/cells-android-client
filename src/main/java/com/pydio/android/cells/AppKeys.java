@@ -2,6 +2,11 @@ package com.pydio.android.cells;
 
 public interface AppKeys {
 
+    String STATE_ID = "state-id";
+    String UID = "uid";
+    String QUERY_CONTEXT = "query-context";
+    String SKIP_VERIFY = "skip-verify";
+
     // WARNING: The migrations rely on this preference
     String INSTALLED_VERSION_CODE = "installed_version_code";
 
@@ -24,7 +29,6 @@ public interface AppKeys {
     String SYNC_CONST_ON_CHARGING = "sync_on_charging";
     String SYNC_CONST_ON_BATT_NOT_LOW = "sync_on_batt_not_low";
     String SYNC_CONST_ON_IDLE = "sync_on_idle";
-
 
     // Monitoring
     String TRANSFER_SORT_BY = "transfer_sort_by";

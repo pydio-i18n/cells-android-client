@@ -70,6 +70,15 @@ class MigrationServiceV2 : KoinComponent {
      * @return the number of offline roots node that have been migrated */
     @OptIn(ExperimentalTime::class)
     suspend fun migrate(context: Context, migrationJob: RJob, oldValue: Int, newValue: Int): Int {
+
+//        // FIXME
+//        for (i in 1..20) {
+//            Log.e(logTag, "Preparing step #$i ...")
+//            jobService.incrementProgress(migrationJob, 5, "Preparing step #$i ...")
+//            delay(1500)
+//        }
+//        return 8
+
         delay(1200) // dirty workaround: take a nap even if you're a speedy device
 
         val result: Pair<Boolean, Int>
@@ -88,12 +97,12 @@ class MigrationServiceV2 : KoinComponent {
                 if (oldValue < 50) {
                     migrateAccountsFromV23x(context, migrationJob, oldValue, newValue, 50) {
                         jobService.incrementProgress(migrationJob, it, null)
-                        true
+                        ""
                     }
                 } else {
                     migrateAccountsFromV24x(migrationJob, oldValue, newValue, 50) {
                         jobService.incrementProgress(migrationJob, it, null)
-                        true
+                        ""
                     }
                 }
             } catch (e: Exception) {
@@ -289,7 +298,7 @@ class MigrationServiceV2 : KoinComponent {
             return 0
         }
 
-        val (_, errMsg) = accountService.refreshWorkspaceList(accountID.accountId)
+        val (_, errMsg) = accountService.refreshWorkspaceList(accountID.account())
         errMsg?.let {
             val msg = "could not list workspaces for $accountID: $errMsg"
             Log.w(logTag, msg)
@@ -423,7 +432,7 @@ class MigrationServiceV2 : KoinComponent {
         }
     }
 
-    private fun cleanLegacyFiles(context: Context) {
+    private suspend fun cleanLegacyFiles(context: Context) {
         // Deletes all old DB files
         for (name in oldDbNames) {
             rmDB(context, name)

@@ -81,6 +81,8 @@ data class RTreeNode(
         return !isFolder()
     }
 
+    fun isWorkspaceRoot(): Boolean = mime == SdkNames.NODE_MIME_WS_ROOT
+
     fun isInRecycle(): Boolean {
         return parentPath.startsWith("/${SdkNames.RECYCLE_BIN_NAME}")
     }
@@ -106,7 +108,6 @@ data class RTreeNode(
     private fun isFlag(flag: Int): Boolean {
         return flags and flag == flag
     }
-
 
     fun toFileNode(): FileNode {
         // TODO double check: we might drop some info that we have missed on first draft implementation

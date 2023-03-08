@@ -1,12 +1,12 @@
 package com.pydio.android.cells.services
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.db.runtime.RJob
 import com.pydio.android.cells.db.runtime.RLog
 import com.pydio.android.cells.db.runtime.RuntimeDB
 import com.pydio.android.cells.utils.currentTimestamp
-import com.pydio.cells.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,17 +36,17 @@ class JobService(runtimeDB: RuntimeDB) {
         return jobDao.getById(jobId)
     }
 
-    fun create(
+    suspend fun create(
         owner: String,
         template: String,
         label: String,
         parentId: Long = -1,
         maxSteps: Long = -1
-    ): Long {
+    ): Long = withContext(Dispatchers.IO) {
         val newJob = RJob.create(owner, template, label, parentId)
         newJob.total = maxSteps
         newJob.updateTimestamp = currentTimestamp()
-        return jobDao.insert(newJob)
+        return@withContext jobDao.insert(newJob)
     }
 
     suspend fun launched(jobId: Long): String? = withContext(Dispatchers.IO) {
@@ -69,6 +69,8 @@ class JobService(runtimeDB: RuntimeDB) {
     }
 
     fun get(jobId: Long): RJob? = jobDao.getById(jobId)
+
+    fun getLiveJob(jobId: Long): LiveData<RJob?> = jobDao.getLiveById(jobId)
 
     fun getMostRecentRunning(template: String): LiveData<RJob?> {
         return jobDao.getMostRecentRunning(template)
@@ -107,14 +109,18 @@ class JobService(runtimeDB: RuntimeDB) {
         jobDao.update(job)
     }
 
-    fun clearTerminated(){
-     jobDao.clearTerminatedJobs()
+    fun clearTerminated() {
+        jobDao.clearTerminatedJobs()
     }
 
     /* MANAGE LOGS */
 
     fun listLogs(): LiveData<List<RLog>> {
         return logDao.getLiveLogs()
+    }
+
+    fun clearAllLogs() {
+        logDao.clearLogs()
     }
 
     // Shortcut for logging
@@ -146,9 +152,5 @@ class JobService(runtimeDB: RuntimeDB) {
                 logDao.insert(log)
             }
         }
-
-    fun clearAllLogs(){
-        logDao.clearLogs()
-    }
 
 }

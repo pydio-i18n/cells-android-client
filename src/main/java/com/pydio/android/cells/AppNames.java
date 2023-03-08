@@ -2,12 +2,13 @@ package com.pydio.android.cells;
 
 public interface AppNames {
 
-    // Network management
-//    String NETWORK_STATUS_UNKNOWN = "unknown";
-//    String NETWORK_STATUS_NO_INTERNET = "no_internet";
-//    String NETWORK_STATUS_METERED = "metered";
-//    String NETWORK_STATUS_OK = "ok";
+    // OAuth Code Flow when remote is Cells
+    String QUERY_KEY_CODE = "code";
+    String QUERY_KEY_STATE = "state";
+    // For OAuth callback
+    String CELLS_ROOT_ENCODED_STATE = "cells%3A%2F%2Froot";
 
+    // Network management
     String NETWORK_TYPE_UNMETERED = "Unmetered";
     String NETWORK_TYPE_METERED = "Metered";
     String NETWORK_TYPE_ROAMING = "Roaming";
@@ -45,8 +46,7 @@ public interface AppNames {
 //    String SORT_BY_DESC = "DESC";
 
     /* Generic actions */
-
-    // TODO  make this generic
+    // Rather make this generic
     String KEY_PREFIX = "com.pydio.android.cells";
     String KEY_PREFIX_ = KEY_PREFIX + ".";
 
@@ -58,6 +58,8 @@ public interface AppNames {
     String ACTION_COPY = KEY_PREFIX_ + "copy";
     String ACTION_MOVE = KEY_PREFIX_ + "move";
     String ACTION_UPLOAD = KEY_PREFIX_ + "upload";
+    String ACTION_DOWNLOAD = KEY_PREFIX_ + "dowload";
+    String ACTION_CREATE_FOLDER = KEY_PREFIX_ + "createfolder";
 
     String ACTION_OPEN_PARENT_IN_WORKSPACES = KEY_PREFIX_ + "openparentinworkspaces";
     String ACTION_DELETE_RECORD = KEY_PREFIX_ + "deleterecord";
@@ -89,27 +91,29 @@ public interface AppNames {
     String JOB_TEMPLATE_RESYNC = "sync-%s";
     String JOB_TEMPLATE_MIGRATION_V2 = "migration-v2";
     String JOB_TEMPLATE_CLEAN = "clean";
+    String JOB_TEMPLATE_SHARE = "share";
 
     String JOB_SORT_BY_DEFAULT = "creation_ts_desc";
     // Status: Warning, same value list must be defined in the res/values/arrays.xml file
     String FILTER_BY_STATUS = "filter_by_status";
     String JOB_STATUS_NEW = "new";
     String JOB_STATUS_PROCESSING = "processing";
-    String JOB_STATUS_CANCELLED = "cancelled";
     String JOB_STATUS_DONE = "done";
+    String JOB_STATUS_CANCELLING = "cancelling";
+    String JOB_STATUS_CANCELLED = "cancelled";
     String JOB_STATUS_WARNING = "warning";
     String JOB_STATUS_ERROR = "error";
     String JOB_STATUS_TIMEOUT = "timeout";
+    // Short cut used in filtering
     String JOB_STATUS_NO_FILTER = "show_all";
+    // Specific additional status to manage uploads when remote server is not currently available
+    String UPLOAD_STATUS_PRE_PROCESSING = "pre_processing";
+    String UPLOAD_STATUS_LOCALLY_CACHED = "locally_cached";
 
     /* Transfers */
     String TRANSFER_TYPE_DOWNLOAD = "download";
     String TRANSFER_TYPE_UPLOAD = "upload";
 
-    String QUERY_KEY_CODE = "code";
-    String QUERY_KEY_STATE = "state";
-
-    String CELLS_ROOT_ENCODED_STATE = "cells%3A%2F%2Froot";
 
     // Workaround to store additional destinations as state
     String CUSTOM_PATH_ACCOUNTS = "/__acounts__";

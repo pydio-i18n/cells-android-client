@@ -10,6 +10,7 @@ import com.pydio.android.cells.AppKeys
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.CellsApp
 import com.pydio.android.cells.R
+import com.pydio.android.cells.db.accounts.RWorkspace
 import com.pydio.android.cells.db.nodes.RLiveOfflineRoot
 import com.pydio.android.cells.db.nodes.ROfflineRoot
 import com.pydio.android.cells.db.nodes.RTreeNode
@@ -35,6 +36,7 @@ import com.pydio.cells.utils.Str
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -75,8 +77,36 @@ class NodeService(
                     "AND parent_path = ? " +
                     "ORDER BY $sortByCol $sortByOrder ", arrayOf(parPath)
         )
-        // Log.e(logTag, "About to list, query: ${lsQuery.sql}")
+        // Log.e(logTag, "About to list, query: ${lsQuery.sql} - file: $parPath")
         return nodeDB(stateID).treeNodeDao().treeNodeQuery(lsQuery)
+    }
+
+    fun sortedList(stateID: StateID, encodedSortBy: String): LiveData<List<RTreeNode>> {
+
+        val (sortByCol, sortByOrder) = parseOrder(encodedSortBy)
+        val parPath = stateID.file
+        val lsQuery = SimpleSQLiteQuery(
+            "SELECT * FROM tree_nodes WHERE encoded_state like '${stateID.id}%' " +
+                    "AND parent_path = ? " +
+                    "ORDER BY $sortByCol $sortByOrder ", arrayOf(parPath)
+        )
+        return nodeDB(stateID).treeNodeDao().treeNodeQuery(lsQuery)
+    }
+
+    fun lsFlow(stateID: StateID): Flow<List<RTreeNode>> {
+
+        val encoded = prefs.getString(
+            AppKeys.CURR_RECYCLER_ORDER, AppNames.DEFAULT_SORT_ENCODED
+        )
+        val (sortByCol, sortByOrder) = parseOrder(encoded)
+        val parPath = stateID.file
+        val lsQuery = SimpleSQLiteQuery(
+            "SELECT * FROM tree_nodes WHERE encoded_state like '${stateID.id}%' " +
+                    "AND parent_path = ? " +
+                    "ORDER BY $sortByCol $sortByOrder ", arrayOf(parPath)
+        )
+        // Log.e(logTag, "About to list, query: ${lsQuery.sql}")
+        return nodeDB(stateID).treeNodeDao().lsFlow(lsQuery)
     }
 
     fun listBookmarks(accountID: StateID): LiveData<List<RTreeNode>> {
@@ -104,20 +134,19 @@ class NodeService(
     }
 
     fun listChildFolders(stateID: StateID): LiveData<List<RTreeNode>> {
-        // Tweak to also be able to list workspaces roots
-        var parPath = stateID.file
-        var mime = SdkNames.NODE_MIME_FOLDER
-        if (Str.empty(parPath)) {
-            parPath = ""
-            mime = SdkNames.NODE_MIME_WS_ROOT
-        } else if (parPath == "/") {
-            Log.e(
-                logTag,
-                "unimplemented tweak. Is it OK?  $stateID: parPath: $parPath, mime: $mime"
-            )
-        }
-        Log.d(logTag, "Listing children of $stateID: parPath: $parPath, mime: $mime")
+        // We use the file param (that includes WS) to be able to also list workspaces roots
+        val parPath = stateID.file ?: "" // initialise with an empty String when null for queries
+
+        val mime = if (Str.notEmpty(parPath))
+            SdkNames.NODE_MIME_FOLDER
+        else
+            SdkNames.NODE_MIME_WS_ROOT
+        Log.d(logTag, "Listing child folders for $stateID. parPath: [$parPath], mime: $mime")
         return nodeDB(stateID).treeNodeDao().lsWithMime(stateID.id, parPath, mime)
+    }
+
+    fun listWorkspaces(stateID: StateID): LiveData<List<RTreeNode>> {
+        return nodeDB(stateID).treeNodeDao().lsWithMime(stateID.id, "", SdkNames.NODE_MIME_WS_ROOT)
     }
 
     fun listViewable(stateID: StateID, mimeFilter: String): LiveData<List<RTreeNode>> {
@@ -127,6 +156,10 @@ class NodeService(
 
     fun getLiveNode(stateID: StateID): LiveData<RTreeNode> {
         return nodeDB(stateID).treeNodeDao().getLiveNode(stateID.id)
+    }
+
+    fun getLiveWorkspace(stateID: StateID): LiveData<RWorkspace> {
+        return accountService.getLiveWorkspace(stateID)
     }
 
     fun getLiveNodes(stateIDs: List<StateID>): LiveData<List<RTreeNode>> {
@@ -139,10 +172,25 @@ class NodeService(
 
     /* Communicate with the DB using suspend functions */
 
+    suspend fun getNode(stateID: StateID): RTreeNode? = withContext(Dispatchers.IO) {
+        if (stateID == StateID.NONE) {
+            null
+        } else {
+            nodeDB(stateID).treeNodeDao().getNode(stateID.id)
+        }
+    }
+
+    suspend fun getWorkspace(stateID: StateID): RWorkspace? {
+        return if (stateID == StateID.NONE) {
+            null
+        } else {
+            accountService.getWorkspace(stateID)
+        }
+    }
+
     /** Single entry point to insert or update a node */
     suspend fun upsertNode(newNode: RTreeNode, isDiffRoot: Boolean = false) =
         withContext(Dispatchers.IO) {
-            // Log.e(logTag, "upserting node: ${newNode.getStateID()}")
 
             val state = newNode.getStateID()
             val currSession = treeNodeRepository.sessions[newNode.getStateID().accountId]
@@ -161,20 +209,20 @@ class NodeService(
                     }
                 }
             }
-            var addr: String? = null
+            var address: String? = null
             val isShared =
                 newNode.properties.getProperty(SdkNames.NODE_PROPERTY_SHARED, "false") == "true"
             if (isShared) {
                 val client = accountService.getClient(state)
                 if (client.isLegacy) {
-                    addr = client.getShareAddress(state.workspace, state.file)
+                    address = client.getShareAddress(state.workspace, state.file)
                 } else {
                     newNode.properties.getProperty(SdkNames.NODE_PROPERTY_SHARE_UUID)?.let {
-                        addr = client.getShareAddress(state.workspace, it)
+                        address = client.getShareAddress(state.workspace, it)
                     }
                 }
             }
-            newNode.setShared(isShared, addr)
+            newNode.setShared(isShared, address)
 
             newNode.localModificationTS = newNode.remoteModificationTS
             newNode.localModificationStatus = null
@@ -198,10 +246,6 @@ class NodeService(
             }
         }
 
-    suspend fun getLocalNode(stateID: StateID): RTreeNode? = withContext(Dispatchers.IO) {
-        nodeDB(stateID).treeNodeDao().getNode(stateID.id)
-    }
-
     suspend fun queryLocally(query: String?, stateID: StateID): List<RTreeNode> =
         withContext(Dispatchers.IO) {
             return@withContext if (query == null) {
@@ -210,6 +254,10 @@ class NodeService(
                 nodeDB(stateID).treeNodeDao().query(query)
             }
         }
+
+    fun liveLocalQuery(stateID: StateID, query: String): LiveData<List<RTreeNode>> =
+        nodeDB(stateID).treeNodeDao().liveQuery(query)
+
 
     /* Update nodes in the local store */
     suspend fun abortLocalChanges(stateID: StateID) = withContext(Dispatchers.IO) {
@@ -220,23 +268,64 @@ class NodeService(
     }
 
     /* Calls to query both the cache and the remote server */
-    suspend fun toggleBookmark(rTreeNode: RTreeNode) = withContext(Dispatchers.IO) {
-        val stateID = rTreeNode.getStateID()
+//    suspend fun toggleBookmark(rTreeNode: RTreeNode) = withContext(Dispatchers.IO) {
+//        val stateID = rTreeNode.getStateID()
+//        toggleBookmark(stateID)
+//    }
+
+    suspend fun toggleBookmark(stateID: StateID, newState: Boolean) = withContext(Dispatchers.IO) {
         try {
-            getClient(stateID).bookmark(stateID.workspace, stateID.file, !rTreeNode.isBookmarked())
-            rTreeNode.setBookmarked(!rTreeNode.isBookmarked())
-            rTreeNode.localModificationTS = currentTimestamp()
-            nodeDB(stateID).treeNodeDao().update(rTreeNode)
+            val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id) ?: return@withContext
+            getClient(stateID).bookmark(stateID.workspace, stateID.file, newState)
+            node.setBookmarked(newState)
+            node.localModificationTS = currentTimestamp()
+            nodeDB(stateID).treeNodeDao().update(node)
         } catch (se: SDKException) { // Could not retrieve thumb, failing silently for the end user
             handleSdkException(stateID, "could not toggle bookmark for $stateID", se)
-            return@withContext null
+            return@withContext
         } catch (ioe: IOException) {
             Log.e(logTag, "cannot toggle bookmark for ${stateID}: ${ioe.message}")
             ioe.printStackTrace()
-            return@withContext null
+            return@withContext
         }
     }
 
+    suspend fun removeShare(stateID: StateID) = withContext(Dispatchers.IO) {
+        try {
+            val client = getClient(stateID)
+            val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id) ?: return@withContext
+            if (client.isLegacy) {
+                client.unshare(stateID.workspace, stateID.file)
+            } else {
+                node.properties.getProperty(SdkNames.NODE_PROPERTY_SHARE_UUID)?.let {
+                    client.unshare(stateID.workspace, it)
+                }
+            }
+        } catch (se: SDKException) {
+            Log.e(logTag, "could remove link for " + stateID.id)
+        } catch (ioe: IOException) {
+            Log.e(logTag, "could remove link for ${stateID}: ${ioe.message}")
+            return@withContext
+        }
+    }
+
+    suspend fun createShare(stateID: StateID): String? = withContext(Dispatchers.IO) {
+        try {
+            // We still put default values. TODO implement user defined details
+            return@withContext getClient(stateID).share(
+                stateID.workspace, stateID.file, stateID.fileName,
+                "Created on ${currentTimestampAsString()}",
+                null, true, true
+            )
+        } catch (se: SDKException) {
+            Log.e(logTag, "could create link for " + stateID.id)
+        } catch (ioe: IOException) {
+            Log.e(logTag, "could create link for ${stateID}: ${ioe.message}")
+        }
+        return@withContext null
+    }
+
+    @Deprecated("Rather use createShare() and removeShare()")
     suspend fun toggleShared(rTreeNode: RTreeNode): String? = withContext(Dispatchers.IO) {
         val stateID = rTreeNode.getStateID()
         try {
@@ -269,18 +358,22 @@ class NodeService(
         return@withContext null
     }
 
-    suspend fun toggleOffline(rTreeNode: RTreeNode) = withContext(Dispatchers.IO) {
-        val stateID = rTreeNode.getStateID()
+    suspend fun toggleOffline(stateID: StateID, newState: Boolean) = withContext(Dispatchers.IO) {
         try {
-            if (rTreeNode.isOfflineRoot()) {
-                removeOfflineRoot(stateID)
+            val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id) ?: return@withContext
+            if (node.isOfflineRoot()) {
+                if (!newState) {
+                    removeOfflineRoot(stateID)
+                }
             } else {
-                updateOfflineRoot(rTreeNode)
+                if (newState) {
+                    updateOfflineRoot(node)
+                }
             }
         } catch (e: Exception) {
             Log.e(logTag, "could update offline sync status for ${stateID}: ${e.message}")
             e.printStackTrace()
-            return@withContext null
+            return@withContext
         }
     }
 
@@ -319,7 +412,7 @@ class NodeService(
         }
 
     // TODO finalize this: we should try to move already existing cache file and index
-    //   rather than deleting / recreating the offline root
+//   rather than deleting / recreating the offline root
     suspend fun moveOfflineRoot(rTreeNode: RTreeNode, offlineRoot: ROfflineRoot) =
         withContext(Dispatchers.IO) {
             val stateID = rTreeNode.getStateID()
@@ -388,7 +481,7 @@ class NodeService(
     ): Pair<Long, String?> =
         withContext(Dispatchers.IO) {
 
-            val label = "Account sync for $stateID launched by $caller"
+            val label = "Account sync for $stateID\nLaunched by $caller"
             val currJobTemplate = String.format(AppNames.JOB_TEMPLATE_RESYNC, stateID.toString())
 
             // We first check if a sync is not already running for this account
@@ -440,7 +533,9 @@ class NodeService(
 //            if (changeNb > 0) {
 //                jobService.incrementProgress(job, 0, "Downloading changed files")
 //            }
-            jobService.done(job, "Sync done with $changeNb changes.", "Successfully done")
+            val msg = "Sync done with $changeNb changes."
+            jobService.done(job, msg, "Successfully done")
+            jobService.i(logTag, "Terminated ${job.label}", "$jobId")
         }
 
     fun getRunningAccountSync(accountID: StateID): LiveData<RJob?> {
@@ -497,14 +592,18 @@ class NodeService(
             return@withContext changeNb
         }
 
-    @OptIn(ExperimentalTime::class)
+    @Deprecated("Rather use method with StateID")
     suspend fun syncOfflineRoot(rTreeNode: RTreeNode): Int = withContext(Dispatchers.IO) {
+        return@withContext syncOfflineRoot(rTreeNode.getStateID())
+    }
 
-        val stateID = rTreeNode.getStateID()
+    @OptIn(ExperimentalTime::class)
+    suspend fun syncOfflineRoot(stateID: StateID): Int = withContext(Dispatchers.IO) {
+
         val caller = AppNames.JOB_OWNER_USER
 
         val dao = nodeDB(stateID).offlineRootDao()
-        val offlineRoot = dao.get(rTreeNode.encodedState) ?: let {
+        val offlineRoot = dao.get(stateID.id) ?: let {
             Log.w(logTag, "Could not find offline root for $stateID, aborting")
             return@withContext 0
         }
@@ -535,7 +634,6 @@ class NodeService(
         jobService.done(job, msg, "Sync done at ${timestampForLogMessage()}")
 
         return@withContext changeNb
-
     }
 
     private fun hasExistingJob(
@@ -666,13 +764,13 @@ class NodeService(
         }
     }
 
-    suspend fun createFolder(parentId: StateID, folderName: String) =
+    suspend fun createFolder(parentID: StateID, folderName: String) =
         withContext(Dispatchers.IO) {
             try {
-                getClient(parentId).mkdir(parentId.workspace, parentId.file, folderName)
+                getClient(parentID).mkdir(parentID.workspace, parentID.file, folderName)
             } catch (e: SDKException) {
-                val msg = "could not create folder at ${parentId.path}"
-                handleSdkException(parentId, msg, e)
+                val msg = "could not create folder at ${parentID.path}"
+                handleSdkException(parentID, msg, e)
                 return@withContext msg
             }
             return@withContext null
@@ -718,7 +816,7 @@ class NodeService(
             return@withContext null
         }
 
-    // Handle communication with the remote server to refresh locally stored data.
+// Handle communication with the remote server to refresh locally stored data.
 
     /**
      * Retrieve the meta of all readable nodes that are at the passed stateID.
@@ -735,7 +833,7 @@ class NodeService(
             val changeNb = folderDiff.compareWithRemote()
             return@withContext Pair(changeNb, null)
         } catch (e: SDKException) {
-            val msg = "could not perform ls for ${stateID.id}"
+            val msg = "could not perform ls for $stateID"
             handleSdkException(stateID, msg, e)
             return@withContext Pair(0, msg)
         }
@@ -783,17 +881,13 @@ class NodeService(
         }
     }
 
-//    private suspend fun statRemoteNode(stateID: StateID): Stats? {
-//        try {
-//            return getClient(stateID).stats(stateID.workspace, stateID.file, true)
-//        } catch (e: SDKException) {
-//            handleSdkException(stateID, "could not stat at $stateID", e)
-//        }
-//        return null
-//    }
+    @Deprecated("Rather use the method with the StateID")
+    suspend fun clearAccountCache(stateId: String): String? = withContext(Dispatchers.IO) {
+        return@withContext clearAccountCache(StateID.fromId(stateId).account())
+    }
 
-    suspend fun clearAccountCache(stateID: String): String? = withContext(Dispatchers.IO) {
-        val accountID = StateID.fromId(stateID).account()
+    suspend fun clearAccountCache(accountID: StateID): String? = withContext(Dispatchers.IO) {
+        // val accountID = StateID.fromId(stateID).account()
         try {
             // First delete corresponding files
             fileService.cleanFileCacheFor(accountID)
@@ -837,7 +931,7 @@ class NodeService(
         val localFile = localFileDao.getFile(rTreeNode.encodedState, AppNames.LOCAL_FILE_TYPE_FILE)
 
         // Corner case: no internet connection
-        if (!accountService.isClientConnected(rTreeNode.encodedState)) {
+        if (!accountService.isClientConnected(rTreeNode.getStateID())) {
             // We admit we are happy with any local version that is found
             localFile?.let { return true }
             // File is not there and we have no connection returning null to let calling class handle this
@@ -858,7 +952,7 @@ class NodeService(
     /**
      * Returns the local file to be opened if it exists, optionally after checking
      * if it is still up to date based on:
-     * - modif time
+     * - modification time
      * - e-tag
      * - size
      */
@@ -956,7 +1050,7 @@ class NodeService(
 //            targetFile
 //        }
 
-    private suspend fun saveToSharedStorage(stateID: StateID, uri: Uri) =
+    suspend fun saveToSharedStorage(stateID: StateID, uri: Uri) =
         withContext(Dispatchers.IO) {
             val rTreeNode = nodeDB(stateID).treeNodeDao().getNode(stateID.id)
                 ?: return@withContext
@@ -1057,7 +1151,7 @@ class NodeService(
                 // We already insert found nodes in the cache to ease following user action
                 for (node in nodes) {
                     // Log.e(logTag, "handling query result for ${node.getStateID()} ")
-                    getLocalNode(node.getStateID())?.let {
+                    getNode(node.getStateID())?.let {
                         // Log.e(logTag, "found ${it.getStateID()}, doing nothing")
                     } ?: upsertNode(node)
                 }

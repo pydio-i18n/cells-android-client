@@ -25,24 +25,21 @@
         android:theme="@style/Cells.Md3">
 
         <activity
-            android:name=".LandActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Cells.Md3.SplashScreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="false"
-            android:theme="@style/Cells.Md3.LightStatusBar" />
-
-        <activity
-            android:name=".ChooseTargetActivity"
-            android:exported="true"
-            android:theme="@style/Cells.Md3.LightStatusBar" >
+            <intent-filter>
+                <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="callback"
+                    android:scheme="cellsauth" />
+            </intent-filter>
             <intent-filter>
                 <category android:name="android.intent.category.DEFAULT" />
                 <action android:name="android.intent.action.SEND" />
@@ -56,20 +53,54 @@
         </activity>
 
         <activity
-            android:name=".AuthActivity"
-            android:exported="true"
-            android:theme="@style/Cells.Md3.LightStatusBar" >
-            <intent-filter>
-                <category android:name="android.intent.category.DEFAULT" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="callback"
-                    android:scheme="cellsauth" />
-            </intent-filter>
-        </activity>
+            android:name=".MigrateActivity"
+            android:exported="false" />
 
-        <activity android:name=".CarouselActivity" />
+        <!--        <activity-->
+        <!--            android:name=".SampleActivity"-->
+        <!--            android:exported="true"-->
+        <!--            android:theme="@style/Cells.Md3.SplashScreen">-->
+        <!--            <intent-filter>-->
+        <!--                <action android:name="android.intent.action.MAIN" />-->
+        <!--                <category android:name="android.intent.category.LAUNCHER" />-->
+        <!--            </intent-filter>-->
+        <!--        </activity>-->
+
+        <!--        <activity-->
+        <!--            android:name=".SelectTargetActivity"-->
+        <!--            android:exported="true"-->
+        <!--            android:theme="@style/Cells.Md3.LightStatusBar">-->
+        <!--            &lt;!&ndash;            <intent-filter>&ndash;&gt;-->
+        <!--            &lt;!&ndash;                <action android:name="android.intent.action.MAIN" />&ndash;&gt;-->
+        <!--            &lt;!&ndash;                <category android:name="android.intent.category.LAUNCHER" />&ndash;&gt;-->
+        <!--            &lt;!&ndash;            </intent-filter>&ndash;&gt;-->
+        <!--            <intent-filter>-->
+        <!--                <category android:name="android.intent.category.DEFAULT" />-->
+        <!--                <action android:name="android.intent.action.SEND" />-->
+        <!--                <data android:mimeType="*/*" />-->
+        <!--            </intent-filter>-->
+        <!--            <intent-filter>-->
+        <!--                <category android:name="android.intent.category.DEFAULT" />-->
+        <!--                <action android:name="android.intent.action.SEND_MULTIPLE" />-->
+        <!--                <data android:mimeType="*/*" />-->
+        <!--            </intent-filter>-->
+        <!--        </activity>-->
+
+        <!--        <activity-->
+        <!--            android:name=".LoginActivity"-->
+        <!--            android:exported="true"-->
+        <!--            android:theme="@style/Cells.Md3.LightStatusBar">-->
+        <!--            <intent-filter>-->
+        <!--                <category android:name="android.intent.category.DEFAULT" />-->
+        <!--                <action android:name="android.intent.action.VIEW" />-->
+        <!--                <category android:name="android.intent.category.BROWSABLE" />-->
+        <!--                <data-->
+        <!--                    android:host="callback"-->
+        <!--                    android:scheme="cellsauth" />-->
+        <!--            </intent-filter>-->
+        <!--        </activity>-->
+
+        <!--        <activity android:name=".CarouselActivity" />-->
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -80,6 +111,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+
         <!-- Work manager is handled by koin, see:
                 https://developer.android.com/topic/libraries/architecture/workmanager/advanced/custom-configuration#remove-default
                 and

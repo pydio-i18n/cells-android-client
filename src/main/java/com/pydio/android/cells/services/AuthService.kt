@@ -1,6 +1,5 @@
 package com.pydio.android.cells.services
 
-import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import com.pydio.android.cells.db.auth.AuthDB
@@ -32,6 +31,7 @@ class AuthService(authDB: AuthDB) {
 
     companion object {
         const val NEXT_ACTION_BROWSE = "browse_account"
+        const val NEXT_ACTION_SHARE = "share"
         const val NEXT_ACTION_ACCOUNTS = "account_list"
         const val NEXT_ACTION_TERMINATE = "terminate"
     }
@@ -44,33 +44,50 @@ class AuthService(authDB: AuthDB) {
     }
 
     /** Cells' Credentials flow management */
-    suspend fun createOAuthIntent(
+    suspend fun generateOAuthFlowUri(
         sessionFactory: SessionFactory,
         url: ServerURL,
         next: String
-    ): Intent? =
+    ): Uri? =
         withContext(Dispatchers.IO) {
-            val serverID = StateID(url.id).id
-            val server = sessionFactory.getServer(serverID)
-            // TODO Do we want to try to re-register the server when it is unknown from the SessionFactory
-                ?: let {
-                    Log.e(logTag, "could not get server $serverID for SessionFactory with url ${url.id}")
-                    return@withContext null
-                }
+            try {
+                val serverID = StateID(url.id).id
 
-            val oAuthState = generateOAuthState()
-            val uri: Uri = generateUriData(server.oAuthConfig, oAuthState)
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.data = uri
-            // Register the state to enable the callback
-            val rOAuthState = ROAuthState(
-                state = oAuthState,
-                serverURL = url,
-                next = next,
-                startTimestamp = currentTimestamp()
-            )
-            authStateDao.insert(rOAuthState)
-            intent
+                val server = sessionFactory.getServer(serverID)
+                // TODO Do we want to try to re-register the server when it is unknown from the SessionFactory
+                    ?: let {
+                        Log.e(
+                            logTag,
+                            "could not get server $serverID for SessionFactory with url ${url.id}"
+                        )
+                        return@withContext null
+                    }
+
+                val oAuthState = generateOAuthState()
+                val uri: Uri = generateUriData(server.oAuthConfig, oAuthState)
+                // Register the state to enable the callback
+                val rOAuthState = ROAuthState(
+                    state = oAuthState,
+                    serverURL = url,
+                    next = next,
+                    startTimestamp = currentTimestamp()
+                )
+                Log.d(logTag, "About to store OAuth state: $rOAuthState")
+                authStateDao.insert(rOAuthState)
+                return@withContext uri
+
+//                val intent = Intent(Intent.ACTION_VIEW)
+//                intent.data = uri
+//                intent.flags = Intent.FLAG_ACTIVITY_NO_HISTORY
+//                intent
+            } catch (e: SDKException) {
+                Log.e(
+                    logTag,
+                    "could not create intent for ${url.url.host}," +
+                            " cause: ${e.code} - ${e.message}"
+                )
+                return@withContext null
+            }
         }
 
     suspend fun handleOAuthResponse(
@@ -78,24 +95,25 @@ class AuthService(authDB: AuthDB) {
         sessionFactory: SessionFactory,
         oauthState: String,
         code: String
-    ): Pair<String, String?>? =
+    ): Pair<StateID, String?>? =
         withContext(Dispatchers.IO) {
-            var accountID: String? = null
+            var accountID: StateID? = null
 
             val rState = authStateDao.get(oauthState)
             if (rState == null) {
-                Log.w(logTag, "Ignored callback with unknown state: ${oauthState}")
+                Log.w(logTag, "Ignored callback with unknown state: $oauthState")
                 return@withContext null
             }
             try {
                 val transport = sessionFactory
                     .getAnonymousTransport(rState.serverURL.id) as CellsTransport
                 val token = transport.getTokenFromCode(code, encoder)
+                Log.d(logTag, "... Matched the token")
                 accountID = manageRetrievedToken(accountService, transport, token)
+                Log.d(logTag, "... Token managed, post clean. Next action: ${rState.next}")
 
                 // Leave OAuth state cacheDB clean
                 authStateDao.delete(oauthState)
-
                 // When creating a new account, we want to put its session on the foreground
                 if (rState.next == NEXT_ACTION_BROWSE) {
                     accountService.openSession(accountID)
@@ -116,7 +134,7 @@ class AuthService(authDB: AuthDB) {
         accountService: AccountService,
         transport: CellsTransport,
         token: Token
-    ): String {
+    ): StateID {
 
         val idToken = IdToken.parse(encoder, token.idToken)
         val accountID = StateID(idToken.claims.name, transport.server.url())
@@ -145,7 +163,7 @@ class AuthService(authDB: AuthDB) {
         // Adapt poll and tasks
         // check if it was a background thread
         // redirectToCallerWithNewState(State.fromAccountId(accountID.id), oauthState)
-        return accountID.id
+        return accountID
     }
 
     private fun generateUriData(cfg: OAuthConfig, state: String): Uri {
