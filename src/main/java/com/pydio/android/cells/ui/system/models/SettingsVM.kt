@@ -1,32 +1,52 @@
 package com.pydio.android.cells.ui.system.models
 
+import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.ViewModel
-import com.pydio.android.cells.AppKeys
-import com.pydio.android.cells.AppNames
-import com.pydio.android.cells.reactive.LiveSharedPreferences
-import com.pydio.android.cells.services.CellsPreferences
-import com.pydio.android.cells.services.NodeService
+import androidx.lifecycle.viewModelScope
+import com.pydio.android.cells.ListType
+import com.pydio.android.cells.services.PreferencesService
 import com.pydio.android.cells.ui.core.ListLayout
+import kotlinx.coroutines.launch
 
 /** Expose methods used to perform house keeping on the App */
 class SettingsVM(
-    private val prefs: CellsPreferences,
-    private val nodeService: NodeService
+    private val prefs: PreferencesService,
+    // private val nodeService: NodeService
 ) : ViewModel() {
 
-    private val logTag = SettingsVM::class.simpleName
+    val cellsPreferences = prefs.cellsPreferencesFlow
 
-    private var livePrefs: LiveSharedPreferences = LiveSharedPreferences(prefs.get())
-    private val sortOrder = livePrefs.getString(
-        AppKeys.CURR_RECYCLER_ORDER,
-        AppNames.DEFAULT_SORT_BY
-    )
-    val layout = livePrefs.getLayout(AppKeys.CURR_RECYCLER_LAYOUT, ListLayout.LIST)
+    fun setShowRuntimeToolsFlag(show: Boolean) {
+        viewModelScope.launch {
+            prefs.setShowDebugToolsFlag(show)
+        }
+    }
 
-    fun setSortBy(newSortBy: String) {
-        val doUpdate = sortOrder.value != newSortBy
-        if (doUpdate) {
-            prefs.setString(AppKeys.CURR_RECYCLER_ORDER, newSortBy)
+    fun setDefaultOrder(order: String) {
+        viewModelScope.launch {
+            prefs.setOrder(ListType.DEFAULT, order)
+        }
+    }
+
+    fun setListLayout(layoutStr: String) {
+        val layout: ListLayout = if (ListLayout.GRID.name == layoutStr)
+            ListLayout.GRID
+        else
+            ListLayout.LIST
+        viewModelScope.launch {
+            prefs.setListLayout(layout)
+        }
+    }
+
+    fun setBooleanFlag(key: Preferences.Key<Boolean>, flag: Boolean) {
+        viewModelScope.launch {
+            prefs.setBoolean(key, flag)
+        }
+    }
+
+    fun setStringPref(key: Preferences.Key<String>, strValue: String) {
+        viewModelScope.launch {
+            prefs.setString(key, strValue)
         }
     }
 }

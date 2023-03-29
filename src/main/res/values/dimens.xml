@@ -53,18 +53,24 @@
     <!-- Bottom Sheets -->
     <dimen name="bottom_sheet_header_height">64dp</dimen>
     <dimen name="bottom_sheet_item_height">54dp</dimen>
-    <dimen name="bottom_sheet_header_h_padding">8dp</dimen>
-    <dimen name="bottom_sheet_header_v_padding">4dp</dimen>
+    <!--    <dimen name="bottom_sheet_header_h_padding">16dp</dimen>-->
+    <dimen name="bottom_sheet_header_v_padding">8dp</dimen>
     <dimen name="bottom_sheet_start_padding">16dp</dimen>
     <dimen name="bottom_sheet_item_h_padding">8dp</dimen>
-    <dimen name="bottom_sheet_v_spacing">6dp</dimen>
-    <dimen name="bottom_sheet_v_padding">6dp</dimen>
+    <dimen name="bottom_sheet_v_spacing">8dp</dimen>
+    <dimen name="bottom_sheet_v_padding">8dp</dimen>
+
+    <!-- Images with Glide -->
+    <dimen name="glide_thumb_radius">4dp</dimen>
 
     <!-- **** LISTS **** -->
+    <dimen name="list_thumb_elevation">12dp</dimen>
 
     <!-- Generic -->
     <item name="disabled_list_item_alpha" format="float" type="dimen">.6</item>
     <dimen name="item_spacer_width">12dp</dimen>
+    <!-- So that the last element of the list is not hidden by the fab ( It used to go with the clipToPadding=false prop in the recycler layout) -->
+    <dimen name="list_bottom_fab_padding">76dp</dimen>
 
     <!-- Lists / Lazy Column Items -->
     <dimen name="list_item_selected_elevation">4dp</dimen>
@@ -74,40 +80,41 @@
     <dimen name="list_item_inner_padding">4dp</dimen>
     <dimen name="list_item_inner_h_padding">8dp</dimen>
     <dimen name="list_item_inner_v_padding">4dp</dimen>
+
     <dimen name="list_up_item_height">40dp</dimen>
 
-    <dimen name="list_thumb_bg_size">40dp</dimen>
-    <dimen name="list_thumb_size">40dp</dimen>
-    <dimen name="list_thumb_icon_size">28dp</dimen>
+    <dimen name="list_thumb_bg_size">48dp</dimen>
+    <dimen name="list_thumb_size">48dp</dimen>
+    <dimen name="list_thumb_icon_size">24dp</dimen>
     <dimen name="list_thumb_padding">8dp</dimen>
     <dimen name="list_thumb_margin">4dp</dimen>
-    <dimen name="list_thumb_elevation">3dp</dimen>
     <dimen name="list_thumb_decorator_size">12dp</dimen>
-    <dimen name="list_thumb_corner_radius">4dp</dimen>
+    <dimen name="list_thumb_corner_radius">6dp</dimen>
+    <dimen name="list_trailing_icon_size">24dp</dimen>
 
-    <dimen name="list_button_size">28dp</dimen>
     <item name="list_button_alpha" format="float" type="dimen">.8</item>
 
-    <!-- Grids / LazyGrids items -->
+    <!-- Grids and LazyGrids items -->
+    <dimen name="grid_large_col_min_width">128dp</dimen>
+    <dimen name="grid_large_corner_radius">12dp</dimen>
+    <dimen name="grid_large_padding">16dp</dimen>
+    <dimen name="grid_large_spaced_by">8dp</dimen>
+    <dimen name="grid_large_icon_size">48dp</dimen>
+    <dimen name="grid_large_h_inner_padding">10dp</dimen>
+    <dimen name="grid_large_v_inner_padding">8dp</dimen>
+    <dimen name="grid_large_more_size">24dp</dimen>
+
+    <dimen name="grid_large_col_text_padding">8dp</dimen>
+    <!-- Grid layout for the account home-->
+    <integer name="grid_ws_column_number">2</integer>
+    <dimen name="grid_ws_image_size">128dp</dimen>
+
+    <!-- Image gallery -->
     <dimen name="grid_col_min_width">128dp</dimen>
     <dimen name="grid_col_spaced_by">2dp</dimen>
     <dimen name="grid_col_text_padding">8dp</dimen>
 
-    <dimen name="grid_large_col_min_width">180dp</dimen>
-    <dimen name="grid_large_icon_size">64dp</dimen>
-    <dimen name="grid_large_col_spaced_by">6dp</dimen>
-    <dimen name="grid_large_col_text_padding">8dp</dimen>
-
-
-    <!-- Recycler View -->
-    <!-- So that the last element of the list is not hidden by the fab
-        Goes with the clipToPadding=false prop in the recycler layout -->
-    <dimen name="recycler_bottom_fab_padding">76dp</dimen>
-    <!-- For rounded corners (in dp) -->
-    <dimen name="glide_thumb_radius">4dp</dimen>
-
     <dimen name="list_icon_size">24dp</dimen>
-    <dimen name="list_more_size">32dp</dimen>
     <dimen name="grid_icon_size">40dp</dimen>
     <dimen name="list_icon_inner_size">16dp</dimen>
     <dimen name="list_icon_corner_radius">6dp</dimen>
@@ -126,10 +133,6 @@
     <dimen name="card_elevation">10dp</dimen>
     <dimen name="card_max_elevation">16dp</dimen>
     <dimen name="grid_layout_card_icon_size">96dp</dimen>
-    <!-- Grid layout for the account home-->
-    <integer name="grid_ws_column_number">2</integer>
-    <dimen name="grid_ws_image_size">128dp</dimen>
-    <dimen name="grid_ws_image_corner_radius">6dp</dimen>
     <!--    <dimen name="grid_thumb_margin2">106dp</dimen>-->
     <dimen name="grid_ws_icon_size">24dp</dimen>
     <dimen name="grid_ws_icon_margin">24dp</dimen>

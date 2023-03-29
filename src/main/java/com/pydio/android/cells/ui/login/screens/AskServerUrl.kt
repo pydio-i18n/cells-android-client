@@ -1,6 +1,8 @@
 package com.pydio.android.cells.ui.login.screens
 
 import android.content.res.Configuration
+import android.util.Log
+import android.view.KeyEvent
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.runtime.Composable
@@ -11,6 +13,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -20,9 +25,8 @@ import com.pydio.android.cells.R
 import com.pydio.android.cells.ui.core.composables.FormBottomButtons
 import com.pydio.android.cells.ui.core.composables.FormInput
 import com.pydio.android.cells.ui.login.LoginHelper
-import com.pydio.android.cells.ui.login.models.NewLoginVM
+import com.pydio.android.cells.ui.login.models.LoginVM
 import com.pydio.android.cells.ui.theme.CellsTheme
-import com.pydio.cells.utils.Log
 import kotlinx.coroutines.launch
 
 private const val logTag = "AskServerUrl"
@@ -30,7 +34,7 @@ private const val logTag = "AskServerUrl"
 @Composable
 fun AskServerUrl(
     helper: LoginHelper,
-    loginVM: NewLoginVM,
+    loginVM: LoginVM,
 ) {
 
     // Log.e(logTag, "Nav to Login Step")
@@ -47,7 +51,6 @@ fun AskServerUrl(
     }
 
     val doPing: (String) -> Unit = { url ->
-        // TODO add sanity checks
         scope.launch {
             val res = loginVM.pingAddress(url, false)
             Log.e(logTag, "After ping with no SkipVerify flag, res: $res")
@@ -78,19 +81,33 @@ fun AskServerUrl(
     cancel: () -> Unit,
 ) {
 
-    val localFocusManager = LocalFocusManager.current
+    val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val imeAction = ImeAction.Done
 
+    val onDone: () -> Unit = {
+        pingUrl(urlString)
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
+
     val keyboardActions = KeyboardActions(
-        onNext = { localFocusManager.moveFocus(FocusDirection.Down) },
-        onDone = {
-            pingUrl(urlString)
-            localFocusManager.clearFocus()
-            keyboardController?.hide()
-        }
+        onNext = { focusManager.moveFocus(FocusDirection.Down) },
+        onDone = { onDone() }
     )
+
+    val modifier = Modifier.onPreviewKeyEvent {
+        if (it.key == Key.Tab && it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+            focusManager.moveFocus(FocusDirection.Down)
+            true
+        } else if (it.key == Key.Enter) {
+            onDone()
+            true
+        } else {
+            false
+        }
+    }
 
     DefaultLoginPage(
         isProcessing = isProcessing,
@@ -98,12 +115,13 @@ fun AskServerUrl(
         desc = stringResource(R.string.ask_url_desc),
         message = message
     ) {
+
         FormInput(
             value = urlString,
             description = "Server URL",
             onValueChanged = { setUrl(it) },
             isProcessing = isProcessing,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             errorMessage = errMsg,
             imeAction = imeAction,
             keyboardActions = keyboardActions

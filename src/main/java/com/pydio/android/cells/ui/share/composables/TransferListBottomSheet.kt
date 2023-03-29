@@ -12,9 +12,10 @@ import androidx.compose.ui.unit.dp
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.nodes.RTransfer
-import com.pydio.android.cells.ui.core.composables.BottomSheetContent
-import com.pydio.android.cells.ui.core.composables.BottomSheetHeader
-import com.pydio.android.cells.ui.core.composables.SimpleMenuItem
+import com.pydio.android.cells.ui.core.composables.menus.BottomSheetContent
+import com.pydio.android.cells.ui.core.composables.menus.BottomSheetHeader
+import com.pydio.android.cells.ui.core.composables.menus.SimpleMenuItem
+import com.pydio.android.cells.ui.share.composables.buildStatusString
 import com.pydio.android.cells.ui.theme.CellsIcons
 import com.pydio.cells.transport.StateID
 
@@ -36,8 +37,9 @@ fun TransferBottomSheet(
         simpleMenuItems.add(
             SimpleMenuItem(
                 CellsIcons.Pause,
-                stringResource(id = R.string.pause)
-            ) { onClick(AppNames.ACTION_CANCEL, item.transferId) },
+                stringResource(id = R.string.pause),
+                { onClick(AppNames.ACTION_CANCEL, item.transferId) },
+            ),
         )
     }
     if (AppNames.JOB_STATUS_CANCELLED == item.status
@@ -46,8 +48,9 @@ fun TransferBottomSheet(
         simpleMenuItems.add(
             SimpleMenuItem(
                 CellsIcons.Resume,
-                stringResource(id = R.string.relaunch)
-            ) { onClick(AppNames.ACTION_RESTART, item.transferId) },
+                stringResource(id = R.string.relaunch),
+                { onClick(AppNames.ACTION_RESTART, item.transferId) },
+            )
         )
     }
     if (AppNames.JOB_STATUS_DONE == item.status
@@ -57,15 +60,17 @@ fun TransferBottomSheet(
         simpleMenuItems.add(
             SimpleMenuItem(
                 CellsIcons.Delete,
-                stringResource(id = R.string.delete)
-            ) { onClick(AppNames.ACTION_DELETE_RECORD, item.transferId) },
+                stringResource(id = R.string.delete),
+                { onClick(AppNames.ACTION_DELETE_RECORD, item.transferId) },
+            )
         )
     }
     simpleMenuItems.add(
         SimpleMenuItem(
             CellsIcons.OpenLocation,
-            stringResource(id = R.string.open_parent_in_workspaces)
-        ) { onClick(AppNames.ACTION_OPEN_PARENT_IN_WORKSPACES, item.transferId) },
+            stringResource(id = R.string.open_parent_in_workspaces),
+            { onClick(AppNames.ACTION_OPEN_PARENT_IN_WORKSPACES, item.transferId) },
+        )
     )
 
     BottomSheetContent({
@@ -91,10 +96,10 @@ fun TransferBottomSheetPreview() {
         ).show()
     }
     val simpleMenuItems: List<SimpleMenuItem> = listOf(
-        SimpleMenuItem(CellsIcons.Share, "Share") { onClick("Share") },
-        SimpleMenuItem(CellsIcons.Link, "Get Link") { onClick("Get Link") },
-        SimpleMenuItem(CellsIcons.Edit, "Edit") { onClick("Edit") },
-        SimpleMenuItem(CellsIcons.Delete, "Delete") { onClick("Delete") },
+        SimpleMenuItem(CellsIcons.Share, "Share", { onClick("Share") }),
+        SimpleMenuItem(CellsIcons.Link, "Get Link", { onClick("Get Link") }),
+        SimpleMenuItem(CellsIcons.Edit, "Edit", { onClick("Edit") }),
+        SimpleMenuItem(CellsIcons.Delete, "Delete", { onClick("Delete") }),
     )
 
     BottomSheetContent(

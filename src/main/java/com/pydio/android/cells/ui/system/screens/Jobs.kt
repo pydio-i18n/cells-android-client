@@ -8,14 +8,17 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
@@ -28,32 +31,51 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.pydio.android.cells.JobStatus
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.runtime.RJob
-import com.pydio.android.cells.ui.core.nav.DefaultTopAppBar
+import com.pydio.android.cells.ui.core.composables.TopBarWithActions
+import com.pydio.android.cells.ui.system.models.JobListVM
+import com.pydio.android.cells.ui.theme.CellsColor
+import com.pydio.android.cells.ui.theme.CellsIcons
 import com.pydio.android.cells.ui.theme.CellsTheme
-import com.pydio.android.cells.ui.theme.debug
-import com.pydio.android.cells.ui.theme.info
-import com.pydio.android.cells.ui.theme.warning
 import com.pydio.android.cells.utils.asSinceString
 import com.pydio.android.cells.utils.currentTimestamp
 import com.pydio.android.cells.utils.timestampToString
+import org.koin.androidx.compose.koinViewModel
+
+@Composable
+fun JobScreen(
+    openDrawer: () -> Unit,
+    jobVM: JobListVM = koinViewModel(),
+) {
+    val jobs by jobVM.jobs.observeAsState()
+    JobScreen(
+        jobs ?: listOf(),
+        openDrawer,
+        jobVM::clearTerminated,
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JobScreen(
+private fun JobScreen(
     jobs: List<RJob>,
     openDrawer: () -> Unit,
-    modifier: Modifier = Modifier
+    clearTerminated: () -> Unit,
 ) {
-    val topAppBarState = rememberTopAppBarState()
     Scaffold(
         topBar = {
-            DefaultTopAppBar(
+            TopBarWithActions(
                 title = stringResource(R.string.job_list_title),
                 openDrawer = openDrawer,
-                topAppBarState = topAppBarState
+                actions = {
+                    IconButton(onClick = clearTerminated) {
+                        Icon(
+                            imageVector = CellsIcons.Delete,
+                            contentDescription = stringResource(R.string.clear_terminated)
+                        )
+                    }
+                },
             )
         },
-        modifier = modifier
     ) { innerPadding ->
         JobList(jobs, innerPadding)
     }
@@ -156,10 +178,10 @@ private fun buildStatusString(
         JobStatus.ERROR.id,
         JobStatus.TIMEOUT.id -> MaterialTheme.colorScheme.error
         JobStatus.WARNING.id,
-        JobStatus.CANCELLED.id -> warning
+        JobStatus.CANCELLED.id -> CellsColor.warning
         JobStatus.NEW.id,
-        JobStatus.PROCESSING.id -> debug
-        else -> info
+        JobStatus.PROCESSING.id -> CellsColor.debug
+        else -> CellsColor.info
     }
     val overStyle = SpanStyle(background = bgColor, color = contentColorFor(bgColor))
     val createdTs = timestampToString(creationTimestamp, "dd-MM HH:mm:ss")

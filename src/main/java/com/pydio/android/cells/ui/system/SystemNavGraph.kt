@@ -1,23 +1,17 @@
 package com.pydio.android.cells.ui.system
 
 import android.content.Intent
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
-import com.pydio.android.cells.ui.core.composables.extraTopPadding
 import com.pydio.android.cells.ui.core.lazyStateID
-import com.pydio.android.cells.ui.rememberContentPaddingForScreen
 import com.pydio.android.cells.ui.system.models.HouseKeepingVM
-import com.pydio.android.cells.ui.system.models.JobListVM
-import com.pydio.android.cells.ui.system.models.LogListVM
 import com.pydio.android.cells.ui.system.models.SettingsVM
 import com.pydio.android.cells.ui.system.screens.AboutScreen
 import com.pydio.android.cells.ui.system.screens.ConfirmClearCache
 import com.pydio.android.cells.ui.system.screens.JobScreen
 import com.pydio.android.cells.ui.system.screens.LogScreen
-import com.pydio.android.cells.ui.system.screens.PreferencesScreen
+import com.pydio.android.cells.ui.system.screens.SettingsScreen
 import com.pydio.cells.utils.Log
 import org.koin.androidx.compose.koinViewModel
 
@@ -34,33 +28,24 @@ fun NavGraphBuilder.systemNavGraph(
 ) {
 
     composable(SystemDestinations.About.route) {
-        Log.e(logTag, "... Will navigate to About, expanded screen: $isExpandedScreen")
+        Log.d(logTag, "... Navigating to \"About\" page, expanded screen: $isExpandedScreen")
         AboutScreen(
             openDrawer = openDrawer,
             launchIntent = launchIntent,
-            contentPadding = rememberContentPaddingForScreen(
-                additionalTop = extraTopPadding(isExpandedScreen),
-                excludeTop = !isExpandedScreen
-            ),
+//            contentPadding = rememberContentPaddingForScreen(
+//                additionalTop = extraTopPadding(isExpandedScreen),
+//                excludeTop = !isExpandedScreen
+//            ),
         )
     }
 
     composable(SystemDestinations.Jobs.route) {
-        val jobVM: JobListVM = koinViewModel()
-        val jobs by jobVM.jobs.observeAsState()
-        JobScreen(
-            jobs = jobs ?: listOf(),
-            openDrawer = openDrawer,
-        )
+        JobScreen(openDrawer = openDrawer)
     }
 
     composable(SystemDestinations.Logs.route) {
-        val logVM: LogListVM = koinViewModel()
-        val logs by logVM.logs.observeAsState()
-        LogScreen(
-            logs = logs ?: listOf(),
-            openDrawer = openDrawer,
-        )
+        Log.d(logTag, "... About to open Logs")
+        LogScreen(openDrawer = openDrawer)
     }
 
     dialog(SystemDestinations.ClearCache.route) { nbsEntry ->
@@ -73,7 +58,7 @@ fun NavGraphBuilder.systemNavGraph(
 
     composable(SystemDestinations.Settings.route) {
         val settingsVM: SettingsVM = koinViewModel()
-        PreferencesScreen(
+        SettingsScreen(
             openDrawer = openDrawer,
             settingsVM,
         )

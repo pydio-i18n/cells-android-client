@@ -7,9 +7,9 @@ import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.LiveData
 import androidx.sqlite.db.SimpleSQLiteQuery
-import com.pydio.android.cells.AppKeys
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.CellsApp
+import com.pydio.android.cells.ListType
 import com.pydio.android.cells.db.nodes.RTransfer
 import com.pydio.android.cells.db.nodes.RTransferCancellation
 import com.pydio.android.cells.db.nodes.RTreeNode
@@ -20,7 +20,7 @@ import com.pydio.android.cells.reactive.NetworkStatus
 import com.pydio.android.cells.utils.childFile
 import com.pydio.android.cells.utils.computeFileMd5
 import com.pydio.android.cells.utils.currentTimestamp
-import com.pydio.android.cells.utils.decodeSortById
+import com.pydio.android.cells.utils.parseOrder
 import com.pydio.cells.api.ErrorCodes
 import com.pydio.cells.api.SDKException
 import com.pydio.cells.api.SdkNames
@@ -46,7 +46,7 @@ import java.io.OutputStream
 import java.util.*
 
 class TransferService(
-    private val prefs: CellsPreferences,
+    private val prefs: PreferencesService,
     private val networkService: NetworkService,
     private val accountService: AccountService,
     private val treeNodeRepository: TreeNodeRepository,
@@ -54,7 +54,7 @@ class TransferService(
     private val fileService: FileService,
 ) {
 
-    private val logTag = TransferService::class.java.simpleName
+    private val logTag = "TransferService"
 
     private val transferServiceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + transferServiceJob)
@@ -71,13 +71,6 @@ class TransferService(
 
     private fun getTransferDao(accountId: StateID): TransferDao {
         return nodeDB(accountId).transferDao()
-    }
-
-    fun queryTransfers(stateId: StateID): LiveData<List<RTransfer>> {
-        val filterByStatus = prefs.getString(
-            AppKeys.TRANSFER_FILTER_BY_STATUS, AppNames.JOB_STATUS_NO_FILTER
-        )
-        return queryTransfersExplicitFilter(stateId, filterByStatus)
     }
 
     fun getTransfersRecordsForJob(
@@ -98,13 +91,10 @@ class TransferService(
 
     fun queryTransfersExplicitFilter(
         stateID: StateID,
-        filterByStatus: String
+        filterByStatus: String,
+        encodedOrder: String,
     ): LiveData<List<RTransfer>> {
-        val (sortByCol, sortByOrder) = decodeSortById(
-            prefs.getString(
-                AppKeys.TRANSFER_SORT_BY, AppNames.JOB_SORT_BY_DEFAULT
-            )
-        )
+        val (sortByCol, sortByOrder) = parseOrder(encodedOrder, ListType.TRANSFER)
         val lsQuery = if (filterByStatus == AppNames.JOB_STATUS_NO_FILTER) {
             SimpleSQLiteQuery("SELECT * FROM transfers ORDER BY $sortByCol $sortByOrder")
         } else {
@@ -128,10 +118,6 @@ class TransferService(
                 uploadOne(it)
             }
         }
-    }
-
-    fun getLiveRecord(accountId: StateID, transferID: Long): LiveData<RTransfer?> {
-        return getTransferDao(accountId).getLiveById(transferID)
     }
 
     suspend fun getRecord(accountID: StateID, transferID: Long): RTransfer? =
@@ -183,13 +169,14 @@ class TransferService(
             }
 
             // Otherwise, try to download if network type and user preferences allow it
-            val applyLimit = prefs.getBoolean(AppKeys.APPLY_METERED_LIMITATION, true)
-            val dlThumb = prefs.getBoolean(AppKeys.METERED_DL_THUMBS, false)
+            val currSettings = prefs.fetchPreferences()
+//            val applyLimit = prefs.getBoolean(AppKeys.APPLY_METERED_LIMITATION, true)
+//            val dlThumb = prefs.getBoolean(AppKeys.METERED_DL_THUMBS, false)
             when (networkService.networkStatus) {
                 is NetworkStatus.Unmetered
                 -> return@withContext downloadFile(state, rNode, type, parentJob, null)
                 is NetworkStatus.Metered
-                -> if (!applyLimit || dlThumb) {
+                -> if (!currSettings.meteredNetwork.applyLimits || currSettings.meteredNetwork.dlThumbs) {
                     return@withContext downloadFile(state, rNode, type, parentJob, null)
                 } else {
                     return@withContext null to "Cannot download preview images on metered network"
@@ -276,31 +263,33 @@ class TransferService(
      * the real download.
      */
     suspend fun prepareDownload(
-        state: StateID,
+        stateID: StateID,
         type: String,
         parentJob: RJob?
     ): Pair<Long, String?> =
         withContext(Dispatchers.IO) {
 
             // Retrieve data and sanity check
-            val rNode = nodeService.getNode(state)
+            val rNode = nodeService.getNode(stateID)
             if (rNode == null) {
                 // No node found, aborting
-                val errorMessage = "No node found for $state, aborting file DL"
+                val errorMessage = "No node found for $stateID, aborting file DL"
                 Log.w(logTag, errorMessage)
                 return@withContext Pair(-1, errorMessage)
             }
 
-            val localPath = fileService.getLocalPathFromState(state, type)
+            val localPath = fileService.getLocalPathFromState(stateID, type)
             val rec = RTransfer.fromState(
-                state.id,
+                stateID.id,
                 AppNames.TRANSFER_TYPE_DOWNLOAD,
                 localPath,
                 rNode.size,
                 rNode.mime,
                 parentJobId = parentJob?.jobId ?: 0L
             )
-            return@withContext Pair(getTransferDao(state).insert(rec), null)
+            val transferID = getTransferDao(stateID).insert(rec)
+            Log.e(logTag, "Prepared transfer #$transferID for $stateID")
+            return@withContext transferID to null
         }
 
     /**
@@ -521,7 +510,7 @@ class TransferService(
         withContext(Dispatchers.IO) {
             // Real upload of a single single part
             var inputStream: InputStream? = null
-            var cancellationMsg = ""
+            var cancellationMsg: String
             try {
 
                 val state = transferRecord.getStateId()

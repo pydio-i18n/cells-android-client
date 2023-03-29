@@ -22,8 +22,6 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,9 +30,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -46,16 +44,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.accounts.RWorkspace
+import com.pydio.android.cells.ui.browse.BrowseHelper
 import com.pydio.android.cells.ui.browse.models.AccountHomeVM
 import com.pydio.android.cells.ui.core.LoadingState
 import com.pydio.android.cells.ui.core.composables.DefaultTopBar
-import com.pydio.android.cells.ui.core.composables.GridThumb
 import com.pydio.android.cells.ui.core.composables.MainTitleText
-import com.pydio.android.cells.ui.core.getFloatResource
+import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithIcon
 import com.pydio.android.cells.ui.models.BrowseRemoteVM
 import com.pydio.android.cells.ui.theme.CellsIcons
 import com.pydio.android.cells.ui.theme.CellsTheme
 import com.pydio.cells.transport.StateID
+import kotlinx.coroutines.launch
 
 private const val logTag = "AccountHome"
 
@@ -63,20 +62,15 @@ private const val logTag = "AccountHome"
 fun AccountHome(
     accountID: StateID,
     openDrawer: () -> Unit,
-    openAccounts: () -> Unit,
     openSearch: () -> Unit,
-    openWorkspace: (StateID) -> Unit,
     browseRemoteVM: BrowseRemoteVM,
     accountHomeVM: AccountHomeVM,
+    browseHelper: BrowseHelper,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    // FIXME this must not be done here anymore
-    LaunchedEffect(key1 = accountID) {
-        Log.e(logTag, "... in AccountHome, launching effect")
-        browseRemoteVM.watch(accountID, false)
-    }
     val loadingState by browseRemoteVM.loadingState.observeAsState()
-
     val sessionView by accountHomeVM.currSession.observeAsState()
     val workspaces by accountHomeVM.wss.observeAsState()
     val cells by accountHomeVM.cells.observeAsState()
@@ -94,8 +88,16 @@ fun AccountHome(
         cells = cells ?: listOf(),
         loadingState = loadingState ?: LoadingState.STARTING,
         openDrawer = openDrawer,
-        openAccounts = openAccounts,
-        openWorkspace = openWorkspace,
+        openAccounts = {
+            scope.launch {
+                browseHelper.open(context, StateID.NONE)
+            }
+        },
+        openWorkspace = {
+            scope.launch {
+                browseHelper.open(context, it)
+            }
+        },
         openSearch = openSearch,
         forceRefresh = forceRefresh,
     )
@@ -123,13 +125,10 @@ private fun WithScaffold(
                 openSearch = openSearch,
             )
         },
-//        modifier = Modifier.padding(
-//            horizontal = dimensionResource(id = R.dimen.margin_small)
-//        )
     ) { padding -> // Since Compose 1.2.0 it's required to use padding parameter, passed into Scaffold content composable. You should apply it to the topmost container/view in content:
 
-        Log.e(logTag, "### About to create the list passed content padding")
-        Log.e(logTag, "$padding")
+//        Log.e(logTag, "### About to create the list passed content padding")
+//        Log.e(logTag, "$padding")
 
         val listPadding = PaddingValues(
             top = padding.calculateTopPadding(),
@@ -138,7 +137,7 @@ private fun WithScaffold(
             end = dimensionResource(id = R.dimen.margin_medium),
         )
 
-        OfflineRootsList(
+        HomeListContent(
             loadingState = loadingState,
             stateID = stateID,
             workspaces = workspaces,
@@ -147,14 +146,14 @@ private fun WithScaffold(
             openAccounts = openAccounts,
             forceRefresh = forceRefresh,
             padding = listPadding,
-            modifier = Modifier.fillMaxWidth(), // padding(padding),
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-private fun OfflineRootsList(
+private fun HomeListContent(
     loadingState: LoadingState,
     stateID: StateID,
     workspaces: List<RWorkspace>,
@@ -173,9 +172,9 @@ private fun OfflineRootsList(
 
     Box(modifier.pullRefresh(state)) {
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 128.dp),
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.margin_medium)),
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.margin)),
+            columns = GridCells.Adaptive(minSize = dimensionResource(R.dimen.grid_large_col_min_width)),
+            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
+            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
             contentPadding = padding,
         ) {
 
@@ -186,7 +185,9 @@ private fun OfflineRootsList(
                     username = stateID.username,
                     address = stateID.serverUrl,
                     openAccounts = openAccounts,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = dimensionResource(id = R.dimen.margin_small))
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -206,15 +207,11 @@ private fun OfflineRootsList(
                     )
                 }
                 items(workspaces, key = { it.encodedState }) { ws ->
-                    HomeCardItem(
-                        encodedState = ws.encodedState,
+                    LargeCardWithIcon(
                         sortName = ws.sortName,
-                        name = ws.label ?: "",
                         title = ws.label ?: "",
                         desc = ws.description ?: "",
                         mime = ws.type,
-                        eTag = "",
-                        hasThumb = false,
                         modifier = Modifier
                             .wrapContentSize(align = Alignment.Center)
                             .clickable { open(ws.getStateID()) },
@@ -230,15 +227,12 @@ private fun OfflineRootsList(
                     )
                 }
                 items(cells, key = { it.encodedState }) { ws ->
-                    HomeCardItem(
-                        encodedState = ws.encodedState,
+                    LargeCardWithIcon(
                         sortName = ws.sortName,
-                        name = ws.label ?: "",
                         title = ws.label ?: "",
-                        desc = ws.description ?: "",
+                        desc = ws.description
+                            ?: "", // TODO provide another string for nicer UI when the description when ws."",
                         mime = ws.type,
-                        eTag = "",
-                        hasThumb = false,
                         modifier = Modifier
                             .wrapContentSize(align = Alignment.Center)
                             .clickable { open(ws.getStateID()) },
@@ -261,70 +255,13 @@ private fun OfflineRootsList(
 }
 
 @Composable
-private fun HomeCardItem(
-    encodedState: String,
-    sortName: String?,
-    name: String,
-    title: String,
-    desc: String,
-    mime: String,
-    eTag: String?,
-    hasThumb: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val titlePadding = PaddingValues(
-        start = 8.dp,
-        end = 8.dp,
-        top = 4.dp,
-        bottom = 0.dp,
-    )
-    val descPadding = PaddingValues(
-        start = 8.dp,
-        end = 8.dp,
-        top = 0.dp,
-        bottom = 8.dp,
-    )
-
-    Card(
-        shape = RoundedCornerShape(dimensionResource(R.dimen.grid_ws_image_corner_radius)),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = dimensionResource(R.dimen.grid_ws_card_elevation)
-        ),
-        modifier = modifier
-    ) {
-
-        GridThumb(
-            encodedState = encodedState,
-            sortName = sortName,
-            name = name,
-            mime = mime,
-            eTag = eTag,
-            hasThumb = hasThumb,
-            outerSize = dimensionResource(R.dimen.grid_ws_image_size),
-            iconSize = dimensionResource(R.dimen.grid_icon_size),
-            clipShape = RoundedCornerShape(dimensionResource(R.dimen.glide_thumb_radius)),
-        )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(titlePadding)
-        )
-        Text(
-            text = desc,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(descPadding)
-        )
-    }
-}
-
-@Composable
 fun HomeHeader(
     username: String,
     address: String,
     openAccounts: () -> Unit,
     modifier: Modifier,
 ) {
-    val buttonAlpha = getFloatResource(LocalContext.current, R.dimen.list_button_alpha)
+//    val buttonAlpha = getFloatResource(LocalContext.current, R.dimen.list_button_alpha)
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,

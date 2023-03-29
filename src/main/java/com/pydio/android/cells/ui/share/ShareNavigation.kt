@@ -6,7 +6,7 @@ import com.pydio.cells.transport.StateID
 /** Simply expose navigation actions for the Share subGraph */
 class ShareNavigation(private val navController: NavHostController) {
 
-    private val logTag = ShareNavigation::class.simpleName
+    // private val logTag = "ShareNavigation"
 
     fun toAccounts() {
         val route = ShareDestination.ChooseAccount.route
@@ -23,7 +23,7 @@ class ShareNavigation(private val navController: NavHostController) {
     fun toTransfers(stateID: StateID, jobID: Long) {
         val route = ShareDestination.UploadInProgress.createRoute(stateID, jobID)
         navController.navigate(route) {
-            launchSingleTop = true
+            popUpTo(ShareDestination.ChooseAccount.route) { inclusive = true }
         }
     }
 

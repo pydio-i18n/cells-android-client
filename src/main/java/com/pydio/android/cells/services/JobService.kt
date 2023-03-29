@@ -70,6 +70,10 @@ class JobService(runtimeDB: RuntimeDB) {
 
     fun get(jobId: Long): RJob? = jobDao.getById(jobId)
 
+    fun getMostRecent(template: String): LiveData<RJob?> {
+        return jobDao.getMostRecent(template)
+    }
+
     fun getLiveJob(jobId: Long): LiveData<RJob?> = jobDao.getLiveById(jobId)
 
     fun getMostRecentRunning(template: String): LiveData<RJob?> {
@@ -99,6 +103,9 @@ class JobService(runtimeDB: RuntimeDB) {
         jobDao.update(job)
     }
 
+// FIXME should be
+    // suspend fun done(job: RJob, message: String?, lastProgressMsg: String?)  = withContext(Dispatchers.IO) {
+
     fun done(job: RJob, message: String?, lastProgressMsg: String?) {
         job.status = AppNames.JOB_STATUS_DONE
         job.doneTimestamp = currentTimestamp()
@@ -109,7 +116,7 @@ class JobService(runtimeDB: RuntimeDB) {
         jobDao.update(job)
     }
 
-    fun clearTerminated() {
+    suspend fun clearTerminated() = withContext(Dispatchers.IO) {
         jobDao.clearTerminatedJobs()
     }
 
@@ -119,7 +126,7 @@ class JobService(runtimeDB: RuntimeDB) {
         return logDao.getLiveLogs()
     }
 
-    fun clearAllLogs() {
+    suspend fun clearAllLogs() = withContext(Dispatchers.IO) {
         logDao.clearLogs()
     }
 

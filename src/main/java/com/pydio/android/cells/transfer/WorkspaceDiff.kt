@@ -24,7 +24,7 @@ class WorkspaceDiff(
     private val client: Client
 ) : KoinComponent {
 
-    private val logTag = WorkspaceDiff::class.simpleName
+    private val logTag = "WorkspaceDiff"
 
     private val treeNodeRepository: TreeNodeRepository by inject()
     private val fileService: FileService by inject()
@@ -151,7 +151,7 @@ class WorkspaceDiff(
         // delete thumbs
         val thumbParPath =
             fileService.dataParentPath(local.getStateID().account(), AppNames.LOCAL_FILE_TYPE_THUMB)
-        // FIXME
+        //  FIXME
 //        for (node in nodeDB.treeNodeDao().getUnder(local.encodedState)) {
 //            node.thumbFilename?.let {
 //                Log.i(logTag, "Got a file to delete: $it")

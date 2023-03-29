@@ -5,6 +5,7 @@ import android.text.format.Formatter
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -49,25 +51,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.pydio.android.cells.ListType
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.nodes.RLiveOfflineRoot
 import com.pydio.android.cells.db.runtime.RJob
+import com.pydio.android.cells.ui.browse.BrowseHelper
 import com.pydio.android.cells.ui.browse.composables.NodeAction
 import com.pydio.android.cells.ui.browse.composables.NodeMoreMenuData
 import com.pydio.android.cells.ui.browse.composables.NodeMoreMenuType
-import com.pydio.android.cells.ui.browse.composables.OfflineRootGridItem
 import com.pydio.android.cells.ui.browse.composables.OfflineRootItem
-import com.pydio.android.cells.ui.browse.composables.getNodeTitle
 import com.pydio.android.cells.ui.browse.menus.MoreMenuState
 import com.pydio.android.cells.ui.browse.menus.SortByMenu
 import com.pydio.android.cells.ui.browse.models.OfflineVM
 import com.pydio.android.cells.ui.core.ListLayout
 import com.pydio.android.cells.ui.core.LoadingState
 import com.pydio.android.cells.ui.core.composables.TopBarWithMoreMenu
-import com.pydio.android.cells.ui.core.composables.WithLoadingListBackground
 import com.pydio.android.cells.ui.core.composables.animations.SmoothLinearProgressIndicator
 import com.pydio.android.cells.ui.core.composables.getJobStatus
-import com.pydio.android.cells.ui.core.composables.modal.ModalBottomSheetLayout
+import com.pydio.android.cells.ui.core.composables.getNodeTitle
+import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithIcon
+import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithThumb
+import com.pydio.android.cells.ui.core.composables.lists.WithLoadingListBackground
+import com.pydio.android.cells.ui.core.composables.menus.CellsModalBottomSheetLayout
 import com.pydio.android.cells.ui.core.composables.modal.ModalBottomSheetValue
 import com.pydio.android.cells.ui.core.composables.modal.rememberModalBottomSheetState
 import com.pydio.android.cells.ui.theme.CellsIcons
@@ -84,26 +89,25 @@ fun OfflineRoots(
     offlineVM: OfflineVM,
     openDrawer: () -> Unit,
     openSearch: () -> Unit,
-    open: (StateID) -> Unit,
+    browseHelper: BrowseHelper,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     val loadingState by offlineVM.loadingState.observeAsState()
-    val currJob = offlineVM.syncJob.observeAsState()
-    val listLayout by offlineVM.layout.observeAsState()
+    val syncJob = offlineVM.syncJob.observeAsState()
+    val listLayout by offlineVM.layout.collectAsState(ListLayout.LIST)
     val roots = offlineVM.offlineRoots.observeAsState()
-
 
     val localOpen: (StateID) -> Unit = { stateID ->
         scope.launch {
             offlineVM.getNode(stateID)?.let {
                 if (it.isFolder()) {
-                    open(stateID)
+                    browseHelper.open(context, stateID)
 //                } else if (it.isPreViewable()) {
                     // TODO (since v2) Open carousel for offline nodes
                 } else {
-                    offlineVM.viewFile(context, stateID)
+                    browseHelper.open(context, stateID)
                 }
             }
         }
@@ -111,9 +115,12 @@ fun OfflineRoots(
 
     val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
     val nodeMoreMenuData: MutableState<Pair<NodeMoreMenuType, StateID>> = remember {
-        mutableStateOf(Pair(NodeMoreMenuType.BOOKMARK,
-            StateID.NONE
-        ))
+        mutableStateOf(
+            Pair(
+                NodeMoreMenuType.OFFLINE,
+                StateID.NONE
+            )
+        )
     }
     val openMoreMenu: (NodeMoreMenuType, StateID) -> Unit = { type, stateID ->
         scope.launch {
@@ -125,7 +132,8 @@ fun OfflineRoots(
     val moreMenuDone: () -> Unit = {
         scope.launch {
             sheetState.hide()
-            nodeMoreMenuData.value = Pair(NodeMoreMenuType.BOOKMARK,
+            nodeMoreMenuData.value = Pair(
+                NodeMoreMenuType.BOOKMARK,
                 StateID.NONE
             )
         }
@@ -153,9 +161,9 @@ fun OfflineRoots(
                 scope.launch {
                     offlineVM.getNode(stateID)?.let {
                         if (it.isFolder()) {
-                            open(stateID)
+                            localOpen(stateID)
                         } else {
-                            open(stateID.parent())
+                            localOpen(stateID.parent())
                         }
                     }
                 }
@@ -189,8 +197,8 @@ fun OfflineRoots(
 
     WithScaffold(
         loadingState = loadingState ?: LoadingState.STARTING,
-        listLayout = listLayout ?: ListLayout.LIST,
-        runningJob = currJob.value,
+        listLayout = listLayout,
+        syncJob = syncJob.value,
         title = stringResource(id = R.string.action_open_offline_roots),
         roots = roots.value ?: listOf(),
         openDrawer = openDrawer,
@@ -211,7 +219,7 @@ fun OfflineRoots(
 private fun WithScaffold(
     loadingState: LoadingState,
     listLayout: ListLayout,
-    runningJob: RJob?,
+    syncJob: RJob?,
     title: String,
     roots: List<RLiveOfflineRoot>,
     openDrawer: () -> Unit,
@@ -220,9 +228,6 @@ private fun WithScaffold(
     launch: (NodeAction, StateID) -> Unit,
     moreMenuState: MoreMenuState,
 ) {
-
-    val tint = MaterialTheme.colorScheme.onSurface
-    val bgColor = MaterialTheme.colorScheme.surface
 
     var isShown by remember { mutableStateOf(false) }
     val showMenu: (Boolean) -> Unit = {
@@ -236,7 +241,8 @@ private fun WithScaffold(
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.button_switch_to_list_layout)) },
                 onClick = {
-                    launch(NodeAction.AsList,
+                    launch(
+                        NodeAction.AsList,
                         StateID.NONE
                     )
                     showMenu(false)
@@ -252,7 +258,8 @@ private fun WithScaffold(
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.button_switch_to_grid_layout)) },
                 onClick = {
-                    launch(NodeAction.AsGrid,
+                    launch(
+                        NodeAction.AsGrid,
                         StateID.NONE
                     )
                     showMenu(false)
@@ -292,63 +299,57 @@ private fun WithScaffold(
         },
     ) { padding ->
 
-        ModalBottomSheetLayout(
+        CellsModalBottomSheetLayout(
             sheetContent = {
                 if (moreMenuState.type == NodeMoreMenuType.SORT_BY) {
                     SortByMenu(
-                        done = { launch(NodeAction.SortBy,
-                            StateID.NONE
-                        ) },
-                        tint = tint,
-                        bgColor = bgColor,
+                        type = ListType.DEFAULT,
+                        done = { launch(NodeAction.SortBy, StateID.NONE) },
                     )
                 } else {
                     NodeMoreMenuData(
                         type = NodeMoreMenuType.OFFLINE,
                         toOpenStateID = moreMenuState.stateID,
                         launch = { launch(it, moreMenuState.stateID) },
-                        tint = tint,
-                        bgColor = bgColor,
                     )
                 }
             },
-            modifier = Modifier,
             sheetState = moreMenuState.sheetState,
-            sheetBackgroundColor = bgColor,
         ) {
-
             OfflineRootsList(
                 loadingState = loadingState,
                 listLayout = listLayout,
-                runningJob = runningJob,
+                syncJob = syncJob,
                 roots = roots,
                 forceRefresh = forceRefresh,
                 openMoreMenu = { moreMenuState.openMoreMenu(NodeMoreMenuType.OFFLINE, it) },
                 open = open,
                 padding = PaddingValues(
                     top = padding.calculateTopPadding(),
-                    bottom = padding.calculateBottomPadding().plus(dimensionResource(R.dimen.margin_medium)),
+                    bottom = padding.calculateBottomPadding()
+                        .plus(dimensionResource(R.dimen.margin_medium)),
                     start = dimensionResource(R.dimen.list_horizontal_padding),
                     end = dimensionResource(R.dimen.list_horizontal_padding),
                 ),
-                modifier = Modifier.fillMaxWidth(), // padding(padding),
             )
         }
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(
+    ExperimentalMaterialApi::class, ExperimentalFoundationApi::class,
+    ExperimentalFoundationApi::class
+)
 @Composable
 private fun OfflineRootsList(
     loadingState: LoadingState,
     listLayout: ListLayout,
-    runningJob: RJob?,
+    syncJob: RJob?,
     roots: List<RLiveOfflineRoot>,
     forceRefresh: () -> Unit,
     openMoreMenu: (StateID) -> Unit,
     open: (StateID) -> Unit,
     padding: PaddingValues,
-    modifier: Modifier,
 ) {
 
     val state = rememberPullRefreshState(
@@ -362,48 +363,69 @@ private fun OfflineRootsList(
     WithLoadingListBackground(
         loadingState = loadingState,
         isEmpty = roots.isEmpty(),
-        // TODO also handle if server is unreachable
         canRefresh = true,
+        emptyRefreshableDesc = stringResource(id = R.string.no_offline_root_for_account),
         modifier = Modifier.fillMaxSize()
     ) {
 
-        Box(modifier.pullRefresh(state)) {
+        Box(Modifier.pullRefresh(state)) { // .fillMaxSize()) {
             when (listLayout) {
                 ListLayout.GRID -> {
+                    val listPadding = PaddingValues(
+                        top = padding.calculateTopPadding().plus(dimensionResource(R.dimen.margin)),
+                        bottom = padding.calculateBottomPadding()
+                            .plus(dimensionResource(R.dimen.margin)),
+                        start = dimensionResource(id = R.dimen.margin_medium),
+                        end = dimensionResource(id = R.dimen.margin_medium),
+                    )
+
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(minSize = dimensionResource(R.dimen.grid_large_col_min_width)),
-                        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_col_spaced_by)),
-                        horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_col_spaced_by)),
-                        contentPadding = padding,
+                        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
+                        horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
+                        contentPadding = listPadding,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-
-                        // FIXME this is not yet done:
-                        //  - prepare offline node item composable for grids
-                        //  - re-enable option in the action menu
-                        if (runningJob != null) {
+                        if (syncJob != null) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 val percentage =
-                                    (runningJob.progress).toFloat().div(runningJob.total)
+                                    (syncJob.progress).toFloat().div(syncJob.total)
                                 SyncStatus(
-                                    desc = getJobStatus(item = runningJob),
+                                    desc = getJobStatus(item = syncJob),
                                     progress = percentage,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
 
-                        items(roots) { offlineRoot ->
-                            OfflineRootGridItem(
-                                item = offlineRoot,
-                                title = getNodeTitle(
-                                    name = offlineRoot.name,
-                                    mime = offlineRoot.mime
-                                ),
-                                desc = getDesc(offlineRoot),
-                                more = { openMoreMenu(offlineRoot.getStateID()) },
-                                modifier = Modifier.clickable { open(offlineRoot.getStateID()) },
-                            )
+                        items(
+                            items = roots,
+                            key = { it.encodedState }) { node ->
+                            if (node.hasThumb()) {
+                                LargeCardWithThumb(
+                                    stateID = node.getStateID(),
+                                    eTag = node.etag,
+                                    title = getNodeTitle(name = node.name, mime = node.mime),
+                                    desc = getDesc(node),
+                                    openMoreMenu = { openMoreMenu(node.getStateID()) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { open(node.getStateID()) }
+                                        .animateItemPlacement(),
+                                )
+                            } else {
+                                LargeCardWithIcon(
+                                    sortName = node.sortName,
+                                    mime = node.mime,
+                                    title = getNodeTitle(name = node.name, mime = node.mime),
+                                    desc = getDesc(node),
+                                    openMoreMenu = { openMoreMenu(node.getStateID()) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { open(node.getStateID()) }
+                                        .animateItemPlacement(),
+                                )
+                            }
                         }
                     }
                 }
@@ -413,18 +435,18 @@ private fun OfflineRootsList(
                         contentPadding = padding,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        if (runningJob != null) {
+                        if (syncJob != null) {
                             item {
                                 val percentage =
-                                    (runningJob.progress).toFloat().div(runningJob.total)
+                                    (syncJob.progress).toFloat().div(syncJob.total)
                                 SyncStatus(
-                                    desc = getJobStatus(item = runningJob),
+                                    desc = getJobStatus(item = syncJob),
                                     progress = percentage,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
-                        items(roots) { offlineRoot ->
+                        items(roots, key = { it.encodedState }) { offlineRoot ->
                             OfflineRootItem(
                                 item = offlineRoot,
                                 title = getNodeTitle(
@@ -433,14 +455,16 @@ private fun OfflineRootsList(
                                 ),
                                 desc = getDesc(offlineRoot),
                                 more = { openMoreMenu(offlineRoot.getStateID()) },
-                                modifier = Modifier.clickable { open(offlineRoot.getStateID()) },
+                                modifier = Modifier
+                                    .clickable { open(offlineRoot.getStateID()) }
+                                    .animateItemPlacement(),
                             )
                         }
                         item {
                             Spacer(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(dimensionResource(R.dimen.recycler_bottom_fab_padding))
+                                    .height(dimensionResource(R.dimen.list_bottom_fab_padding))
                             )
                         }
                     }

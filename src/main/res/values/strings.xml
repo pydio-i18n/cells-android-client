@@ -9,6 +9,7 @@
     <string name="button_confirm">Confirm</string>
     <string name="button_next">Next</string>
     <string name="button_back">Back</string>
+    <string name="button_done_and_exit">Upload done. Exit</string>
     <string name="button_run_in_background">Run in background</string>
     <string name="button_cancel">Cancel</string>
     <string name="button_switch_to_grid_layout">Show as grid</string>
@@ -146,8 +147,8 @@
     <string name="in_progress_restoring">Restoring…</string>
 
     <!-- Search -->
-    <string name="search_label" translatable="false">Search Label</string>
-    <string name="search_hint" translatable="false">Search Hint</string>
+    <string name="search_label" translatable="false">Search...</string>
+    <string name="search_hint" translatable="false">Please provide a query</string>
 
     <!--Offline -->
     <string name="sync_in_progress">Synchronising…</string>
@@ -171,9 +172,11 @@
     <string name="job_sort_by_creation_ts_asc_label">Creation (oldest first)</string>
 
     <!-- Log Management -->
-    <string name="log_list_title">Background job logs</string>
+    <string name="log_list_title">Application logs</string>
 
     <!-- Transfer Management -->
+    <string name="upload_screen_pending_title">Uploading…</string>
+    <string name="upload_screen_done_title">Upload terminated</string>
     <string name="transfer_list_title">Current transfers</string>
     <string name="choose_target_for_share_title">Share to…</string>
     <string name="choose_target_for_copy_title">Copy to…</string>
@@ -185,8 +188,14 @@
     <string name="pick_up_folder">Choose a target folder</string>
     <!--Transfers -->
     <string name="relaunch_transfer">Re-launch transfer</string>
-    <string name="delete_record">Delete record</string>
 
+
+    <!-- System -->
+    <!-- Jobs -->
+    <string name="clear_terminated">Clear terminated</string>
+    <string name="delete_record">Delete record</string>
+    <!-- Logs -->
+    <string name="clear_all_logs">Clear application logs</string>
     <!-- Migration-->
     <string name="migration_message">Migrating legacy data, please wait…</string>
     <string name="post_migration_title">Successfully Upgraded to New Version!</string>
@@ -230,15 +239,15 @@
 
     <!-- Sort By -->
     <string name="sort_by">Sort By</string>
-    <string name="order_by_canon">Canonical (A to Z, folders first)</string>
-    <string name="order_by_name_asc">File name (A to Z)</string>
-    <string name="order_by_name_desc">File name (Z to A)</string>
-    <string name="order_by_remote_ts_asc">Modified (oldest first)</string>
-    <string name="order_by_remote_ts_desc">Modified (newest first)</string>
-    <string name="order_by_mime_asc">Type (A to Z)</string>
-    <string name="order_by_mime_desc">Type (Z to A)</string>
-    <string name="order_by_size_asc">Size (smallest first)</string>
-    <string name="order_by_size_desc">Size (largest first)</string>
+    <!--    <string name="order_by_canon">Canonical (A to Z, folders first)</string>-->
+    <!--    <string name="order_by_name_asc">File name (A to Z)</string>-->
+    <!--    <string name="order_by_name_desc">File name (Z to A)</string>-->
+    <!--    <string name="order_by_remote_ts_asc">Modified (oldest first)</string>-->
+    <!--    <string name="order_by_remote_ts_desc">Modified (newest first)</string>-->
+    <!--    <string name="order_by_mime_asc">Type (A to Z)</string>-->
+    <!--    <string name="order_by_mime_desc">Type (Z to A)</string>-->
+    <!--    <string name="order_by_size_asc">Size (smallest first)</string>-->
+    <!--    <string name="order_by_size_desc">Size (largest first)</string>-->
 
     <!-- Dialogs -->
     <string name="choose_external_app_title">Open with…</string>
@@ -269,6 +278,7 @@
     <string name="display_as_qrcode_dialog_title">Direct link</string>
     <string name="display_as_qrcode_dialog_desc">Scan the code to directly access\n%s</string>
 
+    <string name="running_download_title">Downloading...</string>
     <string name="confirm_download_title">Confirm download</string>
     <string name="confirm_download_desc">This file is large (%s) and you are on a metered network. Are you sure you want to proceed?</string>
 

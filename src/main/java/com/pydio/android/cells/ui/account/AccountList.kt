@@ -62,7 +62,6 @@ fun AccountList(
                 username = account.username,
                 url = account.url,
                 authStatus = account.authStatus,
-                // isForeground = currAccountID == account.getStateID(),
                 isForeground = account.lifecycleState == AppNames.LIFECYCLE_STATE_FOREGROUND,
                 login = { login(account.getStateID(), account.skipVerify(), account.isLegacy) },
                 logout = { logout(account.getStateID()) },
@@ -150,7 +149,7 @@ private fun AccountListItem(
                 Icon(
                     imageVector = btnVectorImg,
                     contentDescription = null,
-                    modifier = Modifier.size(dimensionResource(R.dimen.list_button_size))
+                    modifier = Modifier.size(dimensionResource(R.dimen.list_trailing_icon_size))
                 )
             }
 
@@ -166,7 +165,7 @@ private fun AccountListItem(
                 Icon(
                     imageVector = CellsIcons.Delete,
                     contentDescription = null,
-                    modifier = Modifier.size(dimensionResource(R.dimen.list_button_size))
+                    modifier = Modifier.size(dimensionResource(R.dimen.list_trailing_icon_size))
                 )
             }
         }
@@ -181,9 +180,9 @@ private fun ForegroundAccountListItemPreview() {
             "Cells test server",
             "lea",
             "https://example.com",
-            authStatus = AppNames.AUTH_STATUS_NO_CREDS,
+            //          authStatus = AppNames.AUTH_STATUS_NO_CREDS,
 //            authStatus = AppNames.AUTH_STATUS_UNAUTHORIZED,
-//            authStatus = AppNames.AUTH_STATUS_CONNECTED,
+            authStatus = AppNames.AUTH_STATUS_CONNECTED,
 //            authStatus = AppNames.AUTH_STATUS_EXPIRED,
 //            authStatus = AppNames.AUTH_STATUS_CONNECTED,
             isForeground = true,

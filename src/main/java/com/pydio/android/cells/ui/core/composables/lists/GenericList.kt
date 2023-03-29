@@ -1,4 +1,4 @@
-package com.pydio.android.cells.ui.core.composables
+package com.pydio.android.cells.ui.core.composables.lists
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -29,26 +29,27 @@ import com.pydio.android.cells.R
 import com.pydio.android.cells.ui.core.LoadingState
 import com.pydio.android.cells.ui.theme.CellsIcons
 
+private const val logTag = "GenericList "
+
 @Composable
 fun WithLoadingListBackground(
     loadingState: LoadingState,
     isEmpty: Boolean,
     modifier: Modifier = Modifier,
     canRefresh: Boolean = true,
+    showProgressAtStartup: Boolean = true,
+    startingDesc: String = stringResource(R.string.loading_message),
+    emptyRefreshableDesc: String = stringResource(R.string.empty_folder),
+    emptyNoConnDesc: String = stringResource(R.string.empty_cache) + "\n" + stringResource(R.string.server_unreachable),
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = modifier
-// .background(CellsColor.warning)
-    ) {
+    Box(modifier = modifier) {
         if (isEmpty) {
             if (loadingState == LoadingState.STARTING) {
-                Box(
-                    modifier = Modifier.fillMaxSize()
-//                     .background(CellsColor.danger)
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     StartingIndicator(
-                        desc = stringResource(R.string.loading_message),
+                        desc = startingDesc,
+                        showProgressAtStartup = showProgressAtStartup,
                         modifier = Modifier
                             .fillMaxSize()
                             .alpha(.5f)
@@ -57,14 +58,12 @@ fun WithLoadingListBackground(
             } else {
                 Box(
                     modifier = Modifier.fillMaxSize()
-                    //         .background(CellsColor.ok)
                 ) {
                     EmptyList(
                         desc = if (canRefresh) {
-                            stringResource(R.string.empty_folder)
+                            emptyRefreshableDesc
                         } else {
-                            stringResource(R.string.empty_cache) + "\n" +
-                                    stringResource(R.string.server_unreachable)
+                            emptyNoConnDesc
                         },
                         modifier = Modifier
                             .fillMaxSize()
@@ -80,6 +79,7 @@ fun WithLoadingListBackground(
 @Composable
 fun StartingIndicator(
     modifier: Modifier = Modifier,
+    showProgressAtStartup: Boolean = true,
     desc: String?
 ) {
     Column(
@@ -87,7 +87,9 @@ fun StartingIndicator(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        CircularProgressIndicator()
+        if (showProgressAtStartup) {
+            CircularProgressIndicator()
+        }
         desc?.let {
             Text(it)
         }
@@ -127,9 +129,9 @@ fun BrowseUpItem(
         Row(Modifier.padding(horizontal = 8.dp)) {
             Surface(
                 Modifier
-                    // .size(40.dp)
-                    // .clip(RoundedCornerShape(dimensionResource(R.dimen.card_corner_radius)))
-                    // .background(MaterialTheme.colorScheme.error)
+                // .size(40.dp)
+                // .clip(RoundedCornerShape(dimensionResource(R.dimen.card_corner_radius)))
+                // .background(MaterialTheme.colorScheme.error)
             ) {
                 Image(
                     painter = painterResource(R.drawable.ic_baseline_arrow_back_ios_new_24),
@@ -165,16 +167,3 @@ fun BrowseUpItem(
         }
     }
 }
-
-//@Composable
-//private fun BrowseUpItem(
-//    stateID: StateID,
-//    modifier: Modifier = Modifier
-//) {
-//    val parentDescription = when {
-//        Str.empty(stateID.path) -> stringResource(id = R.string.switch_account)
-//        Str.empty(stateID.fileName) -> stringResource(id = R.string.switch_workspace)
-//        else -> stringResource(R.string.parent_folder)
-//    }
-//    BrowseUpItem(parentDescription = parentDescription, modifier.fillMaxWidth())
-//}

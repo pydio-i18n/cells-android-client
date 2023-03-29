@@ -14,6 +14,7 @@ import com.pydio.android.cells.ui.share.screens.SelectTargetAccount
 import com.pydio.android.cells.ui.share.screens.UploadProgressList
 import com.pydio.cells.transport.StateID
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 private const val logTag = "shareNavGraph"
 
@@ -21,31 +22,29 @@ fun NavGraphBuilder.shareNavGraph(
     helper: ShareHelper,
     browseRemoteVM: BrowseRemoteVM,
     back: () -> Unit,
-    // open: (StateID) -> Unit,
-//    isExpandedScreen: Boolean,
 ) {
 
     composable(ShareDestination.ChooseAccount.route) {
         Log.i(logTag, "... Open ShareDestination.ChooseAccount")
         SelectTargetAccount(
             openAccount = helper::open,
-            cancel = { helper.launchTaskFor(AppNames.ACTION_CANCEL,
-                StateID.NONE
-            ) },
+            cancel = {
+                helper.launchTaskFor(
+                    AppNames.ACTION_CANCEL,
+                    StateID.NONE
+                )
+            },
             login = { helper.launchTaskFor(AppNames.ACTION_LOGIN, it) },
         )
     }
 
-    composable(ShareDestination.OpenFolder.route) { navBackStackEntry ->
-        val stateID = lazyStateID(navBackStackEntry, ShareDestination.OpenFolder.getStateIdKey())
-        Log.i(logTag, ".... ShareDestination.OpenFolder for $stateID")
-
-        val shareVM: ShareVM = koinViewModel()
-
+    composable(ShareDestination.OpenFolder.route) { nbsEntry ->
+        val stateID = lazyStateID(nbsEntry)
         if (stateID == StateID.NONE) {
             Log.e(logTag, "Cannot open target selection folder page with no ID")
             back()
         } else {
+            val shareVM: ShareVM = koinViewModel { parametersOf(stateID) }
             SelectFolderScreen(
                 stateID = stateID,
                 browseRemoteVM = browseRemoteVM,
@@ -59,11 +58,11 @@ fun NavGraphBuilder.shareNavGraph(
     }
 
     composable(ShareDestination.UploadInProgress.route) { nbsEntry ->
-        val stateID = lazyStateID(nbsEntry, ShareDestination.UploadInProgress.getStateIdKey())
+        val stateID = lazyStateID(nbsEntry)
         val jobID = lazyUID(nbsEntry)
         Log.i(logTag, ".... ShareDestination.UploadInProgress for #$jobID @ $stateID")
-        val monitorUploadsVM: MonitorUploadsVM = koinViewModel()
-        monitorUploadsVM.afterCreate(stateID, jobID)
+        val monitorUploadsVM: MonitorUploadsVM =
+            koinViewModel(parameters = { parametersOf(stateID, jobID) })
         UploadProgressList(monitorUploadsVM) {
             helper.launchTaskFor(AppNames.ACTION_CANCEL, stateID)
         }

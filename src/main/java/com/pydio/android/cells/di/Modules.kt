@@ -1,23 +1,26 @@
 package com.pydio.android.cells.di
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import androidx.work.WorkerParameters
 import com.pydio.android.cells.db.accounts.AccountDB
 import com.pydio.android.cells.db.auth.AuthDB
+import com.pydio.android.cells.db.preferences.CELLS_PREFERENCES_NAME
+import com.pydio.android.cells.db.preferences.legacyMigrations
 import com.pydio.android.cells.db.runtime.RuntimeDB
 import com.pydio.android.cells.services.AccountService
 import com.pydio.android.cells.services.AccountServiceImpl
 import com.pydio.android.cells.services.AppCredentialService
 import com.pydio.android.cells.services.AuthService
-import com.pydio.android.cells.services.CellsPreferences
 import com.pydio.android.cells.services.FileService
 import com.pydio.android.cells.services.JobService
 import com.pydio.android.cells.services.NetworkService
 import com.pydio.android.cells.services.NodeService
 import com.pydio.android.cells.services.PasswordStore
+import com.pydio.android.cells.services.PreferencesService
 import com.pydio.android.cells.services.SessionFactory
 import com.pydio.android.cells.services.TokenStore
-import com.pydio.android.cells.ui.search.SearchVM
 import com.pydio.android.cells.services.TransferService
 import com.pydio.android.cells.services.TreeNodeRepository
 import com.pydio.android.cells.services.workers.OfflineSync
@@ -35,19 +38,20 @@ import com.pydio.android.cells.ui.browse.models.SingleTransferVM
 import com.pydio.android.cells.ui.browse.models.SortByMenuVM
 import com.pydio.android.cells.ui.browse.models.TransfersVM
 import com.pydio.android.cells.ui.browse.models.TreeNodeVM
-import com.pydio.android.cells.ui.login.models.NewLoginVM
+import com.pydio.android.cells.ui.login.models.LoginVM
+import com.pydio.android.cells.ui.migration.MigrationVM
 import com.pydio.android.cells.ui.models.AccountListVM
 import com.pydio.android.cells.ui.models.BrowseRemoteVM
-import com.pydio.android.cells.ui.models.LoginVM
-import com.pydio.android.cells.ui.models.MigrationVM
+import com.pydio.android.cells.ui.models.DownloadVM
 import com.pydio.android.cells.ui.models.SelectTargetVM
-import com.pydio.android.cells.ui.models.UploadsVM
+import com.pydio.android.cells.ui.search.SearchVM
 import com.pydio.android.cells.ui.share.models.MonitorUploadsVM
 import com.pydio.android.cells.ui.share.models.ShareVM
 import com.pydio.android.cells.ui.system.models.HouseKeepingVM
 import com.pydio.android.cells.ui.system.models.JobListVM
 import com.pydio.android.cells.ui.system.models.LandingVM
 import com.pydio.android.cells.ui.system.models.LogListVM
+import com.pydio.android.cells.ui.system.models.PrefReadOnlyVM
 import com.pydio.android.cells.ui.system.models.SettingsVM
 import com.pydio.cells.api.Server
 import com.pydio.cells.api.Store
@@ -62,7 +66,15 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val appModule = module {
-    single { CellsPreferences(androidContext().applicationContext) }
+    single {
+        PreferenceDataStoreFactory.create(
+            migrations = legacyMigrations(androidContext().applicationContext)
+        ) {
+            androidContext().applicationContext.preferencesDataStoreFile(CELLS_PREFERENCES_NAME)
+        }
+    }
+
+    single { PreferencesService(get(), androidContext().applicationContext) }
 }
 
 val dbModule = module {
@@ -153,7 +165,7 @@ val serviceModule = module {
 
     // Business services
     single { TreeNodeRepository(androidContext().applicationContext, get()) }
-    single { NodeService(androidContext().applicationContext, get(), get(), get(), get(), get()) }
+    single { NodeService(androidContext().applicationContext, get(), get(), get(), get()) }
     single { FileService(get()) }
     single { TransferService(get(), get(), get(), get(), get(), get()) }
 
@@ -168,37 +180,37 @@ val serviceModule = module {
 val viewModelModule = module {
 
     viewModelOf(::LandingVM)
-    viewModel { NewLoginVM(get(), get(), get()) }
+    viewModelOf(::MigrationVM)
+
     viewModel { LoginVM(get(), get(), get()) }
     viewModel { AccountListVM(get()) }
 
     viewModel { ConnectionVM(get(), get()) }
     viewModel { NodeActionsVM(get(), get(), get()) }
-    viewModel { parameters -> TreeNodeVM(stateID = parameters.get(), get()) }
-    // or Constructor DSL
-    // viewModelOf(::TreeNodeVM)
+
+    viewModelOf(::TreeNodeVM)
     viewModelOf(::SortByMenuVM)
     viewModelOf(::FilterTransferByMenuVM)
 
-//    viewModel { SettingsVM(get()) }
     viewModelOf(::SettingsVM)
+    viewModelOf(::PrefReadOnlyVM)
+
     viewModelOf(::SearchVM)
 
     viewModel { HouseKeepingVM(get()) }
 
-    // viewModel { BookmarksVM(get(), get()) }
+    viewModelOf(::DownloadVM)
+
     viewModelOf(::BookmarksVM)
-    // viewModel { OfflineVM(get(), get(), get()) }
     viewModelOf(::OfflineVM)
-//    viewModel { TransfersVM(get(), get()) }
     viewModelOf(::TransfersVM)
+    viewModelOf(::MonitorUploadsVM)
     viewModelOf(::SingleTransferVM)
 
-
     viewModel { BrowseHostVM(get()) }
-    viewModel { CarouselVM(get(), get()) }
-    viewModel { ShareVM(get(), get(), get()) }
-    viewModel { MonitorUploadsVM(get(), get()) }
+    viewModelOf(::ShareVM)
+
+    viewModelOf(::CarouselVM)
 
     viewModel { ActiveSessionViewModel(get(), get(), get(), get()) }
     viewModel { JobListVM(get()) }
@@ -209,8 +221,6 @@ val viewModelModule = module {
     viewModelOf(::FolderVM)
 
     viewModel { SelectTargetVM(get()) }
-    viewModel { MigrationVM(get(), get(), get(), get()) }
-    viewModel { UploadsVM(get(), get()) }
 
 }
 

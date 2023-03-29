@@ -1,11 +1,13 @@
 package com.pydio.android.cells.ui.browse
 
 import android.util.Log
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import com.pydio.android.cells.ui.browse.models.AccountHomeVM
 import com.pydio.android.cells.ui.browse.models.BookmarksVM
+import com.pydio.android.cells.ui.browse.models.CarouselVM
 import com.pydio.android.cells.ui.browse.models.FolderVM
 import com.pydio.android.cells.ui.browse.models.OfflineVM
 import com.pydio.android.cells.ui.browse.models.TransfersVM
@@ -31,71 +33,82 @@ fun NavGraphBuilder.browseNavGraph(
     browseRemoteVM: BrowseRemoteVM,
     back: () -> Unit,
     openDrawer: () -> Unit,
-    open: (StateID) -> Unit,
-//    isExpandedScreen: Boolean,
 ) {
 
     composable(BrowseDestinations.Open.route) { navBackStackEntry ->
         val stateID = lazyStateID(navBackStackEntry)
-        Log.e(logTag, ".... ## In BrowseDestinations.open at $stateID")
-        if (stateID == StateID.NONE) {
-            NoAccount(
-                openDrawer = openDrawer,
-                addAccount = {},
-            )
-        } else if (Str.notEmpty(stateID.workspace)) {
+        val folderVM: FolderVM = koinViewModel(parameters = { parametersOf(stateID) })
+        val helper = BrowseHelper(navController, folderVM)
 
-            val folderVM: FolderVM = koinViewModel(parameters = { parametersOf(stateID) })
-
-            Folder(
-                stateID,
-                openDrawer = openDrawer,
-                openSearch = {
-                    navController.navigate(CellsDestinations.Search.createRoute("Folder", stateID))
-                },
-                open = open,
-                browseRemoteVM = browseRemoteVM,
-                folderVM = folderVM
-            )
-        } else {
-            var i = 0
-            navController.backQueue.forEach {
-                val stateID = lazyStateID(it)
-                Log.e(logTag, "#${i++} - ${it.destination.route} - $stateID ")
+        Log.i(logTag, "## BrowseDestinations.open - $stateID")
+        LaunchedEffect(key1 = stateID) {
+            Log.e(logTag, "  ... Also launching effect to watch $stateID")
+            if (stateID == StateID.NONE) {
+                browseRemoteVM.pause()
+            } else {
+                browseRemoteVM.watch(stateID, false)
             }
+        }
 
-            val accountHomeVM: AccountHomeVM = koinViewModel(parameters = { parametersOf(stateID) })
-            AccountHome(
-                stateID,
-                openDrawer = openDrawer,
-                openAccounts = { open(StateID.NONE) },
-                openSearch = {},
-                openWorkspace = open,
-                browseRemoteVM = browseRemoteVM,
-                accountHomeVM = accountHomeVM,
-            )
+        when {
+            stateID == StateID.NONE ->
+                NoAccount(
+                    openDrawer = openDrawer,
+                    addAccount = {},
+                )
+            Str.notEmpty(stateID.workspace) -> {
+                Folder(
+                    stateID,
+                    openDrawer = openDrawer,
+                    openSearch = {
+                        navController.navigate(
+                            CellsDestinations.Search.createRoute(
+                                "Folder",
+                                stateID
+                            )
+                        )
+                    },
+                    browseRemoteVM = browseRemoteVM,
+                    folderVM = folderVM,
+                    browseHelper = helper,
+                )
+            }
+            else -> {
+                var i = 0
+                navController.backQueue.forEach {
+                    val currID = lazyStateID(it)
+                    Log.e(logTag, "#${i++} - ${it.destination.route} - $currID ")
+                }
+
+                val accountHomeVM: AccountHomeVM =
+                    koinViewModel(parameters = { parametersOf(stateID) })
+                AccountHome(
+                    stateID,
+                    openDrawer = openDrawer,
+                    openSearch = {
+                        navController.navigate(
+                            CellsDestinations.Search.createRoute(
+                                "AccountHome",
+                                stateID
+                            )
+                        )
+                    },
+                    browseRemoteVM = browseRemoteVM,
+                    accountHomeVM = accountHomeVM,
+                    browseHelper = helper,
+                )
+            }
         }
     }
 
     composable(BrowseDestinations.OpenCarousel.route) { navBackStackEntry ->
         val stateID = lazyStateID(navBackStackEntry)
+        val carouselVM: CarouselVM = koinViewModel(parameters = { parametersOf(stateID) })
         Carousel(
             stateID,
-            back = back,
-            // back = { navController.popBackStack() },
+            // back = back,
+            carouselVM,
         )
-
-//        if (stateId == null) { // Fall back as (unnecessary) failsafe
-//            LaunchedEffect(key1 = accountID) {
-//                // This should never happen
-//                navController.popBackStack(BrowseDestination.AccountHome.route, false)
-//            }
-//        } else {
-//            Carousel(
-//                StateID.fromId(stateId),
-//                back = { navController.popBackStack() },
-//            )
-//        }
     }
 
     composable(BrowseDestinations.OfflineRoots.route) { navBackStackEntry ->
@@ -105,13 +118,13 @@ fun NavGraphBuilder.browseNavGraph(
             Log.e(logTag, "Cannot open OfflineRoots with no ID")
             back()
         } else {
-            val offlineVM: OfflineVM = koinViewModel()
-            offlineVM.afterCreate(stateID.account())
+            val offlineVM: OfflineVM = koinViewModel(parameters = { parametersOf(stateID) })
+            val helper = BrowseHelper(navController, offlineVM)
             OfflineRoots(
                 offlineVM = offlineVM,
                 openDrawer = openDrawer,
-                openSearch = {},
-                open = open,
+                openSearch = {}, // FIXME
+                browseHelper = helper,
             )
         }
     }
@@ -123,13 +136,12 @@ fun NavGraphBuilder.browseNavGraph(
             Log.e(logTag, "Cannot open bookmarks with no ID")
             back()
         } else {
-            val bookmarksVM: BookmarksVM = koinViewModel()
-            bookmarksVM.afterCreate(stateID.account())
+            val bookmarksVM: BookmarksVM = koinViewModel(parameters = { parametersOf(stateID) })
+            val helper = BrowseHelper(navController, bookmarksVM)
             Bookmarks(
                 stateID,
                 openDrawer = openDrawer,
-                // openSearch = {},
-                open = open,
+                browseHelper = helper,
                 browseRemoteVM = browseRemoteVM,
                 bookmarksVM = bookmarksVM,
             )
@@ -143,11 +155,12 @@ fun NavGraphBuilder.browseNavGraph(
             back()
         } else {
             val transfersVM: TransfersVM = koinViewModel(parameters = { parametersOf(stateID) })
+            val helper = BrowseHelper(navController, transfersVM)
             Transfers(
                 accountID = stateID.account(),
                 transfersVM = transfersVM,
                 openDrawer = openDrawer,
-                open = open,
+                browseHelper = helper,
             )
         }
     }

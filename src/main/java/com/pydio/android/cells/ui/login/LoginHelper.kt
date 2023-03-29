@@ -9,7 +9,7 @@ import com.pydio.android.cells.services.AuthService
 import com.pydio.android.cells.ui.StartingState
 import com.pydio.android.cells.ui.browse.BrowseDestinations
 import com.pydio.android.cells.ui.core.lazyStateID
-import com.pydio.android.cells.ui.login.models.NewLoginVM
+import com.pydio.android.cells.ui.login.models.LoginVM
 import com.pydio.cells.transport.ServerURLImpl
 import com.pydio.cells.transport.StateID
 import kotlinx.coroutines.Dispatchers
@@ -17,14 +17,12 @@ import kotlinx.coroutines.withContext
 
 class LoginHelper(
     private val navController: NavHostController,
-    private val loginVM: NewLoginVM,
+    private val loginVM: LoginVM,
     val navigateTo: (String) -> Unit,
-    val launchTaskFor: (String, StateID) -> Unit,
     val startingState: StartingState?,
     val startingStateHasBeenProcessed: (String?, StateID) -> Unit,
 ) {
-    private val logTag = LoginHelper::class.simpleName
-    private val navigation = LoginNavigation(navController)
+    private val logTag = "LoginHelper"
 
     fun cancel() {
         navController.popBackStack()
@@ -41,7 +39,6 @@ class LoginHelper(
         var isFirstLoginPage = true
         if (bq.size > 1) {
             val penEntry = bq[bq.size - 2]
-            val penultimateID = lazyStateID(penEntry)
             val penRoute = penEntry.destination.route
             if (LoginDestinations.isCurrent(penRoute)) {
                 // penultimate route is still in the login subgraph
@@ -91,7 +88,8 @@ class LoginHelper(
                     afterAuth(it.first, it.second)
                 } ?: run {
                     // TODO better error handling
-                    startingStateHasBeenProcessed(null,
+                    startingStateHasBeenProcessed(
+                        null,
                         StateID.NONE
                     )
                 }
@@ -136,8 +134,8 @@ class LoginHelper(
         var targetEntry: NavBackStackEntry? = null
         var i = 1
         navController.backQueue.asReversed().forEach {
-            val stateID = lazyStateID(it)
-            Log.e(logTag, "#${i++} - ${it.destination.route} - $stateID ")
+            val currID = lazyStateID(it)
+            Log.e(logTag, "#${i++} - ${it.destination.route} - $currID ")
 
             if (!LoginDestinations.isCurrent(it.destination.route)) {
                 targetEntry = it
@@ -145,12 +143,14 @@ class LoginHelper(
             }
         }
         targetEntry?.destination?.route?.let {
+            Log.e(logTag, "##### About to nav back to $route ")
             navController.navigate(route) {
                 popUpTo(it) {
                     inclusive = false
                 }
             }
         } ?: run {
+            Log.e(logTag, "##### About to forward nav to $route ")
             navigateTo(route)
         }
         loginVM.flush()

@@ -1,17 +1,12 @@
 package com.pydio.android.cells.ui.browse.models
 
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
-import com.pydio.android.cells.AppKeys
-import com.pydio.android.cells.AppNames.DEFAULT_SORT_BY
 import com.pydio.android.cells.db.accounts.RWorkspace
 import com.pydio.android.cells.db.nodes.RTreeNode
-import com.pydio.android.cells.reactive.LiveSharedPreferences
-import com.pydio.android.cells.services.CellsPreferences
 import com.pydio.android.cells.services.NodeService
-import com.pydio.android.cells.ui.core.ListLayout
+import com.pydio.android.cells.services.PreferencesService
 import com.pydio.cells.transport.StateID
 import com.pydio.cells.utils.Log
 import com.pydio.cells.utils.Str
@@ -26,20 +21,14 @@ import kotlinx.coroutines.launch
  */
 class FolderVM(
     private val stateID: StateID,
-    private val prefs: CellsPreferences,
+    prefs: PreferencesService,
     private val nodeService: NodeService
-) : ViewModel() {
+) : AbstractBrowseVM(prefs, nodeService) {
 
-    private val logTag = FolderVM::class.simpleName
-
-    private var livePrefs: LiveSharedPreferences = LiveSharedPreferences(prefs.get())
-    private val sortOrder = livePrefs.getString(AppKeys.CURR_RECYCLER_ORDER, DEFAULT_SORT_BY)
-    val layout = livePrefs.getLayout(AppKeys.CURR_RECYCLER_LAYOUT, ListLayout.LIST)
+    private val logTag = "FolderVM"
 
     val childNodes: LiveData<List<RTreeNode>>
-        get() = Transformations.switchMap(
-            sortOrder
-        ) { currOrder ->
+        get() = sortOrder.switchMap { currOrder ->
             if (Str.empty(stateID.workspace)) {
                 Log.e(logTag, "Listing workspaces in folderVM, this should never happen")
                 nodeService.listWorkspaces(stateID)
@@ -63,9 +52,5 @@ class FolderVM(
                 }
             }
         }
-    }
-
-    fun setListLayout(listLayout: ListLayout) {
-        prefs.setString(AppKeys.CURR_RECYCLER_LAYOUT, listLayout.name)
     }
 }

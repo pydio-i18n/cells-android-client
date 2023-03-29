@@ -45,18 +45,17 @@ import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.ui.core.LoadingState
-import com.pydio.android.cells.ui.core.composables.BrowseUpItem
 import com.pydio.android.cells.ui.core.composables.Thumbnail
 import com.pydio.android.cells.ui.core.composables.getNodeDesc
 import com.pydio.android.cells.ui.core.composables.getNodeTitle
-import com.pydio.android.cells.ui.core.composables.isFolder
+import com.pydio.android.cells.ui.core.composables.lists.BrowseUpItem
 import com.pydio.android.cells.ui.models.BrowseRemoteVM
 import com.pydio.android.cells.ui.share.models.ShareVM
 import com.pydio.android.cells.ui.theme.CellsTheme
 import com.pydio.cells.transport.StateID
 import com.pydio.cells.utils.Str
 
-private const val logTag = "SelectFolder.kt"
+// private const val logTag = "SelectFolder.kt"
 
 @Composable
 fun SelectFolderScreen(
@@ -70,19 +69,17 @@ fun SelectFolderScreen(
 ) {
 
     val loadingStatus = browseRemoteVM.loadingState.observeAsState(LoadingState.STARTING)
-
-    shareVM.afterCreate(stateID)
     val childNodes by shareVM.childNodes.observeAsState()
 
     val forceRefresh: () -> Unit = {
         browseRemoteVM.watch(stateID, true)
     }
 
-    val interceptAction: (String, StateID) -> Unit = { action, stateID ->
+    val interceptAction: (String, StateID) -> Unit = { action, currID ->
         if (AppNames.ACTION_UPLOAD == action) {
-            startUpload(shareVM, stateID)
+            startUpload(shareVM, currID)
         } else {
-            doAction(action, stateID)
+            doAction(action, currID)
         }
     }
 
@@ -112,7 +109,6 @@ fun SelectFolderScaffold(
 ) {
     Scaffold(
         topBar = {
-            // FIXME we must add options to the top bar
             TopBar(
                 action,
                 stateID = stateID,
@@ -184,8 +180,7 @@ private fun FolderList(
                 }
             }
             items(children) { oneChild ->
-                val isFolder = isFolder(oneChild.mime)
-                val currModifier = if (isFolder) {
+                val currModifier = if (oneChild.isFolder()) {
                     Modifier.clickable { open(oneChild.getStateID()) }
                 } else {
                     Modifier
@@ -193,11 +188,11 @@ private fun FolderList(
 
                 SelectFolderItem(
                     oneChild,
-                    isFolder,
+                    oneChild.isFolder(),
                     mime = oneChild.mime,
                     sortName = oneChild.sortName,
                     title = getNodeTitle(oneChild.name, oneChild.mime),
-                    desc = getNodeDesc(ctx, oneChild),
+                    desc = getNodeDesc(oneChild),
                     modifier = currModifier,
                 )
             }
@@ -276,8 +271,6 @@ private fun TopBar(
     modifier: Modifier = Modifier.fillMaxWidth()
 ) {
 
-//     val title = stringResource(R.string.choose_target_for_share_title)
-
     val title = when (action) {
         AppNames.ACTION_UPLOAD -> stringResource(R.string.choose_target_for_share_title)
         AppNames.ACTION_COPY -> stringResource(R.string.choose_target_for_copy_title)
@@ -288,7 +281,7 @@ private fun TopBar(
     val subTitle = stateID.path ?: "${stateID.username}@${stateID.serverHost}"
 
     Surface(
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier
     ) {
         Row(
@@ -296,7 +289,7 @@ private fun TopBar(
                 .fillMaxWidth()
                 .padding(
                     horizontal = dimensionResource(R.dimen.margin_small),
-                    vertical = 0.dp
+                    vertical = dimensionResource(R.dimen.margin_small),
                 )
         ) {
             Column(

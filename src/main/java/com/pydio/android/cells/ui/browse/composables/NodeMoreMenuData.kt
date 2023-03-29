@@ -9,14 +9,16 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.pydio.android.cells.ListType
+import com.pydio.android.cells.db.accounts.RWorkspace
 import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.ui.browse.menus.BookmarkMenu
 import com.pydio.android.cells.ui.browse.menus.CreateOrImportMenu
 import com.pydio.android.cells.ui.browse.menus.OfflineMenu
 import com.pydio.android.cells.ui.browse.menus.RecycleMenu
 import com.pydio.android.cells.ui.browse.menus.RecycleParentMenu
+import com.pydio.android.cells.ui.browse.menus.SearchMenu
 import com.pydio.android.cells.ui.browse.menus.SingleNodeMenu
 import com.pydio.android.cells.ui.browse.menus.SortByMenu
 import com.pydio.android.cells.ui.browse.models.TreeNodeVM
@@ -27,99 +29,81 @@ import org.koin.core.parameter.parametersOf
 private const val logTag = "NodeMoreMenuData"
 
 enum class NodeMoreMenuType {
-    NONE,
-    MORE, // <- this one is the default
-    SEARCH,
-    OFFLINE,
-    BOOKMARK,
-    CREATE,
-    SORT_BY,
+    NONE, MORE, SEARCH, OFFLINE, BOOKMARK, CREATE, SORT_BY,
 }
 
 @Composable
 fun NodeMoreMenuData(
     type: NodeMoreMenuType,
-    toOpenStateID: StateID?,
+    toOpenStateID: StateID,
     launch: (NodeAction) -> Unit,
-    tint: Color,
-    bgColor: Color,
 ) {
-    val item: MutableState<RTreeNode?> = remember {
-        mutableStateOf(null)
-    }
 
-    val stateID: StateID = toOpenStateID ?: StateID.NONE
-    val moreMenuVM: TreeNodeVM = koinViewModel(parameters = { parametersOf(stateID) })
+    val moreMenuVM: TreeNodeVM = koinViewModel(parameters = { parametersOf(toOpenStateID) })
+    val item: MutableState<RTreeNode?> = remember { mutableStateOf(null) }
+    val workspace: MutableState<RWorkspace?> = remember { mutableStateOf(null) }
 
     LaunchedEffect(key1 = toOpenStateID) {
-        toOpenStateID?.let {
-            val currNode = moreMenuVM.getTreeNode(it) ?: run {
-                Log.e(logTag, "No node found for $it, aborting")
-                // actionDone() TODO do something?
-                null
+        if (toOpenStateID != StateID.NONE) {
+
+            moreMenuVM.getTreeNode(toOpenStateID)?.let { currNode ->
+                item.value = currNode
+            } ?: { Log.e(logTag, "No node found for $toOpenStateID, aborting") }
+
+            if (toOpenStateID.isWorkspaceRoot) {
+                moreMenuVM.getWS(toOpenStateID)?.let { currNode ->
+                    workspace.value = currNode
+                }
             }
-            Log.e(logTag, "## After effect, found a node for $it - $currNode")
-            Log.e(logTag, "## Parent Path: ${it.parentPath} - $currNode")
-            item.value = currNode
         }
     }
 
-    // We have to provide early a dummy content when not enough data to build a menu is present.
-    if (toOpenStateID != null && toOpenStateID.workspace != null) {
-
+    if (toOpenStateID.workspace != null) {
         item.value?.let { myItem ->
-
-            Log.e(logTag, "## Choosing MenuView with type $type for $toOpenStateID }")
-
             when {
                 myItem.isRecycle() -> RecycleParentMenu(
                     stateID = toOpenStateID,
                     rTreeNode = myItem,
                     launch = launch,
-                    tint = tint,
-                    bgColor = bgColor,
                 )
                 myItem.isInRecycle() -> RecycleMenu(
                     stateID = toOpenStateID,
                     rTreeNode = myItem,
                     launch = launch,
-                    tint = tint,
-                    bgColor = bgColor,
                 )
                 type == NodeMoreMenuType.CREATE -> CreateOrImportMenu(
                     stateID = toOpenStateID,
                     rTreeNode = myItem,
+                    rWorkspace = workspace.value,
                     launch = launch,
-                    tint = tint,
-                    bgColor = bgColor,
                 )
                 type == NodeMoreMenuType.OFFLINE -> OfflineMenu(
                     stateID = toOpenStateID,
                     rTreeNode = myItem,
                     launch = launch,
-                    tint = tint,
-                    bgColor = bgColor,
                 )
                 type == NodeMoreMenuType.BOOKMARK -> BookmarkMenu(
                     stateID = toOpenStateID,
                     rTreeNode = myItem,
                     launch = launch,
-                    tint = tint,
-                    bgColor = bgColor,
+                )
+                type == NodeMoreMenuType.SEARCH -> SearchMenu(
+                    stateID = toOpenStateID,
+                    rTreeNode = myItem,
+                    launch = { launch(it) },
                 )
                 type == NodeMoreMenuType.SORT_BY -> SortByMenu(
+                    type = ListType.DEFAULT,
                     done = { launch(NodeAction.SortBy) },
-                    tint = tint,
-                    bgColor = bgColor,
                 )
-                else ->
+                type == NodeMoreMenuType.MORE ->
                     SingleNodeMenu(
                         stateID = toOpenStateID,
                         rTreeNode = myItem,
+                        rWorkspace = workspace.value,
                         launch = launch,
-                        tint = tint,
-                        bgColor = bgColor,
                     )
+                else -> Spacer(modifier = Modifier.height(1.dp))
             }
         }
     }

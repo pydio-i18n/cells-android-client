@@ -105,7 +105,7 @@ data class RTreeNode(
         return flags
     }
 
-    private fun isFlag(flag: Int): Boolean {
+    fun isFlag(flag: Int): Boolean {
         return flags and flag == flag
     }
 
@@ -157,7 +157,7 @@ data class RTreeNode(
     }
 
     companion object {
-        private val logTag = RTreeNode::class.simpleName
+        private val logTag = "RTreeNode"
 
         /**
          * @param stateID use to retrieve the account ID, typically with search result,

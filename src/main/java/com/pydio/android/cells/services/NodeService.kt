@@ -6,9 +6,9 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.sqlite.db.SimpleSQLiteQuery
 import com.bumptech.glide.Glide
-import com.pydio.android.cells.AppKeys
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.CellsApp
+import com.pydio.android.cells.ListType
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.accounts.RWorkspace
 import com.pydio.android.cells.db.nodes.RLiveOfflineRoot
@@ -49,41 +49,18 @@ import kotlin.time.measureTimedValue
 
 class NodeService(
     private val appContext: Context,
-    private val prefs: CellsPreferences,
     private val jobService: JobService,
     private val accountService: AccountService,
     private val treeNodeRepository: TreeNodeRepository,
     private val fileService: FileService,
 ) {
-    private val logTag = NodeService::class.simpleName
+    private val logTag = "NodeService"
     private val nodeServiceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + nodeServiceJob)
 
     // Query the local index to get LiveData for the ViewModels
-
-    /**
-     * Get a LiveData List for all the nodes that have been indexed in the folder at StateID,
-     * using the order that is currently set in preferences.
-     */
-    fun ls(stateID: StateID): LiveData<List<RTreeNode>> {
-
-        val encoded = prefs.getString(
-            AppKeys.CURR_RECYCLER_ORDER, AppNames.DEFAULT_SORT_ENCODED
-        )
-        val (sortByCol, sortByOrder) = parseOrder(encoded)
-        val parPath = stateID.file
-        val lsQuery = SimpleSQLiteQuery(
-            "SELECT * FROM tree_nodes WHERE encoded_state like '${stateID.id}%' " +
-                    "AND parent_path = ? " +
-                    "ORDER BY $sortByCol $sortByOrder ", arrayOf(parPath)
-        )
-        // Log.e(logTag, "About to list, query: ${lsQuery.sql} - file: $parPath")
-        return nodeDB(stateID).treeNodeDao().treeNodeQuery(lsQuery)
-    }
-
     fun sortedList(stateID: StateID, encodedSortBy: String): LiveData<List<RTreeNode>> {
-
-        val (sortByCol, sortByOrder) = parseOrder(encodedSortBy)
+        val (sortByCol, sortByOrder) = parseOrder(encodedSortBy, ListType.DEFAULT)
         val parPath = stateID.file
         val lsQuery = SimpleSQLiteQuery(
             "SELECT * FROM tree_nodes WHERE encoded_state like '${stateID.id}%' " +
@@ -93,27 +70,11 @@ class NodeService(
         return nodeDB(stateID).treeNodeDao().treeNodeQuery(lsQuery)
     }
 
-    fun lsFlow(stateID: StateID): Flow<List<RTreeNode>> {
-
-        val encoded = prefs.getString(
-            AppKeys.CURR_RECYCLER_ORDER, AppNames.DEFAULT_SORT_ENCODED
-        )
-        val (sortByCol, sortByOrder) = parseOrder(encoded)
-        val parPath = stateID.file
-        val lsQuery = SimpleSQLiteQuery(
-            "SELECT * FROM tree_nodes WHERE encoded_state like '${stateID.id}%' " +
-                    "AND parent_path = ? " +
-                    "ORDER BY $sortByCol $sortByOrder ", arrayOf(parPath)
-        )
-        // Log.e(logTag, "About to list, query: ${lsQuery.sql}")
-        return nodeDB(stateID).treeNodeDao().lsFlow(lsQuery)
-    }
-
-    fun listBookmarks(accountID: StateID): LiveData<List<RTreeNode>> {
-        val encoded = prefs.getString(
-            AppKeys.CURR_RECYCLER_ORDER, AppNames.DEFAULT_SORT_ENCODED
-        )
-        val (sortByCol, sortByOrder) = parseOrder(encoded)
+    fun listBookmarks(
+        accountID: StateID,
+        sortByCol: String,
+        sortByOrder: String
+    ): LiveData<List<RTreeNode>> {
         val lsQuery = SimpleSQLiteQuery(
             "SELECT * FROM tree_nodes WHERE flags & " + AppNames.FLAG_BOOKMARK +
                     " = " + AppNames.FLAG_BOOKMARK + " ORDER BY $sortByCol $sortByOrder"
@@ -121,11 +82,11 @@ class NodeService(
         return nodeDB(accountID).treeNodeDao().treeNodeQuery(lsQuery)
     }
 
-    fun listOfflineRoots(accountID: StateID): LiveData<List<RLiveOfflineRoot>> {
-        val encoded = prefs.getString(
-            AppKeys.CURR_RECYCLER_ORDER, AppNames.DEFAULT_SORT_ENCODED
-        )
-        val (sortByCol, sortByOrder) = parseOrder(encoded)
+    fun listOfflineRoots(
+        accountID: StateID,
+        encodedOrder: String,
+    ): LiveData<List<RLiveOfflineRoot>> {
+        val (sortByCol, sortByOrder) = parseOrder(encodedOrder, ListType.DEFAULT)
         val lsQuery = SimpleSQLiteQuery(
             "SELECT * FROM RLiveOfflineRoot WHERE " +
                     "status != '${AppNames.OFFLINE_STATUS_LOST}' ORDER BY $sortByCol $sortByOrder"
@@ -133,17 +94,23 @@ class NodeService(
         return nodeDB(accountID).liveOfflineRootDao().offlineRootQuery(lsQuery)
     }
 
-    fun listChildFolders(stateID: StateID): LiveData<List<RTreeNode>> {
-        // We use the file param (that includes WS) to be able to also list workspaces roots
-        val parPath = stateID.file ?: "" // initialise with an empty String when null for queries
-
-        val mime = if (Str.notEmpty(parPath))
-            SdkNames.NODE_MIME_FOLDER
-        else
-            SdkNames.NODE_MIME_WS_ROOT
-        Log.d(logTag, "Listing child folders for $stateID. parPath: [$parPath], mime: $mime")
-        return nodeDB(stateID).treeNodeDao().lsWithMime(stateID.id, parPath, mime)
+    suspend fun searchLocally(
+        stateID: StateID,
+        query: String,
+        encodedSortBy: String
+    ): List<RTreeNode> = withContext(Dispatchers.IO) {
+        if (Str.empty(query)) {
+            listOf()
+        } else {
+            val (sortByCol, sortByOrder) = parseOrder(encodedSortBy, ListType.DEFAULT)
+            val lsQuery = SimpleSQLiteQuery(
+                "SELECT * FROM tree_nodes WHERE name like '%${query}%' " +
+                        "ORDER BY $sortByCol $sortByOrder LIMIT 100 "
+            )
+            nodeDB(stateID).treeNodeDao().searchQuery(lsQuery)
+        }
     }
+
 
     fun listWorkspaces(stateID: StateID): LiveData<List<RTreeNode>> {
         return nodeDB(stateID).treeNodeDao().lsWithMime(stateID.id, "", SdkNames.NODE_MIME_WS_ROOT)
@@ -154,24 +121,7 @@ class NodeService(
         return nodeDB(stateID).treeNodeDao().lsWithMimeFilter(stateID.id, stateID.file, mimeFilter)
     }
 
-    fun getLiveNode(stateID: StateID): LiveData<RTreeNode> {
-        return nodeDB(stateID).treeNodeDao().getLiveNode(stateID.id)
-    }
-
-    fun getLiveWorkspace(stateID: StateID): LiveData<RWorkspace> {
-        return accountService.getLiveWorkspace(stateID)
-    }
-
-    fun getLiveNodes(stateIDs: List<StateID>): LiveData<List<RTreeNode>> {
-        if (stateIDs.isEmpty()) {
-            throw java.lang.IllegalStateException("Cannot retrieve live nodes without at least one ID")
-        }
-        val encodedIds = stateIDs.map { it.id }.toTypedArray()
-        return nodeDB(stateIDs[0]).treeNodeDao().getLiveNodes(*encodedIds)
-    }
-
     /* Communicate with the DB using suspend functions */
-
     suspend fun getNode(stateID: StateID): RTreeNode? = withContext(Dispatchers.IO) {
         if (stateID == StateID.NONE) {
             null
@@ -246,18 +196,18 @@ class NodeService(
             }
         }
 
-    suspend fun queryLocally(query: String?, stateID: StateID): List<RTreeNode> =
-        withContext(Dispatchers.IO) {
-            return@withContext if (query == null) {
-                listOf()
-            } else {
-                nodeDB(stateID).treeNodeDao().query(query)
-            }
+    fun liveLocalQuery(stateID: StateID, query: String): LiveData<List<RTreeNode>> {
+        return if (Str.empty(query)) {
+            // We prevent large search without query
+            nodeDB(stateID).treeNodeDao().emptyLiveQuery()
+        } else {
+            nodeDB(stateID).treeNodeDao().liveQuery(query)
         }
+    }
 
-    fun liveLocalQuery(stateID: StateID, query: String): LiveData<List<RTreeNode>> =
-        nodeDB(stateID).treeNodeDao().liveQuery(query)
-
+    fun flowLocalQuery(stateID: StateID, query: String): Flow<List<RTreeNode>> {
+        return nodeDB(stateID).treeNodeDao().flowQuery(query)
+    }
 
     /* Update nodes in the local store */
     suspend fun abortLocalChanges(stateID: StateID) = withContext(Dispatchers.IO) {
@@ -474,6 +424,10 @@ class NodeService(
         return job
     }
 
+    fun getSyncTemplateId(stateID: StateID): String {
+        return "${AppNames.JOB_TEMPLATE_RESYNC}-$stateID"
+    }
+
     suspend fun prepareAccountSync(
         stateID: StateID,
         caller: String,
@@ -482,7 +436,7 @@ class NodeService(
         withContext(Dispatchers.IO) {
 
             val label = "Account sync for $stateID\nLaunched by $caller"
-            val currJobTemplate = String.format(AppNames.JOB_TEMPLATE_RESYNC, stateID.toString())
+            val currJobTemplate = getSyncTemplateId(stateID)
 
             // We first check if a sync is not already running for this account
             if (hasExistingJob(label, currJobTemplate, 120)) {
@@ -816,7 +770,8 @@ class NodeService(
             return@withContext null
         }
 
-// Handle communication with the remote server to refresh locally stored data.
+
+    // Handle communication with the remote server to refresh locally stored data.
 
     /**
      * Retrieve the meta of all readable nodes that are at the passed stateID.
@@ -958,12 +913,10 @@ class NodeService(
      */
     suspend fun getLocalFile(rTreeNode: RTreeNode, checkUpToDate: Boolean): File? =
         withContext(Dispatchers.IO) {
-
-            Log.e(
+            Log.d(
                 logTag,
-                "Trying to retrieve local file for ${rTreeNode.getStateID()}, check update: $checkUpToDate"
+                "Getting LocalFile for [${rTreeNode.getStateID()}], check: $checkUpToDate"
             )
-
             val file = File(fileService.getLocalPath(rTreeNode, AppNames.LOCAL_FILE_TYPE_FILE))
             if (!file.exists()) {
                 Log.e(logTag, "File not found at ${file.absolutePath}")
@@ -977,7 +930,10 @@ class NodeService(
                 // Compare with remote if possible
                 val remote = getNodeInfo(rTreeNode.getStateID())
                 // We cannot stat remote, but we have a file let's open this one
-                    ?: return@withContext file
+                    ?: run {
+                        Log.e(logTag, "No info found")
+                        return@withContext file
+                    }
 
                 val isUpToDate = rTreeNode.etag == remote.eTag &&
                         rTreeNode.size == remote.size &&
@@ -991,64 +947,6 @@ class NodeService(
                 return@withContext null
             }
         }
-
-//    suspend fun getOrDownloadFileToCache(rTreeNode: RTreeNode): File? =
-//
-//        withContext(Dispatchers.IO) {
-//            Log.i(logTag, "In getOrDownloadFileToCache for ${rTreeNode.name}")
-//            // TODO improve check to decide whether we should download the full file or not
-//            val isOK = isCacheVersionUpToDate(rTreeNode)
-//            when {
-//                isOK == null && rTreeNode.localFileType != AppNames.LOCAL_FILE_TYPE_NONE
-//                -> fileService.getLocalPath(rTreeNode, AppNames.LOCAL_FILE_TYPE_CACHE)
-//                    .let { return@withContext File(it) }
-//                isOK == null && rTreeNode.localFileType == AppNames.LOCAL_FILE_TYPE_NONE
-//                -> {
-//                }
-//                isOK ?: false
-//                -> return@withContext File(
-//                    fileService.getLocalPath(
-//                        rTreeNode,
-//                        AppNames.LOCAL_FILE_TYPE_CACHE
-//                    )
-//                )
-//            }
-//
-//            Log.i(logTag, "... Launching download for ${rTreeNode.name}")
-//
-//            val stateID = rTreeNode.getStateID()
-//            val baseDir =
-//                fileService.dataParentPath(stateID.accountId, AppNames.LOCAL_FILE_TYPE_CACHE)
-//            val targetFile = File(baseDir, stateID.path.substring(1))
-//            targetFile.parentFile!!.mkdirs()
-//            var out: FileOutputStream? = null
-//
-//            try {
-//                out = FileOutputStream(targetFile)
-//
-//                // TODO handle progress
-//                getClient(stateID).download(stateID.workspace, stateID.file, out, null)
-//
-//                // Success persist change
-//                rTreeNode.localFileType = AppNames.LOCAL_FILE_TYPE_CACHE
-//                rTreeNode.localModificationTS = rTreeNode.remoteModificationTS
-//                nodeDB(stateID).treeNodeDao().update(rTreeNode)
-//                Log.i(logTag, "... download done for ${rTreeNode.name}")
-//            } catch (se: SDKException) {
-//                // Could not retrieve thumb, failing silently for the end user
-//                val msg = "could not perform DL for " + stateID.id
-//                handleSdkException(stateID, msg, se)
-//                return@withContext null
-//            } catch (ioe: IOException) {
-//                // TODO handle this: what should we do ?
-//                Log.e(logTag, "cannot write at ${targetFile.absolutePath}: ${ioe.message}")
-//                ioe.printStackTrace()
-//                return@withContext null
-//            } finally {
-//                IoHelpers.closeQuietly(out)
-//            }
-//            targetFile
-//        }
 
     suspend fun saveToSharedStorage(stateID: StateID, uri: Uri) =
         withContext(Dispatchers.IO) {
@@ -1098,19 +996,6 @@ class NodeService(
         return@withContext null
     }
 
-    suspend fun emptyRecycle(stateID: StateID): String? = withContext(Dispatchers.IO) {
-        try {
-            val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id)
-                ?: return@withContext "No node found at $stateID, could not delete"
-            remoteEmptyRecycle(stateID)
-            persistLocallyModified(node, AppNames.LOCAL_MODIF_DELETE)
-        } catch (se: SDKException) {
-            se.printStackTrace()
-            return@withContext "Could not empty recycle bin: ${se.message}"
-        }
-        return@withContext null
-    }
-
     suspend fun rename(stateID: StateID, newName: String): String? =
         withContext(Dispatchers.IO) {
             try {
@@ -1144,7 +1029,7 @@ class NodeService(
             try {
                 val nodes = getClient(stateID).search(stateID.path ?: "/", query, 20)
                     .map {
-                        // Log.e(logTag, "mapping query result for $stateID: ${it.path}")
+//                        Log.e(logTag, "mapping query result for $stateID: ${it.path}")
                         RTreeNode.fromFileNode(stateID, it)
                     }
 
@@ -1228,3 +1113,4 @@ class NodeService(
         return File(fileService.getLocalPath(item, type))
     }
 }
+

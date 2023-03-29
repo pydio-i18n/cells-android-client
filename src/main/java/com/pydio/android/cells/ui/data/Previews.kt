@@ -136,7 +136,7 @@ private fun NewNodeCardPreview() {
                     imageVector = CellsIcons.MoreVert,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(dimensionResource(R.dimen.list_button_size)),
+                        .size(dimensionResource(R.dimen.list_trailing_icon_size)),
                 )
             }
         }
@@ -166,7 +166,7 @@ private fun NodeCardPreview() {
 
     CellsTheme {
         Card(
-            shape = RoundedCornerShape(dimensionResource(R.dimen.grid_ws_image_corner_radius)),
+            shape = RoundedCornerShape(dimensionResource(R.dimen.grid_large_corner_radius)),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = dimensionResource(R.dimen.grid_ws_card_elevation)
             ),

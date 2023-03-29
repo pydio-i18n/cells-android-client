@@ -3,19 +3,29 @@ package com.pydio.android.cells.ui.browse.composables
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -28,11 +38,14 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.pydio.android.cells.R
 import com.pydio.android.cells.ui.browse.models.NodeActionsVM
+import com.pydio.android.cells.ui.core.composables.animations.SmoothLinearProgressIndicator
 import com.pydio.android.cells.ui.core.composables.dialogs.AskForConfirmation
 import com.pydio.android.cells.ui.core.composables.dialogs.AskForFolderName
 import com.pydio.android.cells.ui.core.composables.dialogs.AskForNewName
+import com.pydio.android.cells.ui.models.DownloadVM
 import com.pydio.android.cells.ui.theme.CellsIcons
 import com.pydio.cells.transport.StateID
+import kotlinx.coroutines.delay
 
 private const val logTag = "NodeActionDialogs.kt"
 
@@ -42,6 +55,7 @@ fun CreateFolder(
     stateID: StateID,
     dismiss: (Boolean) -> Unit,
 ) {
+
     val doCreate: (StateID, String) -> Unit = { parentID, name ->
         nodeActionsVM.createFolder(parentID, name)
         // TODO implement a user feedback via flows
@@ -63,32 +77,165 @@ fun CreateFolder(
     )
 }
 
-//@Composable
-//fun DownloadToDevice(
-//    moreMenuVM: MoreMenuVM,
-//    stateID: StateID,
-//    dismiss: (Boolean) -> Unit,
-//) {
-//
-//    val launched: MutableState<Boolean> = rememberSaveable {
-//        mutableStateOf(false)
-//    }
-//    Log.e(logTag, "----- Here for $stateID. Already launched: ${launched.value}")
-//
-//    val destinationPicker = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.CreateDocument(),
-//        onResult = { uri ->
-//            Log.e(logTag, "Got a destination for $stateID")
-//            dismiss(true)
-//        }
-//    )
-//    // TODO is this correct? we provide a dummy content event if we do not want to show anything
-//    Spacer(modifier = Modifier.height(1.dp))
-//
-//    if (!launched.value ) {
-//        destinationPicker.launch(stateID.fileName)
-//    }
-//}
+@Composable
+fun Download(
+    downloadVM: DownloadVM,
+    stateID: StateID,
+    dismiss: (Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    val rTransfer = downloadVM.transfer.observeAsState()
+    val rTreeNode = downloadVM.treeNode.collectAsState()
+    val cancel: (Boolean) -> Unit = {
+        downloadVM.cancelDownload()
+        dismiss(it)
+    }
+
+    val progress = rTransfer.value?.let {
+        if (it.byteSize > 0) {
+            Log.e(logTag, "got a new value ${it.byteSize}")
+            it.progress.toFloat().div(it.byteSize.toFloat())
+        } else {
+            0f
+        }
+    } ?: 0f
+
+    AlertDialog(
+        title = { Text(stringResource(R.string.running_download_title)) },
+        text = {
+            Column {
+                Text(text = rTreeNode.value?.name ?: "")
+                SmoothLinearProgressIndicator(
+                    indicatorProgress = progress,
+                    modifier = Modifier.padding(top = dimensionResource(R.dimen.margin))
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    cancel(false)
+                }
+            ) { Text(stringResource(R.string.button_cancel)) }
+        },
+        onDismissRequest = { cancel(false) },
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+            securePolicy = SecureFlagPolicy.Inherit
+        )
+    )
+    LaunchedEffect(key1 = stateID) {
+        val isDone = downloadVM.launchDownload()
+        if (isDone) {
+            downloadVM.viewFile(context)
+            dismiss(true)
+        }
+    }
+}
+
+@Composable
+fun PickDestination(
+    nodeActionsVM: NodeActionsVM,
+    stateID: StateID,
+    dismiss: (Boolean) -> Unit,
+) {
+    Log.d(logTag, "Composing PickDestination for $stateID")
+    val alreadyLaunched = rememberSaveable { mutableStateOf(false) }
+    val destinationPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(),
+        onResult = { uri ->
+            Log.e(logTag, "Got a destination for $stateID")
+            if (stateID != StateID.NONE) {
+                uri?.let {
+                    nodeActionsVM.download(stateID, uri)
+                }
+            }
+            dismiss(true)
+        }
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .alpha(0.02f),
+        content = {}
+    )
+    if (!alreadyLaunched.value) {
+        LaunchedEffect(key1 = stateID) {
+            Log.e(logTag, "Launching 'pick destination' for $stateID")
+            delay(100)
+            destinationPicker.launch(stateID.fileName)
+            alreadyLaunched.value = true
+        }
+    }
+}
+
+@Composable
+fun ImportFile(
+    nodeActionsVM: NodeActionsVM,
+    targetParentID: StateID,
+    dismiss: (Boolean) -> Unit,
+) {
+    val alreadyLaunched = rememberSaveable { mutableStateOf(false) }
+    val fileImporter = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents(),
+        onResult = { uris ->
+            nodeActionsVM.importFiles(targetParentID, uris)
+            dismiss(true)
+        }
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .alpha(0.02f),
+        content = {}
+    )
+    if (!alreadyLaunched.value) {
+        LaunchedEffect(key1 = targetParentID) {
+            Log.e(logTag, "Launching 'import file' to $targetParentID")
+            delay(100)
+            fileImporter.launch("*/*")
+            alreadyLaunched.value = true
+        }
+    }
+}
+
+@Composable
+fun TakePicture(
+    nodeActionsVM: NodeActionsVM,
+    targetParentID: StateID,
+    dismiss: (Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    val alreadyLaunched = rememberSaveable { mutableStateOf(false) }
+    val photoTaker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { taken ->
+            if (taken) {
+                nodeActionsVM.uploadPhoto()
+            } else {
+                nodeActionsVM.cancelPhoto()
+            }
+            dismiss(taken)
+        }
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .alpha(0.02f),
+        content = {}
+    )
+    if (!alreadyLaunched.value) {
+        LaunchedEffect(key1 = targetParentID) {
+            Log.e(logTag, "Launching 'TakePicture' with parent $targetParentID")
+            delay(100)
+            nodeActionsVM.preparePhoto(context, targetParentID)?.also {
+                photoTaker.launch(it)
+            }
+            alreadyLaunched.value = true
+        }
+    }
+}
 
 @Composable
 fun TreeNodeRename(
@@ -157,7 +304,7 @@ fun ConfirmEmptyRecycle(
         title = stringResource(id = R.string.confirm_permanent_deletion_title),
         desc = stringResource(id = R.string.confirm_empty_recycle_message, stateID.fileName),
         confirm = {
-            nodeActionsVM.emptyRecycle(stateID) // TODO this should be enough
+            nodeActionsVM.emptyRecycle(stateID)
             dismiss(true)
         },
         dismiss = { dismiss(false) },
@@ -171,9 +318,6 @@ fun ShowQRCode(
     dismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-//    val gotBitmap = rememberSaveable {
-//        mutableStateOf(false)
-//    }
 
     val bitmap = remember {
         mutableStateOf<ImageBitmap?>(null)
@@ -181,7 +325,6 @@ fun ShowQRCode(
 
     val writer = QRCodeWriter()
     LaunchedEffect(stateID) {
-        Log.e(logTag, "in launched effect")
         nodeActionsVM.getShareLink(stateID)?.let {
             val bitMatrix = writer.encode(
                 it,
@@ -198,7 +341,6 @@ fun ShowQRCode(
                     tmpBitmap.setPixel(x, y, if (bitMatrix.get(x, y)) Color.BLACK else Color.WHITE)
                 }
             }
-            Log.e(logTag, "got a bitmap")
             bitmap.value = tmpBitmap.asImageBitmap()
         }
     }
@@ -230,5 +372,4 @@ fun ShowQRCode(
             )
         )
     }
-
 }
