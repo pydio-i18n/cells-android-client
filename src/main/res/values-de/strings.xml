@@ -275,7 +275,7 @@
     <string name="thumb_description">Inhaltsvorschau</string>
     <string name="folder_icon_description">Ordnericon</string>
     <string name="empty_content_icon_description">Leeres Listensymbol</string>
-    <string name="choose_account">Choose an account</string>
+    <string name="choose_account">Konto auswählen</string>
     <string name="switch_account">Konto wechseln</string>
     <string name="switch_workspace">Arbeitsumgebung wechseln</string>
     <string name="parent_folder">Übergeordneter Ordner</string>
