@@ -22,7 +22,7 @@
     <string name="action_open_app">App öffnen</string>
     <string name="action_choose_account">Konto auswählen</string>
     <string name="action_browse">Durchsuchen</string>
-    <string name="action_open_workspaces">Arbeitsumgebungen</string>
+    <string name="action_open_workspaces">Workspaces</string>
     <string name="action_open_offline_roots">Offline-Dateien</string>
     <string name="action_open_bookmarks">Favoriten</string>
     <string name="action_open_transfers">Übertragungen</string>
@@ -35,7 +35,7 @@
     <!-- Main Menu (left drawer) -->
     <string name="open_drawer">Menü-Übersicht öffnen</string>
     <!-- Section titles -->
-    <string name="my_workspaces">Meine Arbeitsumgebungen</string>
+    <string name="my_workspaces">My Workspaces</string>
     <string name="quick_access">Schnellzugriff</string>
     <string name="my_account">Mein Konto</string>
     <string name="nav_open">Öffnen</string>
