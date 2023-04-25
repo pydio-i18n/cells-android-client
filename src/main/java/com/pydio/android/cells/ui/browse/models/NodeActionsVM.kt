@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.pydio.android.cells.CellsApp
 import com.pydio.android.cells.services.FileService
 import com.pydio.android.cells.services.NodeService
+import com.pydio.android.cells.services.OfflineService
 import com.pydio.android.cells.services.TransferService
 import com.pydio.android.cells.utils.DEFAULT_FILE_PROVIDER_ID
 import com.pydio.cells.transport.StateID
@@ -19,12 +20,12 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
-
 /**  Centralize methods to manage a TreeNode */
 class NodeActionsVM(
     private val nodeService: NodeService,
     private val fileService: FileService,
     private val transferService: TransferService,
+    private val offlineService: OfflineService,
 ) : ViewModel() {
 
     private val logTag = "NodeActionsVM"
@@ -98,7 +99,7 @@ class NodeActionsVM(
 
     fun download(stateID: StateID, uri: Uri) {
         viewModelScope.launch {
-            nodeService.saveToSharedStorage(stateID, uri)
+            transferService.saveToSharedStorage(stateID, uri)
             // FIXME handle exception
         }
     }
@@ -158,7 +159,7 @@ class NodeActionsVM(
 
     fun toggleOffline(stateID: StateID, newState: Boolean) {
         viewModelScope.launch {
-            nodeService.toggleOffline(stateID, newState)
+            offlineService.toggleOffline(stateID, newState)
         }
     }
 

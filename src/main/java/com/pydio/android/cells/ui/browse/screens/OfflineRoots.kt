@@ -76,7 +76,7 @@ import com.pydio.android.cells.ui.core.composables.menus.CellsModalBottomSheetLa
 import com.pydio.android.cells.ui.core.composables.modal.ModalBottomSheetValue
 import com.pydio.android.cells.ui.core.composables.modal.rememberModalBottomSheetState
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
 import com.pydio.android.cells.utils.asAgoString
 import com.pydio.cells.transport.StateID
 import kotlinx.coroutines.launch
@@ -88,7 +88,6 @@ private const val logTag = "OfflineRoots"
 fun OfflineRoots(
     offlineVM: OfflineVM,
     openDrawer: () -> Unit,
-    openSearch: () -> Unit,
     browseHelper: BrowseHelper,
 ) {
     val context = LocalContext.current
@@ -101,15 +100,7 @@ fun OfflineRoots(
 
     val localOpen: (StateID) -> Unit = { stateID ->
         scope.launch {
-            offlineVM.getNode(stateID)?.let {
-                if (it.isFolder()) {
-                    browseHelper.open(context, stateID)
-//                } else if (it.isPreViewable()) {
-                    // TODO (since v2) Open carousel for offline nodes
-                } else {
-                    browseHelper.open(context, stateID)
-                }
-            }
+            browseHelper.open(context, stateID)
         }
     }
 
@@ -168,26 +159,32 @@ fun OfflineRoots(
                     }
                 }
             }
+
             is NodeAction.ForceResync -> {
                 offlineVM.forceSync(stateID)
                 moreMenuDone()
             }
+
             is NodeAction.DownloadToDevice -> {
                 destinationPicker.launch(stateID.fileName)
                 // Done is called by the destination picker callback
             }
+
             is NodeAction.ToggleOffline -> {
                 offlineVM.removeFromOffline(stateID)
                 moreMenuDone()
             }
+
             is NodeAction.AsGrid -> {
                 offlineVM.setListLayout(ListLayout.GRID)
                 moreMenuDone()
             }
+
             is NodeAction.AsList -> {
                 offlineVM.setListLayout(ListLayout.LIST)
                 moreMenuDone()
             }
+
             else -> {
                 Log.e(logTag, "Unknown action $action for $stateID")
                 moreMenuDone()
@@ -429,6 +426,7 @@ private fun OfflineRootsList(
                         }
                     }
                 }
+
                 else -> {
 
                     LazyColumn(
@@ -540,7 +538,7 @@ private fun getDesc(item: RLiveOfflineRoot): String {
 )
 @Composable
 private fun SyncStatusPreview() {
-    CellsTheme {
+    UseCellsTheme {
         SyncStatus(
             "Pydio Cells server",
             -1f,

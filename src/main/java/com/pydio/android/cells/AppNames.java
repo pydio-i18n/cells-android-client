@@ -14,7 +14,6 @@ public interface AppNames {
     String NETWORK_TYPE_ROAMING = "Roaming";
     String NETWORK_TYPE_UNAVAILABLE = "Unavailable";
     String NETWORK_TYPE_UNKNOWN = "Unknown";
-
     String NETWORK_TYPE_CONSTRAINT_NONE = "None";
     String NETWORK_TYPE_CONSTRAINT_UNMETERED = "Unmetered";
     String NETWORK_TYPE_CONSTRAINT_NOT_ROAMING = "Not Roaming";
@@ -52,12 +51,13 @@ public interface AppNames {
     String ACTION_MORE = KEY_PREFIX_ + "more";
     String ACTION_OPEN = KEY_PREFIX_ + "open";
     String ACTION_CANCEL = KEY_PREFIX_ + "cancel";
+    String ACTION_DONE = KEY_PREFIX_ + "done";
     String ACTION_RESTART = KEY_PREFIX_ + "restart";
     String ACTION_CHOOSE_TARGET = KEY_PREFIX_ + "choosetarget";
     String ACTION_COPY = KEY_PREFIX_ + "copy";
     String ACTION_MOVE = KEY_PREFIX_ + "move";
     String ACTION_UPLOAD = KEY_PREFIX_ + "upload";
-    String ACTION_DOWNLOAD = KEY_PREFIX_ + "dowload";
+    String ACTION_DOWNLOAD = KEY_PREFIX_ + "download";
     String ACTION_CREATE_FOLDER = KEY_PREFIX_ + "createfolder";
 
     String ACTION_OPEN_PARENT_IN_WORKSPACES = KEY_PREFIX_ + "openparentinworkspaces";

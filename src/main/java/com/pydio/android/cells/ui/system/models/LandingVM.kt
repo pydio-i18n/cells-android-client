@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pydio.android.cells.services.AccountService
+import com.pydio.android.cells.services.AuthService
 import com.pydio.android.cells.services.JobService
 import com.pydio.android.cells.services.PreferencesService
 import com.pydio.android.cells.ui.StartingState
@@ -17,8 +18,9 @@ import kotlin.properties.Delegates
 
 class LandingVM(
     private val prefs: PreferencesService,
-    private val accountService: AccountService,
     private val jobService: JobService,
+    private val authService: AuthService,
+    private val accountService: AccountService,
 ) : ViewModel() {
 
     private val logTag = "LandingVM"
@@ -38,18 +40,25 @@ class LandingVM(
     }
 
     /**
-     * Makes a first quick check for the happy path and returns true if:
-     * - code version is the same as the stored version
-     * OR (TODO still checked during migrate activity for the time being)
-     * - we are on a fresh install
+     * Makes a first quick check for the happy path and returns true
+     * only if code version is the same as the stored version
      *
-     * WARNING: false mean that we have to trigger the migrate activity that will perform
-     * more advanced tests, do a migration (if really necessary) and update the stored version number.
+     * Note: "false" means that we have to trigger the migrate activity that:
+     * - performs advanced tests,
+     * - does a migration (if necessary)
+     * - updates the stored version number.
+     *
+     * Note: We also get "false" for fresh installs and go through migration.
+     *  It takes a few seconds more to start but  subsequent starts are then faster:
+     *  they avoid instantiating legacy migration objects
      */
     suspend fun noMigrationNeeded(): Boolean {
         val currInstalled = prefs.getInstalledVersion()
-        // TODO find a way to know if we are on a fresh install
         return newVersion > 100 && newVersion == currInstalled
+    }
+
+    suspend fun isAuthStateValid(state: String): Pair<Boolean, StateID> {
+        return authService.isAuthStateValid(state)
     }
 
     suspend fun getStartingState(): StartingState {
@@ -68,23 +77,27 @@ class LandingVM(
             }
         }
 
+
+        // probably useless, TODO double check
+        // stateID?.let { accountService.openSession(it.account()) }
+
+        val state = StartingState(stateID ?: StateID.NONE)
         val route = when (stateID) {
             null -> LoginDestinations.AskUrl.createRoute()
             StateID.NONE -> CellsDestinations.Accounts.route
-            else -> BrowseDestinations.Open.createRoute(stateID)
+            else -> {
+                // We are most probably in a restart, so we prevent explicit browsing
+                state.isRestart = true
+                BrowseDestinations.Open.createRoute(stateID)
+            }
         }
-
-        // probably useless, TODO double check
-        stateID?.let { accountService.openSession(it.account()) }
-
-        val state = StartingState(stateID ?: StateID.NONE)
         state.route = route
         return state
     }
 
     fun recordLaunch() {
         try {
-            val creationMsg = "### Starting agent ${ClientData.getInstance().userAgent()}"
+            val creationMsg = "### Started ${ClientData.getInstance().userAgent()}"
             jobService.i(logTag, creationMsg, "Cells App")
 //            jobService.d(logTag, ".... Testing log levels:", "DEBUGGER")
 //            jobService.i(logTag, "   check - 1", "DEBUGGER")
@@ -94,5 +107,4 @@ class LandingVM(
             Log.e(logTag, "could not log start: $e")
         }
     }
-
 }

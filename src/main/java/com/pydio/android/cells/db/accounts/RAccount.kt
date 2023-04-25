@@ -5,18 +5,18 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.pydio.android.cells.AppNames
-import com.pydio.android.cells.db.Converters
+import com.pydio.android.cells.db.CellsConverters
 import com.pydio.cells.api.Server
 import com.pydio.cells.transport.StateID
 import com.pydio.cells.utils.Str
 import java.util.*
 
 @Entity(tableName = "accounts")
-@TypeConverters(Converters::class)
+@TypeConverters(CellsConverters::class)
 data class RAccount(
 
     @PrimaryKey
-    @ColumnInfo(name = "account_id") val accountID: String,
+    @ColumnInfo(name = "account_id") val accountId: String,
 
     @ColumnInfo(name = "url") val url: String,
 
@@ -31,8 +31,6 @@ data class RAccount(
 
     // We rather use properties to simply be able to enrich model
     @ColumnInfo(name = "properties") val properties: Properties,
-//    @ColumnInfo(name = "server_label") val serverLabel: String?,
-//    @ColumnInfo(name = "welcome_message") val welcomeMessage: String?,
 ) {
 
     companion object {
@@ -40,6 +38,7 @@ data class RAccount(
 
         const val KEY_SERVER_LABEL = "server_label"
         const val KEY_WELCOME_MESSAGE = "welcome_message"
+        const val KEY_CUSTOM_COLOR = "custom_color"
 
         fun toRAccount(username: String, server: Server): RAccount {
 
@@ -50,9 +49,12 @@ data class RAccount(
             if (Str.notEmpty(server.welcomeMessage)) {
                 props.setProperty(KEY_WELCOME_MESSAGE, server.welcomeMessage)
             }
+            if (Str.notEmpty(server.customPrimaryColor)) {
+                props.setProperty(KEY_CUSTOM_COLOR, server.customPrimaryColor)
+            }
 
             return RAccount(
-                accountID = StateID(username, server.url()).accountId,
+                accountId = StateID(username, server.url()).accountId,
                 username = username,
                 url = server.url(),
                 tlsMode = if (server.serverURL.skipVerify()) 1 else 0,
@@ -63,7 +65,7 @@ data class RAccount(
         }
     }
 
-    fun account(): StateID = StateID.fromId(accountID)
+    fun accountID(): StateID = StateID.fromId(accountId)
 
     fun skipVerify() = tlsMode != 0
 
@@ -74,10 +76,30 @@ data class RAccount(
         return null
     }
 
+    fun setLabel(label: String) {
+        properties[KEY_SERVER_LABEL] = label
+    }
+
+    fun setCustomColor(colorString: String) {
+        properties[KEY_CUSTOM_COLOR] = colorString
+    }
+
+    fun getCustomColor(): String? {
+        if (properties.containsKey(KEY_CUSTOM_COLOR)) {
+            return properties[KEY_CUSTOM_COLOR] as String
+        }
+        return null
+    }
+
+    fun setWelcomeMessage(message: String) {
+        properties[KEY_WELCOME_MESSAGE] = message
+    }
+
     fun welcomeMessage(): String? {
         if (properties.containsKey(KEY_WELCOME_MESSAGE)) {
             return properties[KEY_WELCOME_MESSAGE] as String
         }
         return null
     }
+
 }

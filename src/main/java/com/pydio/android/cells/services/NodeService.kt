@@ -1,29 +1,21 @@
 package com.pydio.android.cells.services
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.sqlite.db.SimpleSQLiteQuery
 import com.bumptech.glide.Glide
 import com.pydio.android.cells.AppNames
-import com.pydio.android.cells.CellsApp
 import com.pydio.android.cells.ListType
-import com.pydio.android.cells.R
 import com.pydio.android.cells.db.accounts.RWorkspace
 import com.pydio.android.cells.db.nodes.RLiveOfflineRoot
-import com.pydio.android.cells.db.nodes.ROfflineRoot
 import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.db.nodes.TreeNodeDB
-import com.pydio.android.cells.db.nodes.TreeNodeDao
-import com.pydio.android.cells.db.runtime.RJob
-import com.pydio.android.cells.transfer.FileDownloader
 import com.pydio.android.cells.transfer.TreeDiff
 import com.pydio.android.cells.utils.currentTimestamp
 import com.pydio.android.cells.utils.currentTimestampAsString
 import com.pydio.android.cells.utils.logException
 import com.pydio.android.cells.utils.parseOrder
-import com.pydio.android.cells.utils.timestampForLogMessage
 import com.pydio.cells.api.Client
 import com.pydio.cells.api.ErrorCodes
 import com.pydio.cells.api.SDKException
@@ -31,32 +23,26 @@ import com.pydio.cells.api.SdkNames
 import com.pydio.cells.api.ui.FileNode
 import com.pydio.cells.api.ui.Node
 import com.pydio.cells.transport.StateID
-import com.pydio.cells.utils.IoHelpers
 import com.pydio.cells.utils.Str
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
 
 class NodeService(
     private val appContext: Context,
-    private val jobService: JobService,
+    private val ioDispatcher: CoroutineDispatcher,
     private val accountService: AccountService,
     private val treeNodeRepository: TreeNodeRepository,
+    private val offlineService: OfflineService,
     private val fileService: FileService,
 ) {
     private val logTag = "NodeService"
-    private val nodeServiceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + nodeServiceJob)
+    private val nodeServiceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(ioDispatcher + nodeServiceJob)
 
     // Query the local index to get LiveData for the ViewModels
     fun sortedList(stateID: StateID, encodedSortBy: String): LiveData<List<RTreeNode>> {
@@ -94,24 +80,6 @@ class NodeService(
         return nodeDB(accountID).liveOfflineRootDao().offlineRootQuery(lsQuery)
     }
 
-    suspend fun searchLocally(
-        stateID: StateID,
-        query: String,
-        encodedSortBy: String
-    ): List<RTreeNode> = withContext(Dispatchers.IO) {
-        if (Str.empty(query)) {
-            listOf()
-        } else {
-            val (sortByCol, sortByOrder) = parseOrder(encodedSortBy, ListType.DEFAULT)
-            val lsQuery = SimpleSQLiteQuery(
-                "SELECT * FROM tree_nodes WHERE name like '%${query}%' " +
-                        "ORDER BY $sortByCol $sortByOrder LIMIT 100 "
-            )
-            nodeDB(stateID).treeNodeDao().searchQuery(lsQuery)
-        }
-    }
-
-
     fun listWorkspaces(stateID: StateID): LiveData<List<RTreeNode>> {
         return nodeDB(stateID).treeNodeDao().lsWithMime(stateID.id, "", SdkNames.NODE_MIME_WS_ROOT)
     }
@@ -121,12 +89,42 @@ class NodeService(
         return nodeDB(stateID).treeNodeDao().lsWithMimeFilter(stateID.id, stateID.file, mimeFilter)
     }
 
+    fun liveSearch(
+        stateID: StateID,
+        query: String,
+        encodedSortBy: String
+    ): LiveData<List<RTreeNode>> {
+        val (sortByCol, sortByOrder) = parseOrder(encodedSortBy, ListType.DEFAULT)
+        val lsQuery = SimpleSQLiteQuery(
+            "SELECT * FROM tree_nodes WHERE name like '%${query}%' " +
+                    "ORDER BY $sortByCol $sortByOrder LIMIT 100 "
+        )
+        return nodeDB(stateID).treeNodeDao().liveSearchQuery(lsQuery)
+    }
+
     /* Communicate with the DB using suspend functions */
-    suspend fun getNode(stateID: StateID): RTreeNode? = withContext(Dispatchers.IO) {
+    suspend fun getNode(stateID: StateID): RTreeNode? = withContext(ioDispatcher) {
         if (stateID == StateID.NONE) {
             null
         } else {
             nodeDB(stateID).treeNodeDao().getNode(stateID.id)
+        }
+    }
+
+    suspend fun searchLocally(
+        stateID: StateID,
+        query: String,
+        encodedSortBy: String
+    ): List<RTreeNode> = withContext(ioDispatcher) {
+        if (Str.empty(query)) {
+            listOf()
+        } else {
+            val (sortByCol, sortByOrder) = parseOrder(encodedSortBy, ListType.DEFAULT)
+            val lsQuery = SimpleSQLiteQuery(
+                "SELECT * FROM tree_nodes WHERE name like '%${query}%' " +
+                        "ORDER BY $sortByCol $sortByOrder LIMIT 100 "
+            )
+            nodeDB(stateID).treeNodeDao().searchQuery(lsQuery)
         }
     }
 
@@ -140,7 +138,7 @@ class NodeService(
 
     /** Single entry point to insert or update a node */
     suspend fun upsertNode(newNode: RTreeNode, isDiffRoot: Boolean = false) =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
 
             val state = newNode.getStateID()
             val currSession = treeNodeRepository.sessions[newNode.getStateID().accountId]
@@ -152,8 +150,8 @@ class NodeService(
                 ndb.offlineRootDao().getByUuid(newNode.uuid)?.let {
                     if (it.encodedState != newNode.encodedState) {
                         // TODO we should rather try to move existing offline root
-                        removeOfflineRoot(state)
-                        updateOfflineRoot(newNode)
+                        offlineService.removeOfflineRoot(state)
+                        offlineService.updateOfflineRoot(newNode)
                     } else {
                         newNode.setOfflineRoot(true)
                     }
@@ -196,34 +194,11 @@ class NodeService(
             }
         }
 
-    fun liveLocalQuery(stateID: StateID, query: String): LiveData<List<RTreeNode>> {
-        return if (Str.empty(query)) {
-            // We prevent large search without query
-            nodeDB(stateID).treeNodeDao().emptyLiveQuery()
-        } else {
-            nodeDB(stateID).treeNodeDao().liveQuery(query)
-        }
-    }
-
-    fun flowLocalQuery(stateID: StateID, query: String): Flow<List<RTreeNode>> {
-        return nodeDB(stateID).treeNodeDao().flowQuery(query)
-    }
-
     /* Update nodes in the local store */
-    suspend fun abortLocalChanges(stateID: StateID) = withContext(Dispatchers.IO) {
-        val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id) ?: return@withContext
-        node.localModificationTS = node.remoteModificationTS
-        node.localModificationStatus = null
-        nodeDB(stateID).treeNodeDao().update(node)
-    }
 
     /* Calls to query both the cache and the remote server */
-//    suspend fun toggleBookmark(rTreeNode: RTreeNode) = withContext(Dispatchers.IO) {
-//        val stateID = rTreeNode.getStateID()
-//        toggleBookmark(stateID)
-//    }
 
-    suspend fun toggleBookmark(stateID: StateID, newState: Boolean) = withContext(Dispatchers.IO) {
+    suspend fun toggleBookmark(stateID: StateID, newState: Boolean) = withContext(ioDispatcher) {
         try {
             val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id) ?: return@withContext
             getClient(stateID).bookmark(stateID.workspace, stateID.file, newState)
@@ -240,7 +215,7 @@ class NodeService(
         }
     }
 
-    suspend fun removeShare(stateID: StateID) = withContext(Dispatchers.IO) {
+    suspend fun removeShare(stateID: StateID) = withContext(ioDispatcher) {
         try {
             val client = getClient(stateID)
             val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id) ?: return@withContext
@@ -259,7 +234,7 @@ class NodeService(
         }
     }
 
-    suspend fun createShare(stateID: StateID): String? = withContext(Dispatchers.IO) {
+    suspend fun createShare(stateID: StateID): String? = withContext(ioDispatcher) {
         try {
             // We still put default values. TODO implement user defined details
             return@withContext getClient(stateID).share(
@@ -276,7 +251,7 @@ class NodeService(
     }
 
     @Deprecated("Rather use createShare() and removeShare()")
-    suspend fun toggleShared(rTreeNode: RTreeNode): String? = withContext(Dispatchers.IO) {
+    suspend fun toggleShared(rTreeNode: RTreeNode): String? = withContext(ioDispatcher) {
         val stateID = rTreeNode.getStateID()
         try {
             val client = getClient(stateID)
@@ -308,418 +283,8 @@ class NodeService(
         return@withContext null
     }
 
-    suspend fun toggleOffline(stateID: StateID, newState: Boolean) = withContext(Dispatchers.IO) {
-        try {
-            val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id) ?: return@withContext
-            if (node.isOfflineRoot()) {
-                if (!newState) {
-                    removeOfflineRoot(stateID)
-                }
-            } else {
-                if (newState) {
-                    updateOfflineRoot(node)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(logTag, "could update offline sync status for ${stateID}: ${e.message}")
-            e.printStackTrace()
-            return@withContext
-        }
-    }
-
-    private suspend fun removeOfflineRoot(stateID: StateID) = withContext(Dispatchers.IO) {
-        val db = nodeDB(stateID)
-        val offlineDao = db.offlineRootDao()
-
-        if (offlineDao.get(stateID.id) == null) { // Nothing to do
-            return@withContext
-        }
-
-        offlineDao.delete(stateID.id)
-        db.treeNodeDao().getNode(stateID.id)?.let {
-            it.setOfflineRoot(false)
-            persistUpdated(it)
-        }
-
-        // TODO also clean file system ?
-    }
-
-    suspend fun updateOfflineRoot(rTreeNode: RTreeNode, status: String) =
-        withContext(Dispatchers.IO) {
-            val stateID = rTreeNode.getStateID()
-            val db = nodeDB(stateID)
-            val offlineDao = db.offlineRootDao()
-
-            val newRoot = ROfflineRoot.fromTreeNode(rTreeNode)
-            newRoot.status = status
-
-            // TODO should we check if this node is already a descendant of
-            //  an existing offline root ?
-
-            offlineDao.insert(newRoot) // We rely on node UUID and insert REPLACE strategy
-            rTreeNode.setOfflineRoot(true)
-            persistUpdated(rTreeNode)
-        }
-
-    // TODO finalize this: we should try to move already existing cache file and index
-//   rather than deleting / recreating the offline root
-    suspend fun moveOfflineRoot(rTreeNode: RTreeNode, offlineRoot: ROfflineRoot) =
-        withContext(Dispatchers.IO) {
-            val stateID = rTreeNode.getStateID()
-            val db = nodeDB(stateID)
-            val offlineDao = db.offlineRootDao()
-            offlineRoot.encodedState = rTreeNode.encodedState
-            offlineDao.insert(offlineRoot) // We rely on node UUID and insert REPLACE strategy
-            rTreeNode.setOfflineRoot(true)
-            persistUpdated(rTreeNode)
-        }
-
-    private suspend fun updateOfflineRoot(rTreeNode: RTreeNode) {
-        updateOfflineRoot(rTreeNode, AppNames.OFFLINE_STATUS_NEW)
-    }
-
-    /* Offline synchronisation */
-    @OptIn(ExperimentalTime::class)
-    suspend fun runFullSync(caller: String): RJob? {
-
-        val label = "Full sync requested by $caller"
-        val template = AppNames.JOB_TEMPLATE_FULL_RESYNC
-
-        if (hasExistingJob(label, template, 120)) {
-            return null
-        }
-
-        val sessions = accountService.listSessionViews(false).filter {
-            // Filter out the accounts with no defined offline root
-            nodeDB(it.getStateID()).offlineRootDao().getAllActive().isNotEmpty()
-        }
-
-        val job =
-            jobService.createAndLaunch(caller, template, label, maxSteps = sessions.size.toLong())
-                ?: return null
-
-        val startTS = timestampForLogMessage()
-        val firstMsg = "Full sync started at $startTS by $caller"
-        jobService.i(logTag, firstMsg, "${job.jobId}")
-        jobService.incrementProgress(job, 0, firstMsg)
-        var changeNb = 0
-        val timeToSync = measureTimedValue {
-            for (session in sessions) {
-                val msg = if (session.lifecycleState != AppNames.LIFECYCLE_STATE_PAUSED
-                    && session.authStatus == AppNames.AUTH_STATUS_CONNECTED
-                ) {
-                    changeNb += launchAccountSync(session.getStateID(), caller, job.jobId)
-                    "${session.getStateID()} OK"
-                } else {
-                    "Skip ${session.getStateID()} - session: ${session.lifecycleState}, account: ${session.authStatus} "
-                }
-                jobService.incrementProgress(job, 1, msg)
-            }
-        }
-        val msg = "Full sync done with $changeNb changes in ${timeToSync.duration.inWholeSeconds}s"
-        val progressMsg = "Full sync terminated at ${timestampForLogMessage()}"
-        jobService.done(job, msg, progressMsg)
-        jobService.i(logTag, msg, "${job.jobId}")
-
-        return job
-    }
-
-    fun getSyncTemplateId(stateID: StateID): String {
-        return "${AppNames.JOB_TEMPLATE_RESYNC}-$stateID"
-    }
-
-    suspend fun prepareAccountSync(
-        stateID: StateID,
-        caller: String,
-        parentJobId: Long = 0L
-    ): Pair<Long, String?> =
-        withContext(Dispatchers.IO) {
-
-            val label = "Account sync for $stateID\nLaunched by $caller"
-            val currJobTemplate = getSyncTemplateId(stateID)
-
-            // We first check if a sync is not already running for this account
-            if (hasExistingJob(label, currJobTemplate, 120)) {
-                return@withContext 0L to "A running job already exists"
-            }
-
-            val roots = nodeDB(stateID).offlineRootDao().getAllActive()
-            if (roots.isEmpty()) {
-                return@withContext 0L to "No offline root is defined for current account"
-            }
-
-            val jobId = jobService.create(
-                caller,
-                currJobTemplate,
-                label,
-                parentId = parentJobId,
-                maxSteps = roots.size.toLong()
-            )
-
-            return@withContext jobId to null
-        }
-
-    suspend fun performAccountSync(accountID: StateID, jobId: Long, context: Context) =
-        withContext(Dispatchers.IO) {
-            val job = jobService.get(jobId) ?: let {
-                Log.e(logTag, "No job found for id $jobId, aborting launch...")
-                return@withContext
-            }
-            jobService.i(logTag, "Starting ${job.label}", "$jobId")
-
-            val roots = nodeDB(accountID).offlineRootDao().getAllActive()
-            if (roots.isEmpty()) {
-                return@withContext // Should never happen, check has just been done before creating the Job Record
-            }
-
-            jobService.incrementProgress(
-                job,
-                0,
-                context.resources.getString(R.string.sync_tree_walking)
-            )
-
-            var changeNb = 0
-            for (offlineRoot in roots) {
-                changeNb += syncOfflineRoot(offlineRoot, job)
-            }
-
-//            // TODO improve: in fact we only reach this point when the sync has already terminated
-//            if (changeNb > 0) {
-//                jobService.incrementProgress(job, 0, "Downloading changed files")
-//            }
-            val msg = "Sync done with $changeNb changes."
-            jobService.done(job, msg, "Successfully done")
-            jobService.i(logTag, "Terminated ${job.label}", "$jobId")
-        }
-
-    fun getRunningAccountSync(accountID: StateID): LiveData<RJob?> {
-        return jobService.getMostRecentRunning(getSyncTemplateIdForAccount(accountID))
-    }
-
-    private fun getSyncTemplateIdForAccount(accountID: StateID): String {
-        return String.format(AppNames.JOB_TEMPLATE_RESYNC, accountID.toString())
-    }
-
-    @OptIn(ExperimentalTime::class)
-    suspend fun launchAccountSync(stateID: StateID, caller: String, parentJobId: Long = 0L): Int =
-        withContext(Dispatchers.IO) {
-
-            val label = "Account sync for $stateID launched by $caller"
-            val currJobTemplate = getSyncTemplateIdForAccount(stateID)
-
-            // We first check if a sync is not already running for this account
-            if (hasExistingJob(label, currJobTemplate, 120)) {
-                return@withContext 0
-            }
-
-            var changeNb = 0
-            val roots = nodeDB(stateID).offlineRootDao().getAllActive()
-            if (roots.isEmpty()) {
-                return@withContext 0
-            }
-            jobService.d(logTag, "Syncing: $stateID", "$parentJobId")
-
-            val job = jobService.createAndLaunch(
-                caller,
-                currJobTemplate,
-                label,
-                parentId = parentJobId,
-                maxSteps = roots.size.toLong()
-            ) ?: let {
-                jobService.e(logTag, "could not create account sync job for $stateID ")
-                return@withContext 0
-            }
-            val timeToSync = measureTimedValue {
-                for (offlineRoot in roots) {
-                    changeNb += syncOfflineRoot(offlineRoot, job)
-                    jobService.incrementProgress(
-                        job,
-                        1,
-                        "Sync done for ${offlineRoot.getStateID()}"
-                    )
-                }
-            }
-            val msg =
-                "Sync done with $changeNb changes in ${timeToSync.duration.inWholeSeconds}s for $stateID"
-            jobService.i(logTag, msg, "${job.jobId}")
-            jobService.done(job, msg, "Sync done at ${timestampForLogMessage()}")
-            return@withContext changeNb
-        }
-
-    @Deprecated("Rather use method with StateID")
-    suspend fun syncOfflineRoot(rTreeNode: RTreeNode): Int = withContext(Dispatchers.IO) {
-        return@withContext syncOfflineRoot(rTreeNode.getStateID())
-    }
-
-    @OptIn(ExperimentalTime::class)
-    suspend fun syncOfflineRoot(stateID: StateID): Int = withContext(Dispatchers.IO) {
-
-        val caller = AppNames.JOB_OWNER_USER
-
-        val dao = nodeDB(stateID).offlineRootDao()
-        val offlineRoot = dao.get(stateID.id) ?: let {
-            Log.w(logTag, "Could not find offline root for $stateID, aborting")
-            return@withContext 0
-        }
-
-        val label = "Sync for $stateID launched by $caller"
-        val currJobTemplate = String.format(AppNames.JOB_TEMPLATE_RESYNC, stateID.toString())
-
-        // We first check if a sync is not already running for this account
-        if (hasExistingJob(label, currJobTemplate, 120)) {
-            return@withContext 0
-        }
-
-        val job = jobService.createAndLaunch(
-            caller,
-            currJobTemplate,
-            label,
-        ) ?: let {
-            jobService.e(logTag, "could not create sync job for $stateID ")
-            return@withContext 0
-        }
-
-        val changeNb: Int
-        val timeToSync = measureTimedValue {
-            changeNb = syncOfflineRoot(offlineRoot, job)
-        }
-        val msg = "Synced $stateID with $changeNb changes in ${timeToSync.duration.inWholeSeconds}s"
-        jobService.i(logTag, msg, "${job.jobId}")
-        jobService.done(job, msg, "Sync done at ${timestampForLogMessage()}")
-
-        return@withContext changeNb
-    }
-
-    private fun hasExistingJob(
-        label: String,
-        template: String,
-        timeoutSinceUpdated: Int = 120,
-        timeoutSinceStarted: Int = 300,
-    ): Boolean {
-
-        // We first check if a sync is not already running for this account
-        var runningJobs = jobService.getRunningJobs(template)
-        if (runningJobs.isNotEmpty()) {
-            // We check for old jobs
-            for (runningJob in runningJobs) {
-
-                val (isTimedOut, msg) = if (runningJob.updateTimestamp > 0) {
-                    val dur = currentTimestamp() - runningJob.updateTimestamp
-                    (dur > timeoutSinceUpdated) to "Timeout: no update since $dur seconds"
-                } else {
-                    val dur = currentTimestamp() - runningJob.startTimestamp
-                    (dur > timeoutSinceStarted) to "Timeout: job started with no update since $dur seconds"
-                }
-                if (isTimedOut) {
-                    runningJob.doneTimestamp = currentTimestamp()
-                    runningJob.message = msg
-                    runningJob.status = AppNames.JOB_STATUS_TIMEOUT
-                    jobService.update(runningJob)
-                    jobService.w(logTag, msg, "${runningJob.jobId}")
-                }
-            }
-
-            // We re-query the DB to see if we still have old jobs and cancel the launch in such case
-            runningJobs = jobService.getRunningJobs(template)
-            if (runningJobs.isNotEmpty()) {
-                var msg =
-                    "Cannot start job [$label], job ${runningJobs[0].jobId} is already running"
-                if (runningJobs.size > 1) {
-                    msg += " (plus ${runningJobs.size - 1} others)"
-                }
-                jobService.w(logTag, msg, "[not started]")
-                return true
-            }
-        }
-
-        return false
-    }
-
-    @OptIn(ExperimentalTime::class)
-    private suspend fun syncOfflineRoot(offlineRoot: ROfflineRoot, job: RJob): Int =
-        withContext(Dispatchers.IO) {
-            val stateID = offlineRoot.getStateID()
-            try {
-                val client = getClient(stateID)
-                val db = nodeDB(stateID)
-                val treeNodeDao = db.treeNodeDao()
-                val offlineDao = db.offlineRootDao()
-
-                val treeNode = treeNodeDao.getNode(offlineRoot.encodedState)
-                    ?: run {
-                        val nodeInfo = client.nodeInfo(stateID.workspace, stateID.file)
-                            ?: run {
-                                // Remote node has also disappeared on server
-                                offlineRoot.status = AppNames.OFFLINE_STATUS_LOST
-                                offlineRoot.lastCheckTS = currentTimestamp()
-                                return@withContext 0
-                            }
-                        RTreeNode.fromFileNode(stateID, nodeInfo)
-                    }
-
-                val fileDL = FileDownloader(job)
-                var changeNb = 0
-                val timeToSync = measureTimedValue {
-                    changeNb += syncNodeAt(treeNode, client, treeNodeDao, fileDL)
-                }
-                val msg = "walked  $stateID in ${timeToSync.duration.inWholeSeconds}s"
-                jobService.d(logTag, msg, job.jobId.toString())
-                fileDL.walkingDone()
-                fileDL.manualJoin()
-
-                if (!fileDL.isFailed()) {
-                    if (changeNb > 0) {
-                        offlineRoot.localModificationTS = currentTimestamp()
-                        offlineRoot.message = null // TODO double check
-                    }
-                    offlineRoot.lastCheckTS = currentTimestamp()
-                    offlineRoot.status = AppNames.OFFLINE_STATUS_ACTIVE
-                    offlineDao.update(offlineRoot)
-
-                    // TODO add more info on the corresponding root RTreeNode ??
-                    treeNode.setOfflineRoot(true)
-                    persistUpdated(treeNode)
-                }
-                return@withContext changeNb
-            } catch (se: SDKException) {
-                Log.e(logTag, "could update offline sync status for " + stateID.id)
-                se.printStackTrace()
-                return@withContext 0
-            }
-        }
-
-    private suspend fun syncNodeAt(
-        rTreeNode: RTreeNode,
-        client: Client,
-        dao: TreeNodeDao,
-        fileDL: FileDownloader
-    ): Int {
-
-        val stateID = rTreeNode.getStateID()
-
-        // First re-sync current level
-        val treeDiff = TreeDiff(stateID, client, dao, fileDL)
-        var changeNb = treeDiff.compareWithRemote()
-
-        if (rTreeNode.isFolder()) {
-            // Then retrieve child folders and call re-sync on each one
-            val children = nodeDB(stateID).treeNodeDao()
-                .listWithMime(stateID.id, stateID.file, SdkNames.NODE_MIME_FOLDER)
-            for (child in children) {
-                changeNb += syncNodeAt(child, client, dao, fileDL)
-            }
-        }
-        return changeNb
-    }
-
-    fun enqueueDownload(stateID: StateID, uri: Uri) {
-        serviceScope.launch {
-            saveToSharedStorage(stateID, uri)
-        }
-    }
-
     suspend fun createFolder(parentID: StateID, folderName: String) =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             try {
                 getClient(parentID).mkdir(parentID.workspace, parentID.file, folderName)
             } catch (e: SDKException) {
@@ -731,7 +296,7 @@ class NodeService(
         }
 
     suspend fun copy(sources: List<StateID>, targetParent: StateID) =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             try {
                 val srcFiles = mutableListOf<String>()
                 for (source in sources) {
@@ -751,7 +316,7 @@ class NodeService(
         }
 
     suspend fun move(sources: List<StateID>, targetParent: StateID) =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             try {
                 val srcFiles = mutableListOf<String>()
                 for (source in sources) {
@@ -778,7 +343,7 @@ class NodeService(
      * Files and thumbs are lazily retrieved by Glide (for images) or upon user request (for all
      * other files).
      */
-    suspend fun pull(stateID: StateID): Pair<Int, String?> = withContext(Dispatchers.IO) {
+    suspend fun pull(stateID: StateID): Pair<Int, String?> = withContext(ioDispatcher) {
         try {
             val client = getClient(stateID)
             val dao = nodeDB(stateID).treeNodeDao()
@@ -794,7 +359,24 @@ class NodeService(
         }
     }
 
-    suspend fun refreshBookmarks(stateID: StateID): String? = withContext(Dispatchers.IO) {
+    @Throws(SDKException::class)
+    suspend fun tryToCacheNode(stateID: StateID): RTreeNode? = withContext(ioDispatcher) {
+        try {
+            val fileNode = getClient(stateID).nodeInfo(stateID.workspace, stateID.path)
+            Log.e(logTag, "Got a file node: ${fileNode}")
+            val treeNode = RTreeNode.fromFileNode(stateID, fileNode)
+            upsertNode(treeNode)
+            return@withContext treeNode
+        } catch (e: SDKException) {
+            val msg = "could not cache node at $stateID"
+            Log.w(logTag, "$msg, cause: ${e.message ?: "NaN"}")
+            e.printStackTrace()
+            return@withContext null
+        }
+    }
+
+
+    suspend fun refreshBookmarks(stateID: StateID): String? = withContext(ioDispatcher) {
         try {
             // TODO rather use a cursor than loading everything in memory...
             val nodes = mutableListOf<FileNode>()
@@ -837,11 +419,11 @@ class NodeService(
     }
 
     @Deprecated("Rather use the method with the StateID")
-    suspend fun clearAccountCache(stateId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun clearAccountCache(stateId: String): String? = withContext(ioDispatcher) {
         return@withContext clearAccountCache(StateID.fromId(stateId).account())
     }
 
-    suspend fun clearAccountCache(accountID: StateID): String? = withContext(Dispatchers.IO) {
+    suspend fun clearAccountCache(accountID: StateID): String? = withContext(ioDispatcher) {
         // val accountID = StateID.fromId(stateID).account()
         try {
             // First delete corresponding files
@@ -880,7 +462,7 @@ class NodeService(
         return rootPaths.any { currentPath.startsWith(it) }
     }
 
-    private suspend fun isCachedVersionUpToDate(rTreeNode: RTreeNode): Boolean? {
+    suspend fun isCachedVersionUpToDate(rTreeNode: RTreeNode): Boolean? {
 
         val localFileDao = treeNodeRepository.nodeDB(rTreeNode.getStateID()).localFileDao()
         val localFile = localFileDao.getFile(rTreeNode.encodedState, AppNames.LOCAL_FILE_TYPE_FILE)
@@ -912,7 +494,7 @@ class NodeService(
      * - size
      */
     suspend fun getLocalFile(rTreeNode: RTreeNode, checkUpToDate: Boolean): File? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             Log.d(
                 logTag,
                 "Getting LocalFile for [${rTreeNode.getStateID()}], check: $checkUpToDate"
@@ -948,47 +530,12 @@ class NodeService(
             }
         }
 
-    suspend fun saveToSharedStorage(stateID: StateID, uri: Uri) =
-        withContext(Dispatchers.IO) {
-            val rTreeNode = nodeDB(stateID).treeNodeDao().getNode(stateID.id)
-                ?: return@withContext
-            val localFile = getLocalFile(rTreeNode, AppNames.LOCAL_FILE_TYPE_FILE)
-            val resolver = CellsApp.instance.contentResolver
-            var out: OutputStream? = null
-            try {
-                out = resolver.openOutputStream(uri)
-                if (isCachedVersionUpToDate(rTreeNode) ?: return@withContext && localFile.exists()) {
-                    var input: InputStream? = null
-                    try {
-                        input = FileInputStream(localFile)
-                        IoHelpers.pipeRead(input, out)
-                    } finally {
-                        IoHelpers.closeQuietly(input)
-                    }
-                } else {
-                    // Directly download to final destination: we do not save the corresponding file in the cache
-                    // TODO handle progress
-                    getClient(stateID).download(stateID.workspace, stateID.file, out, null)
-                }
-                Log.i(logTag, "... File has been copied to ${uri.path}")
-            } catch (se: SDKException) { // Could not retrieve thumb, failing silently for the end user
-                Log.e(logTag, "could not perform DL for " + stateID.id)
-                se.printStackTrace()
-            } catch (ioe: IOException) {
-                // TODO handle this: what should we do ?
-                Log.e(logTag, "cannot write at ${uri.path}: ${ioe.message}")
-                ioe.printStackTrace()
-            } finally {
-                IoHelpers.closeQuietly(out)
-            }
-        }
-
-    suspend fun restoreNode(stateID: StateID): String? = withContext(Dispatchers.IO) {
+    suspend fun restoreNode(stateID: StateID): String? = withContext(ioDispatcher) {
         try {
             val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id)
                 ?: return@withContext "No node found at $stateID, could not restore"
             remoteRestore(stateID)
-            persistLocallyModified(node, AppNames.LOCAL_MODIF_RESTORE)
+            treeNodeRepository.persistLocallyModified(node, AppNames.LOCAL_MODIF_RESTORE)
         } catch (se: SDKException) {
             se.printStackTrace()
             return@withContext "Could not restore node: ${se.message}"
@@ -997,12 +544,12 @@ class NodeService(
     }
 
     suspend fun rename(stateID: StateID, newName: String): String? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             try {
                 val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id)
                     ?: return@withContext "No node found at $stateID, could not rename"
                 remoteRename(stateID, newName)
-                persistLocallyModified(node, AppNames.LOCAL_MODIF_RENAME)
+                treeNodeRepository.persistLocallyModified(node, AppNames.LOCAL_MODIF_RENAME)
             } catch (se: SDKException) {
                 se.printStackTrace()
                 return@withContext "Could not rename $stateID: ${se.message}"
@@ -1010,12 +557,12 @@ class NodeService(
             return@withContext null
         }
 
-    suspend fun delete(stateID: StateID): String? = withContext(Dispatchers.IO) {
+    suspend fun delete(stateID: StateID): String? = withContext(ioDispatcher) {
         try {
             val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id)
                 ?: return@withContext "No node found at $stateID, could not delete"
             remoteDelete(stateID)
-            persistLocallyModified(node, AppNames.LOCAL_MODIF_DELETE)
+            treeNodeRepository.persistLocallyModified(node, AppNames.LOCAL_MODIF_DELETE)
         } catch (se: SDKException) {
             se.printStackTrace()
             return@withContext "Could not delete $stateID: ${se.message}"
@@ -1025,7 +572,7 @@ class NodeService(
 
     /* Directly communicate with the distant server */
     suspend fun remoteQuery(stateID: StateID, query: String): List<RTreeNode> =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             try {
                 val nodes = getClient(stateID).search(stateID.path ?: "/", query, 20)
                     .map {
@@ -1048,7 +595,7 @@ class NodeService(
             }
         }
 
-    private suspend fun remoteRestore(stateID: StateID): String? = withContext(Dispatchers.IO) {
+    private suspend fun remoteRestore(stateID: StateID): String? = withContext(ioDispatcher) {
         try {
             val node = nodeDB(stateID).treeNodeDao().getNode(stateID.id)
                 ?: return@withContext "No node found at $stateID, could not restore"
@@ -1057,7 +604,7 @@ class NodeService(
             getClient(stateID).restore(stateID.workspace, nodes)
 
             remoteDelete(stateID)
-            persistLocallyModified(node, AppNames.LOCAL_MODIF_DELETE)
+            treeNodeRepository.persistLocallyModified(node, AppNames.LOCAL_MODIF_DELETE)
         } catch (se: SDKException) {
             se.printStackTrace()
             return@withContext "Could not restore $stateID: ${se.message}"
@@ -1081,36 +628,21 @@ class NodeService(
     }
 
     /* Constants and helpers */
+    private suspend fun handleSdkException(stateID: StateID, msg: String, se: SDKException) {
+        Log.e(logTag, "Error #${se.code}: $msg")
+        // se.printStackTrace()
+        accountService.notifyError(stateID, msg, se)
+    }
+
     private fun nodeDB(stateID: StateID): TreeNodeDB {
         return treeNodeRepository.nodeDB(stateID)
     }
 
-    private fun getClient(stateId: StateID): Client {
-        return accountService.getClient(stateId)
+    private fun getClient(stateID: StateID): Client {
+        return accountService.getClient(stateID)
     }
 
-    private fun persistUpdated(rTreeNode: RTreeNode) {
-        rTreeNode.localModificationTS = rTreeNode.remoteModificationTS
-        val dao = nodeDB(rTreeNode.getStateID()).treeNodeDao()
-        dao.getNode(rTreeNode.getStateID().id)
-            ?.let { dao.update(rTreeNode) }
-            ?: let { dao.insert(rTreeNode) }
-    }
-
-    private fun persistLocallyModified(rTreeNode: RTreeNode, modificationType: String) {
-        rTreeNode.localModificationTS = currentTimestamp()
-        rTreeNode.localModificationStatus = modificationType
-        nodeDB(rTreeNode.getStateID()).treeNodeDao().update(rTreeNode)
-    }
-
-    private suspend fun handleSdkException(stateID: StateID, msg: String, se: SDKException) {
-        Log.e(logTag, "Error #${se.code}: $msg")
-        se.printStackTrace()
-        accountService.notifyError(stateID, se.code)
-    }
-
-    private fun getLocalFile(item: RTreeNode, type: String): File {
+    fun getLocalFile(item: RTreeNode, type: String): File {
         return File(fileService.getLocalPath(item, type))
     }
 }
-

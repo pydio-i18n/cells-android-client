@@ -3,13 +3,12 @@ package com.pydio.android.cells.db.accounts
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverters
 import com.pydio.android.cells.AppNames
-import com.pydio.android.cells.db.Converters
+import com.pydio.cells.transport.StateID
 import java.net.URL
 
 @Entity(tableName = "sessions")
-@TypeConverters(Converters::class)
+//@TypeConverters(Converters::class)
 data class RSession(
 
     @PrimaryKey
@@ -38,7 +37,7 @@ data class RSession(
             }
 
             return RSession(
-                accountID = account.accountID,
+                accountID = account.accountId,
                 lifecycleState = AppNames.SESSION_STATE_NEW,
                 dirName = cleanUrl,
                 dbName = cleanDbName,
@@ -46,4 +45,6 @@ data class RSession(
             )
         }
     }
+
+    fun account(): StateID = StateID.fromId(accountID)
 }

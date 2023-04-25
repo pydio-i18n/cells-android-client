@@ -1,7 +1,7 @@
 package com.pydio.android.cells.ui.browse
 
 import android.util.Log
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
@@ -30,26 +30,17 @@ private const val logTag = "BrowseNavGraph"
 
 fun NavGraphBuilder.browseNavGraph(
     navController: NavHostController,
-    browseRemoteVM: BrowseRemoteVM,
     back: () -> Unit,
     openDrawer: () -> Unit,
 ) {
 
     composable(BrowseDestinations.Open.route) { navBackStackEntry ->
         val stateID = lazyStateID(navBackStackEntry)
+        val browseRemoteVM: BrowseRemoteVM = koinViewModel()
         val folderVM: FolderVM = koinViewModel(parameters = { parametersOf(stateID) })
         val helper = BrowseHelper(navController, folderVM)
 
         Log.i(logTag, "## BrowseDestinations.open - $stateID")
-        LaunchedEffect(key1 = stateID) {
-            Log.e(logTag, "  ... Also launching effect to watch $stateID")
-            if (stateID == StateID.NONE) {
-                browseRemoteVM.pause()
-            } else {
-                browseRemoteVM.watch(stateID, false)
-            }
-        }
-
         when {
             stateID == StateID.NONE ->
                 NoAccount(
@@ -77,7 +68,7 @@ fun NavGraphBuilder.browseNavGraph(
                 var i = 0
                 navController.backQueue.forEach {
                     val currID = lazyStateID(it)
-                    Log.e(logTag, "#${i++} - ${it.destination.route} - $currID ")
+                    Log.d(logTag, "#${i++} - ${it.destination.route} - $currID ")
                 }
 
                 val accountHomeVM: AccountHomeVM =
@@ -97,6 +88,17 @@ fun NavGraphBuilder.browseNavGraph(
                     accountHomeVM = accountHomeVM,
                     browseHelper = helper,
                 )
+            }
+        }
+
+        DisposableEffect(key1 = stateID) {
+            if (stateID == StateID.NONE) {
+                browseRemoteVM.pause()
+            } else {
+                browseRemoteVM.watch(stateID, false)
+            }
+            onDispose {
+                browseRemoteVM.pause()
             }
         }
     }
@@ -123,7 +125,6 @@ fun NavGraphBuilder.browseNavGraph(
             OfflineRoots(
                 offlineVM = offlineVM,
                 openDrawer = openDrawer,
-                openSearch = {}, // FIXME
                 browseHelper = helper,
             )
         }
@@ -142,7 +143,6 @@ fun NavGraphBuilder.browseNavGraph(
                 stateID,
                 openDrawer = openDrawer,
                 browseHelper = helper,
-                browseRemoteVM = browseRemoteVM,
                 bookmarksVM = bookmarksVM,
             )
         }

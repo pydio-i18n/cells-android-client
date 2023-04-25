@@ -1,28 +1,32 @@
 package com.pydio.android.cells.services
 
+import android.util.Log
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.CellsApp
 import com.pydio.android.cells.db.nodes.RLocalFile
+import com.pydio.android.cells.db.nodes.RTransfer
 import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.utils.asFormattedString
 import com.pydio.android.cells.utils.computeFileMd5
 import com.pydio.android.cells.utils.getCurrentDateTime
 import com.pydio.cells.api.ui.FileNode
 import com.pydio.cells.transport.StateID
-import com.pydio.cells.utils.Log
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.io.File
 
 /** Centralizes management of local files and where to store/find them. */
-class FileService(private val treeNodeRepository: TreeNodeRepository) {
+class FileService(
+    ioDispatcher: CoroutineDispatcher,
+    private val treeNodeRepository: TreeNodeRepository
+) {
 
     private val logTag = "FileService"
 
-    private val fileServiceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + fileServiceJob)
+    private val fileServiceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(ioDispatcher + fileServiceJob)
     private val sep: String = File.separator
 
     private val appCacheDir = CellsApp.instance.cacheDir.absolutePath
@@ -56,9 +60,11 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
             AppNames.LOCAL_FILE_TYPE_FILE,
             AppNames.LOCAL_FILE_TYPE_TRANSFER
             -> "${dataParentPath(state.account(), type)}${state.path}"
+
             AppNames.LOCAL_FILE_TYPE_THUMB,
             AppNames.LOCAL_FILE_TYPE_PREVIEW
             -> "${dataParentPath(state.account(), type)}${state.file}"
+
             else -> throw IllegalStateException("Cannot create $type path for $state")
         }
     }
@@ -69,6 +75,41 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
         val rLocalFile =
             RLocalFile.fromFile(stateID, type, file, rTreeNode.etag, rTreeNode.remoteModificationTS)
         dao.insert(rLocalFile)
+    }
+
+    fun registerLocalFile(rTransfer: RTransfer) {
+        val tid = rTransfer.transferId
+        val stateID = rTransfer.getStateID() ?: run {
+            Log.e(logTag, "Transfer #$tid has no StateID, could not register, aborting")
+            return
+        }
+        val localPath = rTransfer.localPath ?: run {
+            Log.e(logTag, "Transfer #$tid has no localPath, could not register, aborting")
+            return
+        }
+        val localFile = File(localPath)
+        if (!localFile.exists()) {
+            Log.e(
+                logTag,
+                "Could not find file at $localFile for $stateID. Could not register, aborting"
+            )
+            return
+        }
+        // val type = rTransfer.type // <- This is not OK, transfer type is download or upload
+        // TODO improve when also adding the preview and thumb to the transfer mechanism
+        val type = AppNames.LOCAL_FILE_TYPE_FILE
+        val ndb = treeNodeRepository.nodeDB(stateID.account())
+        val treeNode = ndb.treeNodeDao().getNode(stateID.id) ?: run {
+            Log.e(logTag, "Transfer #$tid points toward an un-existing node at $stateID, aborting")
+            return
+        }
+        val rLocalFile = RLocalFile.fromFile(
+            stateID, type, localFile,
+            treeNode.etag, treeNode.remoteModificationTS
+        )
+        Log.e(logTag, "Transfer #$tid About to register local file:")
+        Log.e(logTag, "$rLocalFile")
+        ndb.localFileDao().insert(rLocalFile)
     }
 
     fun needsUpdate(stateID: StateID, remote: FileNode, type: String): Boolean {
@@ -167,7 +208,7 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
     }
 
     /* Violently remove all local files and also empty the local_files table */
-    fun cleanAllLocalFiles(accountID: StateID, dirName: String) {
+    fun cleanAllLocalFiles(accountID: StateID) {
 
         // Recursively delete local folders
         var currDir = File(dataParentPath(accountID, AppNames.LOCAL_FILE_TYPE_THUMB))
@@ -228,6 +269,7 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
         return when (type) {
             AppNames.LOCAL_FILE_TYPE_THUMB ->
                 appCacheDir + middle + AppNames.THUMB_PARENT_DIR
+
             AppNames.LOCAL_FILE_TYPE_PREVIEW ->
                 appCacheDir + middle + AppNames.PREVIEW_PARENT_DIR
             // TODO we cannot put this in the default cache folder for now:
@@ -239,6 +281,7 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
             // https://developer.android.com/training/data-storage/shared/media#open-file-descriptor
             AppNames.LOCAL_FILE_TYPE_TRANSFER ->
                 appFilesDir + middle + AppNames.TRANSFER_PARENT_DIR
+
             else -> throw IllegalStateException("Unknown file type: $type")
         }
     }

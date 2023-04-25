@@ -14,7 +14,9 @@ import com.pydio.android.cells.reactive.NetworkStatus
 import com.pydio.android.cells.services.JobService
 import com.pydio.android.cells.services.NetworkService
 import com.pydio.android.cells.services.NodeService
+import com.pydio.android.cells.services.OfflineService
 import com.pydio.android.cells.services.PreferencesService
+import com.pydio.android.cells.services.TransferService
 import com.pydio.android.cells.ui.core.LoadingState
 import com.pydio.cells.transport.StateID
 import com.pydio.cells.utils.Str
@@ -29,7 +31,9 @@ class OfflineVM(
     prefs: PreferencesService,
     private val nodeService: NodeService,
     private val networkService: NetworkService,
-    private val jobService: JobService
+    private val jobService: JobService,
+    private val transferService: TransferService,
+    private val offlineService: OfflineService,
 ) : AbstractBrowseVM(prefs, nodeService) {
 
 
@@ -52,7 +56,7 @@ class OfflineVM(
     val syncJob: LiveData<RJob?>
         get() = _syncJobID.switchMap { currID ->
             if (currID < 1) {
-                jobService.getMostRecent(nodeService.getSyncTemplateId(accountID))
+                jobService.getMostRecent(offlineService.getSyncTemplateId(accountID))
             } else {
                 jobService.getLiveJob(currID)
             }
@@ -60,13 +64,13 @@ class OfflineVM(
 
     fun download(stateID: StateID, uri: Uri) {
         viewModelScope.launch {
-            nodeService.saveToSharedStorage(stateID, uri)
+            transferService.saveToSharedStorage(stateID, uri)
         }
     }
 
     fun removeFromOffline(stateID: StateID) {
         viewModelScope.launch {
-            nodeService.toggleOffline(stateID, false)
+            offlineService.toggleOffline(stateID, false)
         }
     }
 
@@ -118,13 +122,16 @@ class OfflineVM(
                 // TODO implement settings to force accept this user story
                 Pair(false, "Preventing re-sync on metered network")
             }
+
             is NetworkStatus.Roaming -> {
                 // TODO implement settings to force accept this user story
                 Pair(false, "Preventing re-sync when on roaming network")
             }
+
             is NetworkStatus.Unavailable, is NetworkStatus.Unknown -> {
                 Pair(false, "Cannot launch re-sync with no internet connection")
             }
+
             is NetworkStatus.Unmetered -> {
                 return stateID?.let {
                     if (it != StateID.NONE) {
@@ -139,13 +146,13 @@ class OfflineVM(
 
     private fun doForceSingleRootSync(stateID: StateID) {
         CellsApp.instance.appScope.launch {
-            nodeService.syncOfflineRoot(stateID)
+            offlineService.syncOfflineRoot(stateID)
         }
     }
 
     private suspend fun doForceAccountSync(accID: StateID) {
 
-        val (jobID, error) = nodeService.prepareAccountSync(accID, AppNames.JOB_OWNER_USER)
+        val (jobID, error) = offlineService.prepareAccountSync(accID, AppNames.JOB_OWNER_USER)
 
         if (Str.notEmpty(error)) {
             _errorMessage.value = error
@@ -155,7 +162,7 @@ class OfflineVM(
         _syncJobID.value = jobID
         jobService.launched(jobID)
         CellsApp.instance.appScope.launch {
-            nodeService.performAccountSync(
+            offlineService.performAccountSync(
                 accID,
                 jobID,
                 CellsApp.instance.applicationContext

@@ -16,11 +16,14 @@ import com.pydio.cells.transport.auth.Token
 import com.pydio.cells.transport.auth.credentials.JWTCredentials
 import com.pydio.cells.transport.auth.jwt.IdToken
 import com.pydio.cells.transport.auth.jwt.OAuthConfig
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.util.*
 
-class AuthService(authDB: AuthDB) {
+class AuthService(
+    private val ioDispatcher: CoroutineDispatcher,
+    authDB: AuthDB
+) {
 
     private val tokenDao = authDB.tokenDao()
     private val legacyCredentialsDao = authDB.legacyCredentialsDao()
@@ -49,17 +52,14 @@ class AuthService(authDB: AuthDB) {
         url: ServerURL,
         next: String
     ): Uri? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             try {
                 val serverID = StateID(url.id).id
 
                 val server = sessionFactory.getServer(serverID)
                 // TODO Do we want to try to re-register the server when it is unknown from the SessionFactory
                     ?: let {
-                        Log.e(
-                            logTag,
-                            "could not get server $serverID for SessionFactory with url ${url?.id}"
-                        )
+                        Log.e(logTag, "could not get server $serverID  with url ${url.id}")
                         return@withContext null
                     }
 
@@ -81,6 +81,7 @@ class AuthService(authDB: AuthDB) {
                     "could not create intent for ${url.url.host}," +
                             " cause: ${e.code} - ${e.message}"
                 )
+                e.printStackTrace()
                 return@withContext null
             } catch (e: Exception) {
                 Log.e(logTag, "Unexpected exception: ${e.message}")
@@ -89,16 +90,22 @@ class AuthService(authDB: AuthDB) {
             }
         }
 
+    suspend fun isAuthStateValid(authState: String): Pair<Boolean, StateID> =
+        withContext(ioDispatcher) {
+            val rState = authStateDao.get(authState)
+                ?: return@withContext false to StateID.NONE
+            return@withContext true to StateID(rState.serverURL.id)
+        }
+
+
     suspend fun handleOAuthResponse(
         accountService: AccountService,
         sessionFactory: SessionFactory,
         oauthState: String,
         code: String
     ): Pair<StateID, String?>? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             var accountID: StateID? = null
-
-            Log.e(logTag, "... handleOAuthResponse")
 
             val rState = authStateDao.get(oauthState)
             if (rState == null) {
@@ -106,15 +113,13 @@ class AuthService(authDB: AuthDB) {
                 return@withContext null
             }
             try {
-                Log.e(logTag, "... Got a state: ${rState.state} + ${rState.serverURL}")
+                Log.i(logTag, "... Handling state ${rState.state} for ${rState.serverURL.url}")
 
                 val transport = sessionFactory
                     .getAnonymousTransport(rState.serverURL.id) as CellsTransport
-                Log.e(logTag, "... Got a transport")
                 val token = transport.getTokenFromCode(code, encoder)
-                Log.e(logTag, "... Matched the token")
                 accountID = manageRetrievedToken(accountService, transport, token)
-                Log.e(logTag, "... Token managed, post clean. Next action: ${rState.next}")
+                Log.d(logTag, "... Token managed. Next action: ${rState.next}")
 
                 // Leave OAuth state cacheDB clean
                 authStateDao.delete(oauthState)
@@ -183,8 +188,6 @@ class AuthService(authDB: AuthDB) {
         return uriBuilder.build()
     }
 
-    private val seedChars = "abcdef1234567890"
-
     private fun generateOAuthState(): String {
         val sb = StringBuilder()
         val rand = Random()
@@ -193,4 +196,6 @@ class AuthService(authDB: AuthDB) {
         }
         return sb.toString()
     }
+
+    private val seedChars = "abcdef1234567890"
 }

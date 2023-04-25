@@ -9,8 +9,7 @@ import com.pydio.android.cells.db.runtime.RJob
 import com.pydio.android.cells.db.runtime.RLog
 import com.pydio.android.cells.services.AccountService
 import com.pydio.android.cells.services.JobService
-import com.pydio.android.cells.services.NodeService
-import com.pydio.android.cells.services.PreferencesService
+import com.pydio.android.cells.services.OfflineService
 import com.pydio.android.cells.services.SessionFactory
 import com.pydio.android.cells.utils.currentTimestamp
 import com.pydio.android.cells.utils.timestampForLogMessage
@@ -23,7 +22,9 @@ import com.pydio.cells.transport.StateID
 import com.pydio.cells.transport.auth.credentials.JWTCredentials
 import com.pydio.cells.utils.IoHelpers
 import com.pydio.cells.utils.Str
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
@@ -43,10 +44,11 @@ class MigrationServiceV2 : KoinComponent {
 
     private val accountService by inject<AccountService>()
     private val sessionFactory by inject<SessionFactory>()
-    private val nodeService by inject<NodeService>()
-    private val prefs: PreferencesService by inject()
+    // private val nodeService by inject<NodeService>()
+    // private val prefs: PreferencesService by inject()
 
     private val jobService by inject<JobService>()
+    private val offlineService by inject<OfflineService>()
     private val logDao by inject<LogDao>()
 
     private val oldDbNames = listOf(
@@ -67,15 +69,12 @@ class MigrationServiceV2 : KoinComponent {
      *
      * @return the number of offline roots node that have been migrated */
     @OptIn(ExperimentalTime::class)
-    suspend fun migrate(context: Context, migrationJob: RJob, oldValue: Int, newValue: Int): Int {
-
-//        // FIXME
-//        for (i in 1..20) {
-//            Log.e(logTag, "Preparing step #$i ...")
-//            jobService.incrementProgress(migrationJob, 5, "Preparing step #$i ...")
-//            delay(1500)
-//        }
-//        return 8
+    suspend fun migrate(
+        context: Context,
+        scope: CoroutineScope,
+        migrationJob: RJob,
+        oldValue: Int, newValue: Int
+    ): Int {
 
         delay(1200) // dirty workaround: take a nap even if you're a speedy device
 
@@ -94,12 +93,16 @@ class MigrationServiceV2 : KoinComponent {
             result = try {
                 if (oldValue < 50) {
                     migrateAccountsFromV23x(context, migrationJob, oldValue, newValue, 50) {
-                        jobService.incrementProgress(migrationJob, it, null)
+                        scope.launch {
+                            jobService.incrementProgress(migrationJob, it, null)
+                        }
                         ""
                     }
                 } else {
                     migrateAccountsFromV24x(migrationJob, oldValue, newValue, 50) {
-                        jobService.incrementProgress(migrationJob, it, null)
+                        scope.launch {
+                            jobService.incrementProgress(migrationJob, it, null)
+                        }
                         ""
                     }
                 }
@@ -282,7 +285,7 @@ class MigrationServiceV2 : KoinComponent {
     ): Int {
         // Refresh workspace list and check credentials
         val client = try {
-            sessionFactory.getUnlockedClient(accountID.accountId)
+            sessionFactory.getUnlockedClient(accountID)
         } catch (e: Exception) {
             val msg = "could not retrieve client for $accountID: ${e.message}"
             jobService.e(logTag, msg, "${job.jobId}")
@@ -323,7 +326,7 @@ class MigrationServiceV2 : KoinComponent {
                 val fn = client.nodeInfo(storedFileNode.workspace, storedFileNode.path)
                 RTreeNode.fromFileNode(state, fn)
             }
-            nodeService.updateOfflineRoot(newNode, AppNames.OFFLINE_STATUS_MIGRATED)
+            offlineService.updateOfflineRoot(newNode, AppNames.OFFLINE_STATUS_MIGRATED)
         }
 
         return offlineRoots.size

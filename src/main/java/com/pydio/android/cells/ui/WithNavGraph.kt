@@ -3,9 +3,9 @@ package com.pydio.android.cells.ui
 import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,7 +22,7 @@ import com.pydio.android.cells.ui.login.LoginHelper
 import com.pydio.android.cells.ui.login.LoginNavigation
 import com.pydio.android.cells.ui.login.loginNavGraph
 import com.pydio.android.cells.ui.login.models.LoginVM
-import com.pydio.android.cells.ui.models.BrowseRemoteVM
+import com.pydio.android.cells.ui.models.AccountListVM
 import com.pydio.android.cells.ui.models.DownloadVM
 import com.pydio.android.cells.ui.search.Search
 import com.pydio.android.cells.ui.search.SearchHelper
@@ -48,7 +48,6 @@ fun CellsNavGraph(
     openDrawer: () -> Unit,
     launchTaskFor: (String, StateID) -> Unit,
     launchIntent: (Intent?, Boolean, Boolean) -> Unit,
-    browseRemoteVM: BrowseRemoteVM = koinViewModel(),
     loginVM: LoginVM = koinViewModel(),
 ) {
 
@@ -58,7 +57,16 @@ fun CellsNavGraph(
 
     // Starting state is null once the initial state has been consumed
     if (startingState != null) {
-        LaunchedEffect(key1 = startingState.route) {
+        LaunchedEffect(key1 = startingState.route, key2 = startingState.isRestart) {
+            if (startingState.isRestart) {
+                Log.e(logTag, "## Got a restart preventing navigation")
+                Log.d(
+                    logTag,
+                    "    - route: ${startingState.route}, stateID: ${startingState.stateID}"
+                )
+                return@LaunchedEffect
+            }
+
             Log.e(logTag, "########## Launching side effect for ${startingState.route}")
             Log.e(logTag, "##########     with stateID: ${startingState.stateID}")
             if (startingState.route?.isNotEmpty() == true) {
@@ -120,14 +128,24 @@ fun CellsNavGraph(
         }
 
         composable(CellsDestinations.Accounts.route) {
+
+            val accountListVM: AccountListVM = koinViewModel()
+
             AccountsScreen(
+                isExpandedScreen = isExpandedScreen,
+                accountListVM = accountListVM,
                 navigateTo = navigateTo,
                 openDrawer = openDrawer,
                 contentPadding = rememberContentPaddingForScreen(
-                    additionalTop = if (!isExpandedScreen) 0.dp else 8.dp,
+                    // additionalTop = if (!isExpandedScreen) 0.dp else 8.dp,
                     excludeTop = !isExpandedScreen
                 ),
             )
+
+            DisposableEffect(key1 = true) {
+                accountListVM.watch()
+                onDispose { accountListVM.pause() }
+            }
         }
 
         composable(CellsDestinations.Search.route) { entry ->
@@ -156,7 +174,6 @@ fun CellsNavGraph(
 
         browseNavGraph(
             navController = navController,
-            browseRemoteVM = browseRemoteVM,
             back = { navController.popBackStack() },
             openDrawer,
         )
@@ -173,7 +190,6 @@ fun CellsNavGraph(
         )
 
         shareNavGraph(
-            browseRemoteVM = browseRemoteVM,
             helper = ShareHelper(
                 navController,
                 launchTaskFor,

@@ -1,11 +1,13 @@
 package com.pydio.android.cells.ui.share
 
 import android.util.Log
+import androidx.compose.runtime.DisposableEffect
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.ui.core.lazyStateID
 import com.pydio.android.cells.ui.core.lazyUID
+import com.pydio.android.cells.ui.models.AccountListVM
 import com.pydio.android.cells.ui.models.BrowseRemoteVM
 import com.pydio.android.cells.ui.share.models.MonitorUploadsVM
 import com.pydio.android.cells.ui.share.models.ShareVM
@@ -20,13 +22,13 @@ private const val logTag = "shareNavGraph"
 
 fun NavGraphBuilder.shareNavGraph(
     helper: ShareHelper,
-    browseRemoteVM: BrowseRemoteVM,
     back: () -> Unit,
 ) {
-
     composable(ShareDestination.ChooseAccount.route) {
         Log.i(logTag, "... Open ShareDestination.ChooseAccount")
+        val accountListVM: AccountListVM = koinViewModel()
         SelectTargetAccount(
+            accountListVM = accountListVM,
             openAccount = helper::open,
             cancel = {
                 helper.launchTaskFor(
@@ -36,6 +38,11 @@ fun NavGraphBuilder.shareNavGraph(
             },
             login = { helper.launchTaskFor(AppNames.ACTION_LOGIN, it) },
         )
+
+        DisposableEffect(key1 = true) {
+            accountListVM.watch()
+            onDispose { accountListVM.pause() }
+        }
     }
 
     composable(ShareDestination.OpenFolder.route) { nbsEntry ->
@@ -45,6 +52,8 @@ fun NavGraphBuilder.shareNavGraph(
             back()
         } else {
             val shareVM: ShareVM = koinViewModel { parametersOf(stateID) }
+            val browseRemoteVM: BrowseRemoteVM = koinViewModel()
+
             SelectFolderScreen(
                 stateID = stateID,
                 browseRemoteVM = browseRemoteVM,
@@ -54,6 +63,16 @@ fun NavGraphBuilder.shareNavGraph(
                 startUpload = helper::startUpload,
                 doAction = { action, currID -> helper.launchTaskFor(action, currID) },
             )
+            DisposableEffect(key1 = stateID) {
+                if (stateID == StateID.NONE) {
+                    browseRemoteVM.pause()
+                } else {
+                    browseRemoteVM.watch(stateID, false)
+                }
+                onDispose {
+                    browseRemoteVM.pause()
+                }
+            }
         }
     }
 
@@ -63,8 +82,12 @@ fun NavGraphBuilder.shareNavGraph(
         Log.i(logTag, ".... ShareDestination.UploadInProgress for #$jobID @ $stateID")
         val monitorUploadsVM: MonitorUploadsVM =
             koinViewModel(parameters = { parametersOf(stateID, jobID) })
-        UploadProgressList(monitorUploadsVM) {
-            helper.launchTaskFor(AppNames.ACTION_CANCEL, stateID)
-        }
+        UploadProgressList(
+            monitorUploadsVM,
+            { helper.runInBackground(stateID) },
+            { helper.done(stateID) },
+            { helper.cancel(stateID) },
+            { helper.openParentLocation(stateID) },
+        )
     }
 }

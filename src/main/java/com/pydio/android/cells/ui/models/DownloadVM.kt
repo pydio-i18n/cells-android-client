@@ -13,7 +13,6 @@ import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.services.NodeService
 import com.pydio.android.cells.services.TransferService
 import com.pydio.android.cells.utils.externallyView
-import com.pydio.cells.api.ErrorCodes
 import com.pydio.cells.api.SDKException
 import com.pydio.cells.transport.StateID
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,14 +36,6 @@ class DownloadVM(
             transferService.liveTransfer(stateID.account(), currID)
         }
 
-    init {
-        viewModelScope.launch {
-            nodeService.getNode(stateID)?.let {
-                _rTreeNode.value = it
-            }
-        }
-    }
-
     fun cancelDownload() {
         viewModelScope.launch {
             if (_transferID.value >= 0) {
@@ -53,21 +44,15 @@ class DownloadVM(
         }
     }
 
-    suspend fun launchDownload(): Boolean {
-        val (transferID, errorMsg) =
-            transferService.prepareDownload(stateID, AppNames.LOCAL_FILE_TYPE_FILE, null)
-        if (!errorMsg.isNullOrBlank()) {
-            Log.e(logTag, "Could not prepare download for $stateID: $errorMsg")
-            return false
+    suspend fun launchDownload() {
+        try {
+            val transferID = transferService.prepareDownload(stateID, AppNames.LOCAL_FILE_TYPE_FILE)
+            _transferID.value = transferID
+            transferService.runDownloadTransfer(stateID.account(), transferID, null)
+        } catch (se: SDKException) {
+            Log.e(logTag, "Could not perform download for $stateID: ${se.message ?: "-"} ")
+            // TODO also notify the end user
         }
-
-        _transferID.value = transferID
-        transferService.runDownloadTransfer(stateID.account(), transferID, null)?.let {
-            Log.e(logTag, "Could not perform download for $stateID: $errorMsg")
-            return false
-        }
-        // }
-        return true
     }
 
     suspend fun viewFile(context: Context) {
@@ -76,7 +61,15 @@ class DownloadVM(
                 externallyView(context, file, node)
                 return
             } ?: run {
-                throw SDKException(ErrorCodes.no_local_file)
+                Log.e(logTag, "Could not open file for ${node.getStateID()}")
+            }
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            nodeService.getNode(stateID)?.let {
+                _rTreeNode.value = it
             }
         }
     }

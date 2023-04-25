@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.pydio.android.cells.R
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
 import com.pydio.cells.utils.Str
 
 //@OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +57,7 @@ import com.pydio.cells.utils.Str
 @Composable
 fun DefaultTopBar(
     title: String,
+    isExpandedScreen: Boolean = false,
     back: (() -> Unit)? = null,
     openDrawer: (() -> Unit)? = null,
     openSearch: (() -> Unit)? = null,
@@ -70,7 +71,14 @@ fun DefaultTopBar(
                 overflow = TextOverflow.Ellipsis
             )
         },
-        colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = if (isExpandedScreen) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+
+        ),
         navigationIcon = {
             if (back != null) {
                 IconButton(onClick = { back() }) {
@@ -124,7 +132,7 @@ fun TopBarWithMoreMenu(
                 overflow = TextOverflow.Ellipsis
             )
         },
-        colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         navigationIcon = {
             if (back != null) {
                 IconButton(onClick = { back() }) {
@@ -178,7 +186,7 @@ fun TopBarWithActions(
     actions: @Composable RowScope.() -> Unit,
 ) {
     TopAppBar(
-        colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         title = {
             Text(
                 text = title,
@@ -210,7 +218,6 @@ fun TopBarWithActions(
     )
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBarWithSearch(
@@ -226,7 +233,7 @@ fun TopBarWithSearch(
 //    contentPadding: PaddingValues = PaddingValues(all = 16.dp),
 ) {
     TopAppBar(
-        colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         title = {
             TextField(
                 value = queryStr,
@@ -299,9 +306,29 @@ fun TopBarWithSearch(
 )
 @Composable
 private fun DefaultTopBarPreview() {
-    CellsTheme {
+    UseCellsTheme {
         DefaultTopBar(
             "Pydio Cells server",
+            false,
+            { },
+            null,
+            { },
+        )
+    }
+}
+
+@Preview(name = "Expanded top bar - Light Mode")
+@Preview(
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true,
+    name = "Expanded top bar - Dark Mode"
+)
+@Composable
+private fun ExpandedTopBarPreview() {
+    UseCellsTheme {
+        DefaultTopBar(
+            "Pydio Cells server",
+            true,
             { },
             null,
             { },

@@ -4,6 +4,7 @@ import android.util.Log
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.db.accounts.AccountDB
 import com.pydio.android.cells.db.accounts.RSessionView
+import com.pydio.android.cells.transfer.CellsS3Client
 import com.pydio.cells.api.Client
 import com.pydio.cells.api.ErrorCodes
 import com.pydio.cells.api.SDKException
@@ -31,37 +32,9 @@ class SessionFactory(
 ) : ClientFactory(credentialService, serverStore, transportStore) {
 
     private val logTag = "SessionFactory"
-//    private var sessionFactoryJob = Job()
-//    private val sessionFactoryScope = CoroutineScope(Dispatchers.IO + sessionFactoryJob)
-//
 
     private val sessionViewDao = accountDB.sessionViewDao()
     private val accountDao = accountDB.accountDao()
-
-//    private var ready = false
-
-//    init {
-//        sessionFactoryScope.launch(Dispatchers.IO) {
-//            val sessions = sessionViewDao.getSessions()
-//            // val accounts = accountService.accountDB.accountDao().getAccounts()
-//            Log.i(logTag, "... Initialise SessionFactory")
-//            for (rLiveSession in sessions) {
-//                // TODO skip sessions when we know they are not usable?
-//                Log.i(logTag, "... Preparing transport for ${rLiveSession.getStateID()}")
-//                try {
-//                    prepareTransport(rLiveSession)
-//                } catch (e: SDKException) {
-//                    // TODO update live session depending on the error
-//                    Log.e(
-//                        logTag,
-//                        "Cannot restore session for " + rLiveSession.accountID + ": " + e.message
-//                    )
-//                }
-//            }
-//            Log.i(logTag, "... Session factory initialised")
-//            ready = true
-//        }
-//    }
 
     override fun getServer(id: String): Server? {
         val stateID = StateID.fromId(id)
@@ -70,11 +43,9 @@ class SessionFactory(
         // If not yet defined, try to register it
         val sessionView = sessionViewDao.getSession(stateID.accountId)
         if (sessionView != null) {
-            var currTransport = transportStore.get(stateID.accountId)
-            if (currTransport == null) {
-                currTransport = prepareTransport(sessionView)
-            }
-            return currTransport?.server
+            var currTransport =
+                transportStore.get(stateID.accountId) ?: prepareTransport(sessionView)
+            return currTransport.server
         }
 
         if (Str.empty(stateID.username)) {
@@ -85,12 +56,58 @@ class SessionFactory(
                 return registerServer(serverURL)
             }
         }
-
         throw SDKException(ErrorCodes.not_found, "cannot retrieve server for $stateID")
     }
 
+    /**
+     * Enable Callback from ancestor classes in the JAVA SDK.
+     */
+    override fun getCellsClient(transport: CellsTransport): CellsClient {
+
+        // We also check if we need a token refresh at this point
+        // TODO double check if it is the correct point to do so
+        transport.requestTokenRefresh()
+
+        return CellsClient(
+            transport,
+            CellsS3Client(transport)
+        )
+    }
+
+    fun getTransport(stateID: StateID): Transport? {
+        return transportStore.get(stateID.accountId)
+    }
+
     @Throws(SDKException::class)
-    fun getUnlockedClient(accountID: String): Client {
+    private fun internalGetClient(accountID: StateID): Client {
+
+        // At this point we are quite sure we have a connection to the internet...
+        // Yet we still code defensively afterwards and correctly handle errors
+        val sessionView: RSessionView = sessionViewDao.getSession(accountID.accountId)
+            ?: run {
+                throw SDKException(ErrorCodes.not_found, "cannot retrieve client for $accountID")
+            }
+
+        if (sessionView.authStatus == AppNames.AUTH_STATUS_CONNECTED) {
+            var currTransport = transportStore.get(accountID.id)
+            if (currTransport == null) {
+                currTransport = prepareTransport(sessionView)
+            }
+            return getClient(currTransport)
+        } else {
+            Log.d(logTag, "... Required session is not connected, listing known sessions:")
+            for (currentSession in sessionViewDao.getSessions()) {
+                Log.d(logTag, "$currentSession.dbName} / ${currentSession.authStatus}")
+            }
+            throw SDKException(
+                ErrorCodes.authentication_required,
+                "cannot unlock session for $accountID, auth status: " + sessionView.authStatus
+            )
+        }
+    }
+
+    @Throws(SDKException::class)
+    fun getUnlockedClient(accountID: StateID): Client {
 
         if (!networkService.isConnected())
             throw SDKException(ErrorCodes.no_internet, "No internet connection is available")
@@ -141,7 +158,7 @@ class SessionFactory(
         return internalGetClient(accountID)
     }
 
-    fun getUnlockedUnMeteredClient(accountID: String): Client {
+    fun getUnlockedUnMeteredClient(accountID: StateID): Client {
 
         if (networkService.isConnected() && networkService.isMetered())
             throw SDKException(
@@ -158,35 +175,6 @@ class SessionFactory(
         return internalGetClient(accountID)
     }
 
-    @Throws(SDKException::class)
-    private fun internalGetClient(accountID: String): Client {
-
-        // At this point we are quite sure we have a connection to the internet...
-        // Yet we still code defensively afterwards and correctly handle errors
-        val sessionView: RSessionView = sessionViewDao.getSession(accountID)
-            ?: run {
-                throw SDKException(ErrorCodes.not_found, "cannot retrieve client for $accountID")
-            }
-
-        if (sessionView.authStatus == AppNames.AUTH_STATUS_CONNECTED) {
-            var currTransport = transportStore.get(accountID)
-            if (currTransport == null) {
-                currTransport = prepareTransport(sessionView)
-            }
-            return getClient(currTransport)
-        } else {
-
-            Log.d(logTag, "... Required session is not connected, listing known sessions:")
-            for (currentSession in sessionViewDao.getSessions()) {
-                Log.d(logTag, "$currentSession.dbName} / ${currentSession.authStatus}")
-            }
-
-            throw SDKException(
-                ErrorCodes.authentication_required,
-                "cannot unlock session for $accountID, auth status: " + sessionView.authStatus
-            )
-        }
-    }
 
     private fun prepareTransport(sessionView: RSessionView): Transport {
         try {
@@ -210,6 +198,33 @@ class SessionFactory(
         }
     }
 
+
+//    private var ready = false
+
+//    init {
+//        sessionFactoryScope.launch(ioDispatcher) {
+//            val sessions = sessionViewDao.getSessions()
+//            // val accounts = accountService.accountDB.accountDao().getAccounts()
+//            Log.i(logTag, "... Initialise SessionFactory")
+//            for (rLiveSession in sessions) {
+//                // TODO skip sessions when we know they are not usable?
+//                Log.i(logTag, "... Preparing transport for ${rLiveSession.getStateID()}")
+//                try {
+//                    prepareTransport(rLiveSession)
+//                } catch (e: SDKException) {
+//                    // TODO update live session depending on the error
+//                    Log.e(
+//                        logTag,
+//                        "Cannot restore session for " + rLiveSession.accountID + ": " + e.message
+//                    )
+//                }
+//            }
+//            Log.i(logTag, "... Session factory initialised")
+//            ready = true
+//        }
+//    }
+
+
 //    private fun registerTransport(accountID: StateID): Transport {
 //        try {
 //            val skipVerify = sessionView.tlsMode == 1
@@ -231,12 +246,4 @@ class SessionFactory(
 //            throw se
 //        }
 // }
-
-
-    /**
-     * Enables the use of a android specific S3 client by the ancestor classes in the JAVA only SDK
-     * */
-    override fun getCellsClient(transport: CellsTransport?): CellsClient {
-        return CellsClient(transport, S3Client(transport))
-    }
 }

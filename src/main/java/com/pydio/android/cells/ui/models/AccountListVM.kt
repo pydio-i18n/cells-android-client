@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pydio.android.cells.db.accounts.RSessionView
 import com.pydio.android.cells.services.AccountService
+import com.pydio.android.cells.services.AppCredentialService
 import com.pydio.android.cells.utils.BackOffTicker
 import com.pydio.cells.transport.StateID
 import kotlinx.coroutines.Dispatchers
@@ -20,12 +21,11 @@ import java.util.concurrent.TimeUnit
  * Central ViewModel when dealing with a user's accounts.
  */
 class AccountListVM(
+    private val appCredentialService: AppCredentialService,
     private val accountService: AccountService,
 ) : ViewModel() {
 
     private val logTag = "AccountListVM"
-//    private var viewModelJob = Job()
-//    private val vmScope = CoroutineScope(Dispatchers.Main + viewModelJob)
 
     private var _sessions = accountService.getLiveSessions()
     val sessions: LiveData<List<RSessionView>>
@@ -57,7 +57,7 @@ class AccountListVM(
         resume()
     }
 
-    fun resume() {
+    private fun resume() {
         if (!_isActive) {
             _isActive = true
             currWatcher = watchAccounts()
@@ -69,6 +69,7 @@ class AccountListVM(
         currWatcher?.cancel()
         _isActive = false
         setLoading(false)
+        Log.e(logTag, "... Account watching paused.")
     }
 
     fun forgetAccount(stateID: StateID) {
@@ -99,6 +100,9 @@ class AccountListVM(
     }
 
     private suspend fun doCheckAccounts() {
+        // First we check if some token are about to expire
+        // accountService.checkRegisteredAccounts()
+        // Then we refresh the list
         val result = accountService.checkRegisteredAccounts()
         withContext(Dispatchers.Main) {
             if (result.second != null) {

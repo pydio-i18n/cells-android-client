@@ -34,7 +34,7 @@ import com.pydio.android.cells.ui.core.composables.Decorated
 import com.pydio.android.cells.ui.core.composables.Type
 import com.pydio.android.cells.ui.core.getFloatResource
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
 import com.pydio.cells.transport.StateID
 
 @Composable
@@ -92,11 +92,7 @@ private fun AccountListItem(
         tonalElevation = if (isForeground) dimensionResource(R.dimen.list_item_selected_elevation) else 0.dp,
         modifier = modifier
     ) {
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Decorated(Type.AUTH, authStatus) {
                 Icon(
                     imageVector = CellsIcons.Person,
@@ -110,7 +106,7 @@ private fun AccountListItem(
             Spacer(modifier = Modifier.width(dimensionResource(R.dimen.list_thumb_margin)))
 
             Column(
-                modifier = modifier
+                modifier = Modifier
                     .weight(1f)
                     .padding(
                         horizontal = dimensionResource(R.dimen.card_padding),
@@ -175,21 +171,14 @@ private fun AccountListItem(
 @Preview(name = "Light Mode")
 @Composable
 private fun ForegroundAccountListItemPreview() {
-    CellsTheme {
+    UseCellsTheme {
         AccountListItem(
             "Cells test server",
             "lea",
             "https://example.com",
-            //          authStatus = AppNames.AUTH_STATUS_NO_CREDS,
-//            authStatus = AppNames.AUTH_STATUS_UNAUTHORIZED,
             authStatus = AppNames.AUTH_STATUS_CONNECTED,
-//            authStatus = AppNames.AUTH_STATUS_EXPIRED,
-//            authStatus = AppNames.AUTH_STATUS_CONNECTED,
             isForeground = true,
-            {},
-            {},
-            {},
-            Modifier
+            {}, {}, {}, Modifier
         )
     }
 }
@@ -201,7 +190,7 @@ private fun ForegroundAccountListItemPreview() {
 )
 @Composable
 private fun AccountListItemPreview() {
-    CellsTheme {
+    UseCellsTheme {
         AccountListItem(
             "Cells test server",
             "lea",

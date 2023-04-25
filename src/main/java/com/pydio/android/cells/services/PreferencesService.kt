@@ -1,6 +1,5 @@
 package com.pydio.android.cells.services
 
-import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -31,15 +30,16 @@ object PreferencesKeys {
     val INSTALLED_VERSION_CODE = intPreferencesKey("installed_version_code")
 
     // Show technical pages
-    var SHOW_DEBUG_TOOLS = booleanPreferencesKey("show_debug_tools")
+    val SHOW_DEBUG_TOOLS = booleanPreferencesKey("show_debug_tools")
+    val DISABLE_POLL = booleanPreferencesKey("disable_poll")
 
     // List order, layout and filters
     val DEFAULT_LIST_ORDER = stringPreferencesKey("current_recycler_order")
     val DEFAULT_LIST_LAYOUT = stringPreferencesKey("current_recycler_layout")
-    var TRANSFER_SORT_BY = stringPreferencesKey("transfer_sort_by")
-    var TRANSFER_FILTER_BY_STATUS = stringPreferencesKey("transfer_filter_by_status")
-    var JOB_SORT_BY = stringPreferencesKey("job_sort_by")
-    var JOB_FILTER_BY_STATUS = stringPreferencesKey("job_filter_by_status")
+    val TRANSFER_SORT_BY = stringPreferencesKey("transfer_sort_by")
+    val TRANSFER_FILTER_BY_STATUS = stringPreferencesKey("transfer_filter_by_status")
+    val JOB_SORT_BY = stringPreferencesKey("job_sort_by")
+    val JOB_FILTER_BY_STATUS = stringPreferencesKey("job_filter_by_status")
 
     // Metered network limitations
     val APPLY_METERED_LIMITATION = booleanPreferencesKey("apply_metered_limitations")
@@ -49,17 +49,14 @@ object PreferencesKeys {
         longPreferencesKey("on_metered_ask_before_dl_files_greater_than")
 
     // Offline settings
-    var SYNC_FREQ = stringPreferencesKey("sync_frequency")
-    var SYNC_CONST_NETWORK_TYPE = stringPreferencesKey("sync_network_type")
-    var SYNC_CONST_ON_CHARGING = booleanPreferencesKey("sync_on_charging")
-    var SYNC_CONST_ON_BATT_NOT_LOW = booleanPreferencesKey("sync_on_batt_not_low")
-    var SYNC_CONST_ON_IDLE = booleanPreferencesKey("sync_on_idle")
+    val SYNC_FREQ = stringPreferencesKey("sync_frequency")
+    val SYNC_CONST_NETWORK_TYPE = stringPreferencesKey("sync_network_type")
+    val SYNC_CONST_ON_CHARGING = booleanPreferencesKey("sync_on_charging")
+    val SYNC_CONST_ON_BATT_NOT_LOW = booleanPreferencesKey("sync_on_batt_not_low")
+    val SYNC_CONST_ON_IDLE = booleanPreferencesKey("sync_on_idle")
 }
 
-class PreferencesService(
-    private val dataStore: DataStore<Preferences>,
-    context: Context,
-) {
+class PreferencesService(private val dataStore: DataStore<Preferences>) {
 
     private val logTag = "PreferencesService"
     private val noPref = defaultCellsPreferences()
@@ -74,7 +71,6 @@ class PreferencesService(
             }
         }.map { preferences ->
             val currPrefs = mapCellsPreferences(preferences)
-//            Log.d(logTag, "emit: ${currPrefs}")
             currPrefs
         }
 
@@ -97,17 +93,23 @@ class PreferencesService(
         }
     }
 
-    /**
-     * Returns Pair<ORDER_BY, DIRECTION> e.g Pair("sort_name", "DESC")
-     */
-    suspend fun getOrderByPair(type: ListType): Pair<String, String> {
-        val currentKey = when (type) {
-            ListType.JOB -> PreferencesKeys.JOB_SORT_BY
-            ListType.TRANSFER -> PreferencesKeys.TRANSFER_SORT_BY
-            ListType.DEFAULT -> PreferencesKeys.DEFAULT_LIST_ORDER
+    suspend fun setDisablePollFlag(disablePoll: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DISABLE_POLL] = disablePoll
         }
-        return parseOrder(dataStore.data.first().toPreferences()[currentKey], type)
     }
+
+//    /**
+//     * Returns Pair<ORDER_BY, DIRECTION> e.g Pair("sort_name", "DESC")
+//     */
+//    suspend fun getOrderByPair(type: ListType): Pair<String, String> {
+//        val currentKey = when (type) {
+//            ListType.JOB -> PreferencesKeys.JOB_SORT_BY
+//            ListType.TRANSFER -> PreferencesKeys.TRANSFER_SORT_BY
+//            ListType.DEFAULT -> PreferencesKeys.DEFAULT_LIST_ORDER
+//        }
+//        return parseOrder(dataStore.data.first().toPreferences()[currentKey], type)
+//    }
 
     /**
      * Returns Pair<ORDER_BY, DIRECTION> e.g Pair("sort_name", "DESC")
@@ -163,73 +165,82 @@ class PreferencesService(
         Log.e(logTag, "New layout : $layout")
     }
 
-    private fun mapCellsPreferences(toPreferences: Preferences): CellsPreferences {
-        val currVersion = toPreferences[PreferencesKeys.INSTALLED_VERSION_CODE] ?: -1
+    private fun mapCellsPreferences(fromPreferences: Preferences): CellsPreferences {
+        val currVersion = fromPreferences[PreferencesKeys.INSTALLED_VERSION_CODE] ?: -1
         // Show technical pages
-        val showDebug = toPreferences[PreferencesKeys.SHOW_DEBUG_TOOLS] ?: noPref.showDebugTools
+        val showDebug = fromPreferences[PreferencesKeys.SHOW_DEBUG_TOOLS] ?: noPref.showDebugTools
+        val disablePoll = fromPreferences[PreferencesKeys.DISABLE_POLL] ?: noPref.disablePoll
         val layout =
-            if (ListLayout.GRID.name == toPreferences[PreferencesKeys.DEFAULT_LIST_LAYOUT])
+            if (ListLayout.GRID.name == fromPreferences[PreferencesKeys.DEFAULT_LIST_LAYOUT])
                 ListLayout.GRID
             else
                 noPref.list.layout
         // List order, layout and filters
         val listPref = ListPreferences(
-            order = toPreferences[PreferencesKeys.DEFAULT_LIST_ORDER]
+            order = fromPreferences[PreferencesKeys.DEFAULT_LIST_ORDER]
                 ?: noPref.list.order,
             layout = layout,
             transferOrder =
-            toPreferences[PreferencesKeys.TRANSFER_SORT_BY] ?: noPref.list.transferOrder,
-            transferFilter = toPreferences[PreferencesKeys.TRANSFER_FILTER_BY_STATUS]
+            fromPreferences[PreferencesKeys.TRANSFER_SORT_BY] ?: noPref.list.transferOrder,
+            transferFilter = fromPreferences[PreferencesKeys.TRANSFER_FILTER_BY_STATUS]
                 ?: noPref.list.transferFilter,
-            jobOrder = toPreferences[PreferencesKeys.JOB_SORT_BY] ?: noPref.list.jobOrder,
+            jobOrder = fromPreferences[PreferencesKeys.JOB_SORT_BY] ?: noPref.list.jobOrder,
             jobFilter =
-            toPreferences[PreferencesKeys.JOB_FILTER_BY_STATUS] ?: noPref.list.jobFilter,
+            fromPreferences[PreferencesKeys.JOB_FILTER_BY_STATUS] ?: noPref.list.jobFilter,
         )
         // Metered network limitations
+
+
         val meteredPref = MeteredNetworkPreferences(
-            applyLimits = toPreferences[PreferencesKeys.APPLY_METERED_LIMITATION]
+            applyLimits = fromPreferences[PreferencesKeys.APPLY_METERED_LIMITATION]
                 ?: noPref.meteredNetwork.applyLimits,
-            dlThumbs = toPreferences[PreferencesKeys.METERED_DL_THUMBS]
+            dlThumbs = fromPreferences[PreferencesKeys.METERED_DL_THUMBS]
                 ?: noPref.meteredNetwork.dlThumbs,
-            askBeforeDL = toPreferences[PreferencesKeys.METERED_ASK_B4_DL_FILES]
+            askBeforeDL = fromPreferences[PreferencesKeys.METERED_ASK_B4_DL_FILES]
                 ?: noPref.meteredNetwork.askBeforeDL,
-            sizeThreshold = toPreferences[PreferencesKeys.METERED_ASK_B4_DL_FILES_SIZE]
-                ?: noPref.meteredNetwork.sizeThreshold,
+            sizeThreshold = safelyGetLongPref(
+                fromPreferences,
+                PreferencesKeys.METERED_ASK_B4_DL_FILES_SIZE,
+                noPref.meteredNetwork.sizeThreshold
+            ),
         )
         // Offline settings
         val syncPref = SyncPreferences(
-            frequency = toPreferences[PreferencesKeys.SYNC_FREQ] ?: noPref.sync.frequency,
-            onNetworkType = toPreferences[PreferencesKeys.SYNC_CONST_NETWORK_TYPE]
+            frequency = fromPreferences[PreferencesKeys.SYNC_FREQ] ?: noPref.sync.frequency,
+            onNetworkType = fromPreferences[PreferencesKeys.SYNC_CONST_NETWORK_TYPE]
                 ?: noPref.sync.onNetworkType,
-            onCharging = toPreferences[PreferencesKeys.SYNC_CONST_ON_CHARGING]
+            onCharging = fromPreferences[PreferencesKeys.SYNC_CONST_ON_CHARGING]
                 ?: noPref.sync.onCharging,
-            onBatteryNotLow = toPreferences[PreferencesKeys.SYNC_CONST_ON_BATT_NOT_LOW]
+            onBatteryNotLow = fromPreferences[PreferencesKeys.SYNC_CONST_ON_BATT_NOT_LOW]
                 ?: noPref.sync.onBatteryNotLow,
-            onIdle = toPreferences[PreferencesKeys.SYNC_CONST_ON_IDLE] ?: noPref.sync.onIdle
+            onIdle = fromPreferences[PreferencesKeys.SYNC_CONST_ON_IDLE] ?: noPref.sync.onIdle
         )
-        return CellsPreferences(currVersion, showDebug, listPref, meteredPref, syncPref)
+        return CellsPreferences(
+            currVersion,
+            showDebug,
+            disablePoll,
+            listPref,
+            meteredPref,
+            syncPref
+        )
     }
 
 
-//    private val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-//
-//    fun get(): SharedPreferences {
-//        return sharedPreferences
-//    }
-//
-//    fun getString(key: String, defValue: String): String {
-//        return sharedPreferences.getString(key, defValue) ?: defValue
-//    }
-//
-//    fun setString(key: String, value: String) {
-//        with(sharedPreferences.edit()) {
-//            putString(key, value)
-//            apply()
-//        }
-//    }
-//
-//    fun getInt(key: String, defValue: Int = -1): Int {
-//        return sharedPreferences.getInt(key, defValue)
-//    }
-
+    // Avoid a crash when migrating from an older version
+    private fun safelyGetLongPref(
+        fromPreferences: Preferences,
+        key: Preferences.Key<Long>,
+        default: Long
+    ): Long {
+        val newValue: Long? = try {
+            fromPreferences[key]
+        } catch (e: ClassCastException) {
+            try {
+                fromPreferences[stringPreferencesKey(key.name)]?.toLong()
+            } catch (e: Exception) {
+                null
+            }
+        }
+        return newValue ?: default
+    }
 }

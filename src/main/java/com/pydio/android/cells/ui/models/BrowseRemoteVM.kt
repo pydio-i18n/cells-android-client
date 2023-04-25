@@ -4,46 +4,55 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.pydio.android.cells.db.nodes.RTreeNode
+import androidx.lifecycle.viewModelScope
 import com.pydio.android.cells.services.AccountService
 import com.pydio.android.cells.services.NodeService
+import com.pydio.android.cells.services.PreferencesService
+import com.pydio.android.cells.services.WorkerService
 import com.pydio.android.cells.ui.core.LoadingState
 import com.pydio.android.cells.utils.BackOffTicker
 import com.pydio.cells.api.Transport
 import com.pydio.cells.transport.StateID
 import com.pydio.cells.utils.Str
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class BrowseRemoteVM(
+    prefs: PreferencesService,
     private val accountService: AccountService,
-    private val nodeService: NodeService
+    private val nodeService: NodeService,
+    private val workerService: WorkerService,
 ) : ViewModel() {
 
     private val logTag = "BrowseRemoteVM"
 
-    private val viewModelJob = Job()
-    private val vmScope = CoroutineScope(Dispatchers.Main + viewModelJob)
     private val backOffTicker = BackOffTicker()
     private var currWatcher: Job? = null
+
+    private val disablePoll = prefs.cellsPreferencesFlow.map { cellsPreferences ->
+        cellsPreferences.disablePoll
+    }
 
     private val _stateID = MutableStateFlow(StateID(/* serverUrl = */ Transport.UNDEFINED_URL))
     val stateID: StateFlow<StateID> = _stateID.asStateFlow()
 
     private var _isActive = false
-    private val _loadingState = MutableLiveData<LoadingState>()
+    private val _loadingState = MutableLiveData(LoadingState.IDLE)
     private val _errorMessage = MutableLiveData<String?>()
 
     init {
-        _loadingState.value = LoadingState.STARTING
+        if (stateID.value != StateID.NONE) {
+            _loadingState.value = LoadingState.STARTING
+            Log.i(logTag, "... Starting for ${stateID.value}")
+        }
     }
 
     val loadingState: LiveData<LoadingState>
@@ -53,24 +62,21 @@ class BrowseRemoteVM(
         get() = _errorMessage
 
     fun watch(newStateID: StateID, isForceRefresh: Boolean) {
-        pause()
+        Log.i(logTag, "Watching $newStateID ${if (isForceRefresh) "(Force refresh)" else ""}")
         _loadingState.value = if (isForceRefresh) LoadingState.PROCESSING else LoadingState.STARTING
         currWatcher?.cancel()
+        _isActive = false
         _stateID.value = newStateID
         resume()
     }
 
-    suspend fun getTreeNode(stateID: StateID): RTreeNode? {
-        return nodeService.getNode(stateID)
-    }
-
     fun pause() {
-        Log.e(logTag, "... About to pause remote VM, state: ${stateID.value}")
+        Log.i(logTag, "... Pause remote watching for ${stateID.value}")
         _isActive = false
         _loadingState.value = LoadingState.IDLE
     }
 
-    fun resume() {
+    private fun resume() {
         if (!_isActive) {
             _isActive = true
             currWatcher = watchFolder()
@@ -79,16 +85,16 @@ class BrowseRemoteVM(
     }
 
     // Technical local objects
-    private fun watchFolder() = vmScope.launch {
+    private fun watchFolder() = viewModelScope.launch {
         while (_isActive) {
             doPull()
             val nd = backOffTicker.getNextDelay()
             delay(TimeUnit.SECONDS.toMillis(nd))
-            val msg = "... Watching folders at ${stateID.value}"
+            val msg = "watching folders at ${stateID.value}"
             if (_isActive) {
                 Log.d(logTag, "$msg, next delay: ${nd}s")
             } else {
-                Log.d(logTag, "$msg has been stopped, leaving the loop")
+                Log.d(logTag, "STOP $msg")
             }
         }
     }
@@ -119,7 +125,7 @@ class BrowseRemoteVM(
     }
 
     override fun onCleared() {
-        viewModelJob.cancel()
         super.onCleared()
+        Log.i(logTag, "ViewModel cleared")
     }
 }

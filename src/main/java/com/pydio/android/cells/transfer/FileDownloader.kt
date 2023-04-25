@@ -7,7 +7,6 @@ import com.pydio.android.cells.services.JobService
 import com.pydio.android.cells.services.TransferService
 import com.pydio.cells.api.SDKException
 import com.pydio.cells.transport.StateID
-import com.pydio.cells.utils.Str
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -91,6 +90,7 @@ class FileDownloader(private val parentJob: RJob) : KoinComponent {
                     doneChannel.send(true)
                     return
                 }
+
                 else -> {
                     if (!isFailed) {
                         Log.d(logTag, "Processing DL for $msg")
@@ -105,33 +105,18 @@ class FileDownloader(private val parentJob: RJob) : KoinComponent {
         val (stateId, type) = decodeModel(encoded)
         try {
             jobService.incrementProgress(parentJob, 0, stateId.fileName)
-            val (_, errMsg) = transferService.getFileForDiff(
-                stateId,
-                type,
-                parentJob,
-                progressChannel
-            )
-            if (Str.notEmpty(errMsg)) {
-                // We cancel the diff as soon as we find an error. TODO improve
-                isFailed = true
-                jobService.failed(parentJob.jobId, errMsg!!)
-                jobService.e(logTag, "$errMsg", "${parentJob.jobId}")
-            }
+            transferService.getFileForDiff(stateId, type, parentJob, progressChannel)
         } catch (e: SDKException) {
-            Log.w(
-                logTag,
-                "could not download $type for $stateId, error #${e.code}: ${e.message}"
-            )
+            val errMsg = "could not download $type for $stateId, error #${e.code}: ${e.message}"
+            Log.w(logTag, errMsg)
+            isFailed = true
+            jobService.failed(parentJob.jobId, errMsg)
+            jobService.e(logTag, errMsg, "${parentJob.jobId}")
             // accountService.notifyError(state, e.code)
-            jobService.e(
-                logTag,
-                "unexpected error #${e.code} during $type DL for $stateId: ${e.message} ",
-                "${parentJob.jobId}"
-            )
         }
     }
 
-    private fun finalizeJob() {
+    private suspend fun finalizeJob() {
         // We assume all downloads have been done at this time
         lastIncrementalTotal = totalInBytes
         persistTotal(totalInBytes)
@@ -170,12 +155,12 @@ class FileDownloader(private val parentJob: RJob) : KoinComponent {
         }
     }
 
-    private fun persistTotal(total: Long) {
+    private suspend fun persistTotal(total: Long) {
         parentJob.total = total
         jobService.update(parentJob)
     }
 
-    private fun persistProgress(progress: Long) {
+    private suspend fun persistProgress(progress: Long) {
         parentJob.progress = progress
         jobService.update(parentJob)
     }

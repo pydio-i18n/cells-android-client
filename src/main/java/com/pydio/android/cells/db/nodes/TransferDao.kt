@@ -9,10 +9,10 @@ import androidx.room.RawQuery
 import androidx.room.TypeConverters
 import androidx.room.Update
 import androidx.sqlite.db.SupportSQLiteQuery
-import com.pydio.android.cells.db.Converters
+import com.pydio.android.cells.db.CellsConverters
 
 @Dao
-@TypeConverters(Converters::class)
+@TypeConverters(CellsConverters::class)
 interface TransferDao {
 
     // MAIN TRANSFER OBJECT
@@ -31,6 +31,9 @@ interface TransferDao {
 
     @Query("SELECT * FROM transfers WHERE transfer_id = :transferID LIMIT 1")
     fun getById(transferID: Long): RTransfer?
+
+    @Query("SELECT * FROM transfers WHERE external_id = :tuID LIMIT 1")
+    fun getByExternalID(tuID: Int): RTransfer?
 
     @Query("SELECT * FROM transfers WHERE job_id = :jobID")
     fun getByJobId(jobID: Long): LiveData<List<RTransfer>>

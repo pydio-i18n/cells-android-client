@@ -11,20 +11,24 @@ import androidx.lifecycle.asFlow
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.reactive.LiveNetwork
 import com.pydio.android.cells.reactive.NetworkStatus
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.util.*
+import java.util.Locale
 
-class NetworkService constructor(context: Context) {
+class NetworkService(
+    context: Context,
+    ioDispatcher: CoroutineDispatcher,
+) {
 
     private val logTag = "NetworkService"
-    private val serviceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(ioDispatcher + serviceJob)
 
     // Business objects
-    private var _networkStatus: NetworkStatus = NetworkStatus.Unknown
+    private var _networkStatus: NetworkStatus = NetworkStatus.Unavailable
     val networkStatus: NetworkStatus
         get() = _networkStatus
 
@@ -40,42 +44,37 @@ class NetworkService constructor(context: Context) {
 
     init {
         serviceScope.launch { // Asynchronous is necessary to wait for the context
-
+            Log.i(logTag, "Initialising network watching")
             val liveNetwork = LiveNetwork(context)
-            setNetworkStatus(liveNetwork.value ?: NetworkStatus.Unknown)
+            setNetworkStatus(liveNetwork.value ?: NetworkStatus.Unavailable)
 
             liveNetwork.asFlow().collect {
+                // Log.e(logTag, "##############################################")
+                Log.d(logTag, "Live network event: $it")
                 setNetworkStatus(it)
             }
             Log.i(logTag, "Initial status: ${liveNetwork.value}")
-            Log.i(logTag, "After init, current network status: $_networkType")
+            Log.d(logTag, "After init, current network status: $_networkType")
         }
     }
 
     fun isConnected(): Boolean {
         return when (_networkStatus) {
+
             is NetworkStatus.Unknown -> {
                 Log.w(logTag, "Unknown network status, doing as if connected")
                 true
             }
-            is NetworkStatus.Unavailable -> {
-                Log.w(logTag, "Unavailable network status, doing as if connected")
-                true
+
+            is NetworkStatus.Unavailable -> { // There is no network connection
+                false
             }
+
             is NetworkStatus.Unmetered,
             is NetworkStatus.Metered,
             is NetworkStatus.Roaming -> true
         }
     }
-
-//    fun isLimited(status: String): Boolean {
-//        return when (status) {
-//            AppNames.NETWORK_TYPE_ROAMING,
-//            AppNames.NETWORK_TYPE_METERED,
-//            -> true
-//            else -> false
-//        }
-//    }
 
     fun isMetered(): Boolean {
         return _networkStatus is NetworkStatus.Metered ||
@@ -83,7 +82,6 @@ class NetworkService constructor(context: Context) {
     }
 
     private fun setNetworkStatus(status: NetworkStatus) {
-
         Log.i(logTag, "### Setting new status: $status")
         this._networkStatus = status
 
