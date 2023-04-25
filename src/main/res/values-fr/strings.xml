@@ -88,7 +88,7 @@
     <string name="account_list_desc">Gérer les serveurs distants déjà enregistrés</string>
     <string name="account_list_none">Aucun compte n\'a encore été configuré…</string>
     <!-- Browse management -->
-    <string name="ws_list_subtitle">Choisir un espace de travail à parcourir</string>
+    <string name="ws_list_subtitle">Choisir un workspace à parcourir</string>
     <string name="browse_list_desc">Parcourir les serveurs distants</string>
     <string name="browse_list_none">Vide</string>
     <string name="recycle_bin_label">Corbeille</string>
@@ -277,7 +277,7 @@
     <string name="empty_content_icon_description">Icône de liste vide</string>
     <string name="choose_account">Sélectionner un compte</string>
     <string name="switch_account">Changer de compte</string>
-    <string name="switch_workspace">Changer d\'espace de travail</string>
+    <string name="switch_workspace">Changer de workspace</string>
     <string name="parent_folder">Dossier parent</string>
     <string name="order_by_title">Ordre de tri</string>
 </resources>
