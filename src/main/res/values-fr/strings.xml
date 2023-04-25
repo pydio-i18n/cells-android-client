@@ -17,11 +17,11 @@
     <string name="button_clear_list">Vider la liste</string>
     <string name="button_resync_all">Synchroniser</string>
     <string name="button_skip">Passer</string>
-    <string name="button_launch_sync">Launch Sync</string>
+    <string name="button_launch_sync">Lancer la synchro</string>
     <!-- Navigation labels -->
     <string name="action_home">Page d\'accueil</string>
     <!--    <string name="action_open_app">Open App</string>-->
-    <string name="action_open_after_migration">Start using the app!</string>
+    <string name="action_open_after_migration">Ouvrir l\'application</string>
     <string name="action_choose_account">Choisir un compte</string>
     <string name="action_browse">Parcourir</string>
     <string name="action_open_workspaces">Workspaces</string>
@@ -115,8 +115,8 @@
     <string name="no_bookmark_for_account">Aucun favori n\'a été défini pour ce compte…</string>
     <string name="no_transfer_for_account">Aucun transfert récent à afficher</string>
     <string name="no_offline_root_for_account">Aucun dossier n\'a été tagué pour être maintenu hors ligne pour ce compte…</string>
-    <string name="account_home_no_ws_title">No workspace to list</string>
-    <string name="account_home_no_ws_desc">Either the server is unreachable, or you may have lost your permissions. In the latter case, please contact your site administrator.</string>
+    <string name="account_home_no_ws_title">Aucun workspace à lister</string>
+    <string name="account_home_no_ws_desc">Soit le serveur est inaccessible, soit vous avez perdu vos autorisations. Dans ce cas, prenez contact avec l\'administrateur du site.</string>
     <plurals name="selected_count">
         <item quantity="one">%d élément sélectionné</item>
         <item quantity="other">%d éléments sélectionnés</item>
