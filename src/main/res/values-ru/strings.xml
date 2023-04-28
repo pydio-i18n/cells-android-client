@@ -130,6 +130,8 @@
     <string name="in_progress_moving">Перемещение…</string>
     <string name="in_progress_restoring">Восстановление…</string>
     <!-- Search -->
+    <string name="search_label">Search…</string>
+    <string name="search_hint">Enter a term to search your files!</string>
     <!--Offline -->
     <string name="sync_in_progress">Синхронизация…</string>
     <string name="sync_downloading">Загрузка файлов…</string>
