@@ -128,6 +128,8 @@
     <string name="in_progress_moving">Moviendo…</string>
     <string name="in_progress_restoring">Restaurando…</string>
     <!-- Search -->
+    <string name="search_label">Search…</string>
+    <string name="search_hint">Enter a term to search your files!</string>
     <!--Offline -->
     <string name="sync_in_progress">Sincronizando…</string>
     <string name="sync_downloading">Descargando archivos…</string>
