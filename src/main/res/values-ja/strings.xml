@@ -127,6 +127,8 @@
     <string name="in_progress_moving">Moving…</string>
     <string name="in_progress_restoring">Restoring…</string>
     <!-- Search -->
+    <string name="search_label">Search…</string>
+    <string name="search_hint">Enter a term to search your files!</string>
     <!--Offline -->
     <string name="sync_in_progress">Synchronising…</string>
     <string name="sync_downloading">Downloading files…</string>
