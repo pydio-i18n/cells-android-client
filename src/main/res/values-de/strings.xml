@@ -129,7 +129,7 @@
     <string name="in_progress_restoring">Wiederherstellung…</string>
     <!-- Search -->
     <string name="search_label">Suchen…</string>
-    <string name="search_hint">Enter a term to search your files!</string>
+    <string name="search_hint">Geben Sie einen Begriff ein, um Ihre Dateien zu durchsuchen!</string>
     <!--Offline -->
     <string name="sync_in_progress">Synchronisierung…</string>
     <string name="sync_downloading">Dateien werden heruntergeladen…</string>
