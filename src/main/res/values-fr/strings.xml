@@ -107,6 +107,7 @@
     <string name="captive_portal">Portail captif: connexion requise</string>
     <string name="metered_connection">Connecté à un réseau limité</string>
     <string name="roaming_connection">Connecté en itinérance</string>
+    <string name="no_account">No account, please configure at least a connection</string>
     <string name="server_unreachable">Impossible de se connecter au serveur</string>
     <string name="empty_cache">Impossible de lister le contenu du dossier</string>
     <string name="cannot_download_file">Impossible de télécharger le fichier</string>
@@ -139,7 +140,7 @@
     <string name="sync_tree_walking">Parcours de l\'arbre pour trouver des changements…</string>
     <string name="sync_already_running">Une synchronisation est déjà en cours. Veuillez patienter avant d\'en lancer une nouvelle</string>
     <string name="confirm_remove_offline_title">Confirmer votre choix</string>
-    <string name="confirm_remove_offline_desc">La suppression du statut hors ligne de ce nœud peut conduire à la perte des données téléchargées. Êtes-vous sûr de vouloir continuer</string>
+    <string name="confirm_remove_offline_desc">Removing the offline status of this node can lead to losing the downloaded data. Are you sure you want to proceed</string>
     <!-- Job Management -->
     <string name="job_list_title">Tâches de fond</string>
     <string name="job_list_empty_message">Aucune tâche de fond à afficher</string>
@@ -197,6 +198,7 @@
     <string name="delete">Effacer</string>
     <string name="pause">Suspendre</string>
     <string name="relaunch">Relancer</string>
+    <string name="resume">Resume</string>
     <string name="empty_recycle">Vider la corbeille</string>
     <string name="restore_content">Restaurer</string>
     <string name="permanently_remove">Supprimer définitivement</string>
@@ -262,7 +264,7 @@
     <string name="pref_offline_constraint_charging_title">Lorsque l\'appareil est en charge</string>
     <string name="pref_offline_constraint_charging_desc">Lancer la synchronisation uniquement lorsque l\'appareil est en charge</string>
     <string name="pref_offline_constraint_idle_title">Inactif</string>
-    <string name="pref_offline_constraint_idle_desc">Lorsque l\'appareil est inactif (nécessite Android 6+)</string>
+    <string name="pref_offline_constraint_idle_desc">When the device is idle</string>
     <string name="pref_offline_constraint_batt_not_low_title">Lorsque la batterie n\'est pas faible</string>
     <string name="pref_offline_constraint_batt_not_low_desc">Lorsque la batterie n\'est pas faible</string>
     <string name="pref_category_title_feedback">Commentaires et aide</string>
