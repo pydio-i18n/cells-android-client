@@ -17,11 +17,11 @@
     <string name="button_clear_list">Limpar lista</string>
     <string name="button_resync_all">Re-sincronizar</string>
     <string name="button_skip">Pular</string>
-    <string name="button_launch_sync">Launch Sync</string>
+    <string name="button_launch_sync">Iniciar Sincronização</string>
     <!-- Navigation labels -->
     <string name="action_home">Início</string>
     <!--    <string name="action_open_app">Open App</string>-->
-    <string name="action_open_after_migration">Start using the app!</string>
+    <string name="action_open_after_migration">Comece a usar o aplicativo!</string>
     <string name="action_choose_account">Selecione uma conta</string>
     <string name="action_browse">Navegar</string>
     <string name="action_open_workspaces">Espaços de trabalho</string>
@@ -101,7 +101,7 @@
     <string name="category_workspaces">Espaços de trabalho</string>
     <string name="last_check">Última verificação</string>
     <string name="last_check_never">nunca</string>
-    <string name="appears_in_prefix">Inside %s</string>
+    <string name="appears_in_prefix">Dentro de %s</string>
     <string name="loading_message">Aguarde enquanto carrega o conteúdo…</string>
     <string name="no_internet">Sem conexão à internet</string>
     <string name="captive_portal">Captive portal: sign in required</string>
