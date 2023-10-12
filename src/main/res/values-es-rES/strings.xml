@@ -4,8 +4,8 @@
     <!-- Button Labels -->
     <string name="button_ok">OK</string>
     <string name="button_confirm">Confirmar</string>
-    <string name="button_next">Next</string>
-    <string name="button_back">Back</string>
+    <string name="button_next">Siguiente</string>
+    <string name="button_back">Atrás</string>
     <string name="button_done_and_exit">Upload done. Exit</string>
     <string name="button_run_in_background">Run in background</string>
     <string name="button_cancel">Cancelar</string>
