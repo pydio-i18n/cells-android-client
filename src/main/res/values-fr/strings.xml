@@ -177,7 +177,7 @@
     <string name="post_migration_sync_message">Vous avez un ou plusieurs éléments marqués comme hors ligne et cette migration nécessite un retéléchargement complet. Voulez-vous procéder maintenant ? Vous pouvez l\'ignorer et effectuer la synchronisation plus tard.</string>
     <!-- More menus -->
     <string name="open_more_menu">Choisir une action à appliquer aux éléments sélectionnés</string>
-    <string name="deselect_all">Un-select all</string>
+    <string name="deselect_all">Désélectionner tout</string>
     <string name="more_button_description">Afficher plus d\'actions pour cet élément</string>
     <string name="open_in_workspaces">Ouvrir l\'emplacement</string>
     <string name="open_parent_in_workspaces">Ouvrir l\'emplacement parent</string>
