@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="order_by_labels">
-        <item>Kanonické (A až Z, složky první)</item>
+        <item>Standard (A to Z, folders first)</item>
         <item>Název souboru (A až Z)</item>
         <item>Název souboru (Z až A)</item>
         <item>Upraveno (od nejstarších)</item>
@@ -9,6 +9,9 @@
         <item>Velikost (od nejmenších)</item>
         <item>Velikost (od největších)</item>
     </string-array>
+    <!-- Mime type ordering does not mean anything for the time  being. -->
+    <!--        <item>Type (A to Z)</item>-->
+    <!--        <item>Type (Z to A)</item>-->
     <string-array name="list_layout_labels">
         <item>Seznam</item>
         <item>Mřížka</item>
@@ -34,7 +37,7 @@
         <item>Timeout</item>
     </string-array>
     <string-array name="transfer_order_by_labels">
-        <item>Canonical (By creation order, newest first)</item>
+        <item>Standard (By creation order, newest first)</item>
         <item>Creation order (oldest first)</item>
         <item>Status (A to Z)</item>
         <item>Status (Z to A)</item>
@@ -42,7 +45,7 @@
         <item>Type (Upload First)</item>
     </string-array>
     <string-array name="job_order_by_labels">
-        <item>Canonical (By creation order, newest first)</item>
+        <item>Standard (By creation order, newest first)</item>
         <item>Creation order (oldest first)</item>
         <item>Status (A to Z)</item>
         <item>Status (Z to A)</item>
