@@ -1,6 +1,5 @@
 package com.pydio.android.cells.ui.core.nav
 
-import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,18 +13,15 @@ import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pydio.android.cells.R
-import com.pydio.android.cells.ui.ConnectionVM
+import com.pydio.android.cells.services.ConnectionService
 import com.pydio.android.cells.ui.browse.BrowseDestinations
 import com.pydio.android.cells.ui.browse.BrowseNavigationActions
-import com.pydio.android.cells.ui.browse.screens.HomeHeader
 import com.pydio.android.cells.ui.core.composables.MenuTitleText
 import com.pydio.android.cells.ui.core.composables.getWsThumbVector
 import com.pydio.android.cells.ui.core.composables.menus.BottomSheetDivider
@@ -33,7 +29,6 @@ import com.pydio.android.cells.ui.system.SystemDestinations
 import com.pydio.android.cells.ui.system.SystemNavigationActions
 import com.pydio.android.cells.ui.system.models.PrefReadOnlyVM
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
 import com.pydio.cells.transport.StateID
 import org.koin.androidx.compose.koinViewModel
 
@@ -45,18 +40,20 @@ import org.koin.androidx.compose.koinViewModel
 fun AppDrawer(
     currRoute: String?,
     currSelectedID: StateID?,
-    connectionVM: ConnectionVM,
+    closeDrawer: () -> Unit,
+    prefReadOnlyVM: PrefReadOnlyVM = koinViewModel(),
+    connectionService: ConnectionService,
     cellsNavActions: CellsNavigationActions,
     systemNavActions: SystemNavigationActions,
-    browseNavActions: BrowseNavigationActions,
-    closeDrawer: () -> Unit,
-    prefReadOnlyVM: PrefReadOnlyVM = koinViewModel()
+    browseNavActions: BrowseNavigationActions
 ) {
 
-    val defaultPadding = PaddingValues(start = 16.dp, end = 16.dp)
-//        horizontal = 8.dp,
-//        vertical = 8.dp,)
-// NavigationDrawerItemDefaults.ItemPadding
+    val showDebugTools = prefReadOnlyVM.showDebugTools.collectAsState(initial = false)
+    val accountID = connectionService.currAccountID.collectAsState(StateID.NONE)
+    val wss = connectionService.wss.collectAsState(listOf())
+    val cells = connectionService.cells.collectAsState(listOf())
+
+    val defaultPadding = PaddingValues(horizontal = dimensionResource(R.dimen.horizontal_padding))
     val defaultModifier = Modifier.padding(defaultPadding)
     val defaultTitleModifier = defaultModifier.padding(
         PaddingValues(
@@ -64,11 +61,6 @@ fun AppDrawer(
             bottom = 8.dp,
         )
     )
-    val accountID = connectionVM.currAccountID.observeAsState()
-    val wss = connectionVM.wss.observeAsState()
-    val cells = connectionVM.cells.observeAsState()
-
-    val showDebugTools = prefReadOnlyVM.showDebugTools.collectAsState(initial = false)
 
     ModalDrawerSheet(
         windowInsets = WindowInsets.systemBars
@@ -80,13 +72,9 @@ fun AppDrawer(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                // .weight(1f)
-                // .padding(vertical = dimensionResource(id = R.dimen.bottom_sheet_v_spacing))
                 .verticalScroll(scrollState)
-
         ) {
-
-            HomeHeader(
+            AccountHeader(
                 username = accountID.value?.username ?: stringResource(R.string.ask_url_title),
                 address = accountID.value?.serverUrl ?: "",
                 openAccounts = { cellsNavActions.navigateToAccounts(); closeDrawer() },
@@ -108,28 +96,24 @@ fun AppDrawer(
                     icon = CellsIcons.KeepOffline,
                     selected = BrowseDestinations.OfflineRoots.isCurrent(currRoute),
                     onClick = { browseNavActions.toOfflineRoots(currAccountID); closeDrawer() },
-//                modifier = defaultModifier
                 )
                 MyNavigationDrawerItem(
                     label = stringResource(R.string.action_open_bookmarks),
                     icon = CellsIcons.Bookmark,
                     selected = BrowseDestinations.Bookmarks.isCurrent(currRoute),
                     onClick = { browseNavActions.toBookmarks(currAccountID);closeDrawer() },
-//                modifier = defaultModifier
                 )
                 MyNavigationDrawerItem(
                     label = stringResource(R.string.action_open_transfers),
                     icon = CellsIcons.Transfers,
                     selected = BrowseDestinations.Transfers.isCurrent(currRoute),
                     onClick = { browseNavActions.toTransfers(currAccountID); closeDrawer() },
-//                modifier = defaultModifier
                 )
 
                 BottomSheetDivider()
 
                 MenuTitleText(stringResource(R.string.my_workspaces), defaultTitleModifier)
-
-                wss.value?.listIterator()?.forEach {
+                wss.value.listIterator().forEach {
                     val selected = BrowseDestinations.Open.isCurrent(currRoute)
                             && it.getStateID() == currSelectedID
                     MyNavigationDrawerItem(
@@ -137,11 +121,9 @@ fun AppDrawer(
                         icon = getWsThumbVector(it.sortName ?: ""),
                         selected = selected,
                         onClick = { browseNavActions.toBrowse(it.getStateID());closeDrawer() },
-                        modifier = defaultModifier
                     )
                 }
-
-                cells.value?.listIterator()?.forEach {
+                cells.value.listIterator().forEach {
                     val selected = BrowseDestinations.Open.isCurrent(currRoute)
                             && it.getStateID() == currSelectedID
                     MyNavigationDrawerItem(
@@ -149,7 +131,6 @@ fun AppDrawer(
                         icon = getWsThumbVector(it.sortName ?: ""),
                         selected = selected,
                         onClick = { browseNavActions.toBrowse(it.getStateID()); closeDrawer() },
-                        modifier = defaultModifier
                     )
                 }
             } ?: run { // Temporary fallback when no account is defined
@@ -159,21 +140,17 @@ fun AppDrawer(
                     icon = Icons.Filled.Group,
                     selected = CellsDestinations.Accounts.route == currRoute,
                     onClick = { cellsNavActions.navigateToAccounts();closeDrawer() },
-                    modifier = defaultModifier
                 )
             }
 
             BottomSheetDivider()
-//        BottomSheetDivider(defaultModifier)
 
             MenuTitleText(stringResource(R.string.my_account), defaultTitleModifier)
-
             MyNavigationDrawerItem(
                 label = stringResource(R.string.action_settings),
                 icon = CellsIcons.Settings,
                 selected = SystemDestinations.Settings.route == currRoute,
                 onClick = { systemNavActions.navigateToSettings(); closeDrawer() },
-                modifier = defaultModifier
             )
             accountID.value?.let { accID -> // We also temporarily disable this when no account is defined
                 // TODO Remove the check once the "clear cache" / housekeeping strategy has been refined
@@ -182,7 +159,6 @@ fun AppDrawer(
                     icon = CellsIcons.EmptyRecycle,
                     selected = SystemDestinations.ClearCache.isCurrent(currRoute),
                     onClick = { systemNavActions.navigateToClearCache(accID); closeDrawer() },
-                    modifier = defaultModifier
                 )
             }
             if (showDebugTools.value) {
@@ -191,14 +167,12 @@ fun AppDrawer(
                     icon = CellsIcons.Jobs,
                     selected = SystemDestinations.Jobs.route == currRoute,
                     onClick = { systemNavActions.navigateToJobs(); closeDrawer() },
-                    modifier = defaultModifier
                 )
                 MyNavigationDrawerItem(
                     label = stringResource(R.string.action_open_logs),
                     icon = CellsIcons.Logs,
                     selected = SystemDestinations.Logs.route == currRoute,
                     onClick = { systemNavActions.navigateToLogs(); closeDrawer() },
-                    modifier = defaultModifier
                 )
             }
             MyNavigationDrawerItem(
@@ -206,41 +180,10 @@ fun AppDrawer(
                 icon = CellsIcons.About,
                 selected = SystemDestinations.About.route == currRoute,
                 onClick = { systemNavActions.navigateToAbout(); closeDrawer() },
-                modifier = defaultModifier,
             )
         }
     }
 }
-
-//@Composable
-//private fun PydioLogo(modifier: Modifier = Modifier) {
-//    Row(modifier = modifier) {
-//        Icon(
-//            painterResource(R.drawable.pydio_logo),
-//            contentDescription = null,
-//            tint = MaterialTheme.colorScheme.primary
-//        )
-//    }
-//}
-
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun MyNavigationDrawerItem(
-//    label: String,
-//    selected: Boolean,
-//    onClick: () -> Unit,
-//    modifier: Modifier = Modifier,
-//    iconID: Int,
-//) {
-//    NavigationDrawerItem(
-//        label = { Text(label) },
-//        icon = { Icon(painterResource(iconID), label) },
-//        selected = selected,
-//        onClick = onClick,
-//        modifier = modifier.height(dimensionResource(id = R.dimen.menu_item_height)),
-//        shape = ShapeDefaults.Small,
-//    )
-//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -248,7 +191,6 @@ fun MyNavigationDrawerItem(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
     icon: ImageVector,
 ) {
     NavigationDrawerItem(
@@ -259,24 +201,4 @@ fun MyNavigationDrawerItem(
         modifier = Modifier.height(dimensionResource(R.dimen.menu_item_height)),
         shape = ShapeDefaults.Small,
     )
-    //    badge: (@Composable () -> Unit)? = null,
-    //    colors: NavigationDrawerItemColors = NavigationDrawerItemDefaults.colors(),
-    //    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
-}
-
-@Preview("Drawer contents")
-@Preview("Drawer contents (dark)", uiMode = UI_MODE_NIGHT_YES)
-@Composable
-fun PreviewAppDrawer() {
-    CellsTheme {
-//        AppDrawer(
-//            currAccountID = Transport.UNDEFINED_STATE_ID,
-//            currentRoute = CellsDestinations.Home.route,
-//            navigateToHome = {},
-//            navigateToBrowse = {},
-//            navigateToAccounts = {},
-//            navigateToAbout = {},
-//            closeDrawer = { }
-//        )
-    }
 }

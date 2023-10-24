@@ -1,28 +1,28 @@
 package com.pydio.android.cells.services
 
+import android.util.Log
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.CellsApp
 import com.pydio.android.cells.db.nodes.RLocalFile
+import com.pydio.android.cells.db.nodes.RTransfer
 import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.utils.asFormattedString
 import com.pydio.android.cells.utils.computeFileMd5
 import com.pydio.android.cells.utils.getCurrentDateTime
 import com.pydio.cells.api.ui.FileNode
 import com.pydio.cells.transport.StateID
-import com.pydio.cells.utils.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
 
 /** Centralizes management of local files and where to store/find them. */
-class FileService(private val treeNodeRepository: TreeNodeRepository) {
+class FileService(
+    coroutineService: CoroutineService,
+    private val treeNodeRepository: TreeNodeRepository
+) {
 
     private val logTag = "FileService"
 
-    private val fileServiceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + fileServiceJob)
+    private val serviceScope = coroutineService.cellsIoScope
     private val sep: String = File.separator
 
     private val appCacheDir = CellsApp.instance.cacheDir.absolutePath
@@ -36,9 +36,9 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
         File(dataParentPath(account, AppNames.LOCAL_FILE_TYPE_TRANSFER)).mkdirs()
     }
 
-    fun dataParentPath(accountId: StateID, type: String): String {
-        val dirName = treeNodeRepository.sessions[accountId.accountId]?.dirName
-            ?: throw IllegalStateException("No record found for $accountId")
+    fun dataParentPath(accountID: StateID, type: String): String {
+        val dirName = treeNodeRepository.sessions[accountID.accountId]?.dirName
+            ?: throw IllegalStateException("No record found for [$accountID]")
         return staticDataParentPath(dirName, type)
     }
 
@@ -56,9 +56,11 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
             AppNames.LOCAL_FILE_TYPE_FILE,
             AppNames.LOCAL_FILE_TYPE_TRANSFER
             -> "${dataParentPath(state.account(), type)}${state.path}"
+
             AppNames.LOCAL_FILE_TYPE_THUMB,
             AppNames.LOCAL_FILE_TYPE_PREVIEW
             -> "${dataParentPath(state.account(), type)}${state.file}"
+
             else -> throw IllegalStateException("Cannot create $type path for $state")
         }
     }
@@ -69,6 +71,40 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
         val rLocalFile =
             RLocalFile.fromFile(stateID, type, file, rTreeNode.etag, rTreeNode.remoteModificationTS)
         dao.insert(rLocalFile)
+    }
+
+    fun registerLocalFile(rTransfer: RTransfer) {
+        val tid = rTransfer.transferId
+        val stateID = rTransfer.getStateID() ?: run {
+            Log.e(logTag, "Transfer #$tid has no StateID, could not register, aborting")
+            return
+        }
+        val localPath = rTransfer.localPath ?: run {
+            Log.e(logTag, "Transfer #$tid has no localPath, could not register, aborting")
+            return
+        }
+        val localFile = File(localPath)
+        if (!localFile.exists()) {
+            Log.e(
+                logTag,
+                "Could not find file at $localFile for $stateID. Could not register, aborting"
+            )
+            return
+        }
+        // val type = rTransfer.type // <- This is not OK, transfer type is download or upload
+        // TODO improve when also adding the preview and thumb to the transfer mechanism
+        val type = AppNames.LOCAL_FILE_TYPE_FILE
+        val ndb = treeNodeRepository.nodeDB(stateID.account())
+        val treeNode = ndb.treeNodeDao().getNode(stateID.id) ?: run {
+            Log.e(logTag, "Transfer #$tid points toward an un-existing node at $stateID, aborting")
+            return
+        }
+        val rLocalFile = RLocalFile.fromFile(
+            stateID, type, localFile,
+            treeNode.etag, treeNode.remoteModificationTS
+        )
+        Log.i(logTag, "... #$tid - After transfer, registering local file: $rLocalFile")
+        ndb.localFileDao().insert(rLocalFile)
     }
 
     fun needsUpdate(stateID: StateID, remote: FileNode, type: String): Boolean {
@@ -105,6 +141,10 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
             return false
         }
 
+        if (localFile.etag == null) { // We have a P8 distant server, no more checks
+            return true
+        }
+
         // Finally recompute local file md5 to insure it corresponds with the expected value (corrupted file)
         val computedMd5 = computeFileMd5(lf)
         if (localFile.etag != computedMd5) {
@@ -120,17 +160,17 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
         val dao = treeNodeRepository.nodeDB(stateID).localFileDao()
 
         val rFile = dao.getFile(stateID.id, type) ?: let {
-            Log.e(logTag, "no record for [$type]: $stateID")
+            Log.d(logTag, "No record for $type file: [ $stateID ]")
             return null
         }
         val parPath = dataParentPath(stateID.account(), type)
         val file = File(parPath + File.separator + rFile.file)
         if (!file.exists()) {
-            Log.e(logTag, "could not find file at ${file.absolutePath}")
+            Log.d(logTag, "Could not find file at ${file.absolutePath}")
             return null
         }
         if (!isFileInLineWithIndex(rTreeNode, rFile)) {
-            Log.e(logTag, "remote file has changed")
+            Log.d(logTag, "Remote file has changed for [$stateID]")
             return null
         }
         return file
@@ -145,29 +185,34 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
     }
 
     fun cleanFileCacheFor(accountID: StateID) = serviceScope.launch {
+        try {
+            // Defined offline roots that must be left intact
+            val offlineDao = treeNodeRepository.nodeDB(accountID).offlineRootDao()
+            val offlinePaths = offlineDao.getAllActive().map { it.encodedState }
 
-        // Defined offline roots that must be left intact
-        val offlineDao = treeNodeRepository.nodeDB(accountID).offlineRootDao()
-        val offlinePaths = offlineDao.getAllActive().map { it.encodedState }
-
-        // Iterate on all files both in cache/<id>/{previews,thumbs} and in files/<id>/local
-        // and delete the ones that are not in offline roots
-        val filesDao = treeNodeRepository.nodeDB(accountID).localFileDao()
-        for (record in filesDao.getFilesUnder(accountID.id)) {
-            if (!isInOfflineTree(offlinePaths, record.encodedState)) {
-                filesDao.delete(record.encodedState, record.type)
+            // Iterate on all files both in cache/<id>/{previews,thumbs} and in files/<id>/local
+            // and delete the ones that are not in offline roots
+            val filesDao = treeNodeRepository.nodeDB(accountID).localFileDao()
+            for (record in filesDao.getFilesUnder(accountID.id)) {
+                if (!isInOfflineTree(offlinePaths, record.encodedState)) {
+                    filesDao.delete(record.encodedState, record.type)
+                }
             }
-        }
 
-        // Also violently wipe transfer temporary files
-        val transferDir = File(dataParentPath(accountID, AppNames.LOCAL_FILE_TYPE_TRANSFER))
-        if (transferDir.exists()) {
-            transferDir.deleteRecursively()
+            // Also violently wipe transfer temporary files
+            val transferDir = File(dataParentPath(accountID, AppNames.LOCAL_FILE_TYPE_TRANSFER))
+            if (transferDir.exists()) {
+                transferDir.deleteRecursively()
+            }
+        } catch (e: Exception) {
+            // TODO better error handling
+            Log.e(logTag, "Could not clean cache for $accountID: ${e.message}")
+            e.printStackTrace()
         }
     }
 
     /* Violently remove all local files and also empty the local_files table */
-    fun cleanAllLocalFiles(accountID: StateID, dirName: String) {
+    fun cleanAllLocalFiles(accountID: StateID) {
 
         // Recursively delete local folders
         var currDir = File(dataParentPath(accountID, AppNames.LOCAL_FILE_TYPE_THUMB))
@@ -228,6 +273,7 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
         return when (type) {
             AppNames.LOCAL_FILE_TYPE_THUMB ->
                 appCacheDir + middle + AppNames.THUMB_PARENT_DIR
+
             AppNames.LOCAL_FILE_TYPE_PREVIEW ->
                 appCacheDir + middle + AppNames.PREVIEW_PARENT_DIR
             // TODO we cannot put this in the default cache folder for now:
@@ -239,6 +285,7 @@ class FileService(private val treeNodeRepository: TreeNodeRepository) {
             // https://developer.android.com/training/data-storage/shared/media#open-file-descriptor
             AppNames.LOCAL_FILE_TYPE_TRANSFER ->
                 appFilesDir + middle + AppNames.TRANSFER_PARENT_DIR
+
             else -> throw IllegalStateException("Unknown file type: $type")
         }
     }

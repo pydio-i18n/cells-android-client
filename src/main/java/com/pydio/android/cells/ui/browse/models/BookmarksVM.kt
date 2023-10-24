@@ -2,80 +2,74 @@ package com.pydio.android.cells.ui.browse.models
 
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
-import com.pydio.android.cells.ListType
-import com.pydio.android.cells.db.nodes.RTreeNode
-import com.pydio.android.cells.services.NodeService
-import com.pydio.android.cells.services.PreferencesService
-import com.pydio.android.cells.ui.core.LoadingState
+import com.pydio.android.cells.services.TransferService
+import com.pydio.android.cells.ui.core.AbstractCellsVM
+import com.pydio.android.cells.ui.models.MultipleItem
+import com.pydio.android.cells.ui.models.deduplicateNodes
 import com.pydio.cells.transport.StateID
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** Expose methods used by bookmark pages */
 class BookmarksVM(
     private val accountID: StateID,
-    private val prefs: PreferencesService,
-    private val nodeService: NodeService
-) : AbstractBrowseVM(prefs, nodeService) {
+    private val transferService: TransferService,
+) : AbstractCellsVM() {
 
     private val logTag = "BookmarksVM"
 
-    private val _loadingState = MutableLiveData(LoadingState.STARTING)
-    private val _errorMessage = MutableLiveData<String?>()
-    val loadingState: LiveData<LoadingState> = _loadingState
-    val errorMessage: LiveData<String?> = _errorMessage
-
-    private val orderPair = prefs.cellsPreferencesFlow.map { cellsPreferences ->
-        prefs.getOrderByPair(
-            cellsPreferences,
-            ListType.DEFAULT
-        )
-    }.asLiveData(viewModelScope.coroutineContext)
-    val bookmarks: LiveData<List<RTreeNode>>
-        get() = orderPair.switchMap { currOrder ->
-            nodeService.listBookmarks(accountID, currOrder.first, currOrder.second)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val bookmarks: Flow<List<MultipleItem>> = defaultOrderPair.flatMapLatest { currPair ->
+        nodeService.listBookmarkFlow(accountID, currPair.first, currPair.second).map { nodes ->
+            deduplicateNodes(nodeService, nodes)
         }
+    }
 
     fun forceRefresh(stateID: StateID) {
         viewModelScope.launch {
             launchProcessing()
-            done(nodeService.refreshBookmarks(stateID))
+            try {
+                nodeService.refreshBookmarks(stateID)
+                done()
+            } catch (e: Exception) {
+                done(e)
+            }
         }
     }
 
     fun removeBookmark(stateID: StateID) {
         viewModelScope.launch {
-            nodeService.toggleBookmark(stateID, false)
+            try {
+                nodeService.toggleBookmark(stateID, false)
+            } catch (e: Exception) {
+                Log.e(logTag, "Cannot delete bookmark for $stateID, cause:  ${e.message}")
+                e.printStackTrace()
+                done(e)
+            }
         }
     }
 
     fun download(stateID: StateID, uri: Uri) {
         viewModelScope.launch {
-            nodeService.saveToSharedStorage(stateID, uri)
+            try {
+                transferService.saveToSharedStorage(stateID, uri)
+            } catch (e: Exception) {
+                done(e)
+            }
         }
     }
 
     /* Helpers */
     init {
-        Log.d(logTag, "Initialising BookmarksVM")
+        forceRefresh(accountID)
+        Log.d(logTag, "... Initialised")
     }
 
     override fun onCleared() {
-        Log.d(logTag, "BookmarksVM cleared")
-    }
-
-    private fun launchProcessing() {
-        _loadingState.value = LoadingState.PROCESSING
-        _errorMessage.value = null
-    }
-
-    private fun done(err: String? = null) {
-        _loadingState.value = LoadingState.IDLE
-        _errorMessage.value = err
+        Log.d(logTag, "... Cleared")
     }
 }

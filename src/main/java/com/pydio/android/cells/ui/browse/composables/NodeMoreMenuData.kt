@@ -24,9 +24,6 @@ import com.pydio.android.cells.ui.browse.menus.SortByMenu
 import com.pydio.android.cells.ui.browse.models.TreeNodeVM
 import com.pydio.cells.transport.StateID
 import org.koin.androidx.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
-
-private const val logTag = "NodeMoreMenuData"
 
 enum class NodeMoreMenuType {
     NONE, MORE, SEARCH, OFFLINE, BOOKMARK, CREATE, SORT_BY,
@@ -35,74 +32,83 @@ enum class NodeMoreMenuType {
 @Composable
 fun NodeMoreMenuData(
     type: NodeMoreMenuType,
-    toOpenStateID: StateID,
-    launch: (NodeAction) -> Unit,
+    subjectID: StateID,
+    launch: (NodeAction, StateID) -> Unit,
+    treeNodeVM: TreeNodeVM = koinViewModel(),
 ) {
+    val logTag = "NodeMoreMenuData"
 
-    val moreMenuVM: TreeNodeVM = koinViewModel(parameters = { parametersOf(toOpenStateID) })
     val item: MutableState<RTreeNode?> = remember { mutableStateOf(null) }
     val workspace: MutableState<RWorkspace?> = remember { mutableStateOf(null) }
 
-    LaunchedEffect(key1 = toOpenStateID) {
-        if (toOpenStateID != StateID.NONE) {
-
-            moreMenuVM.getTreeNode(toOpenStateID)?.let { currNode ->
+    LaunchedEffect(key1 = subjectID) {
+        if (subjectID != StateID.NONE) {
+            treeNodeVM.getTreeNode(subjectID)?.let { currNode ->
                 item.value = currNode
-            } ?: { Log.e(logTag, "No node found for $toOpenStateID, aborting") }
+            } ?: { Log.e(logTag, "No node found for $subjectID, aborting") }
 
-            if (toOpenStateID.isWorkspaceRoot) {
-                moreMenuVM.getWS(toOpenStateID)?.let { currNode ->
+            if (subjectID.isWorkspaceRoot) {
+                treeNodeVM.getWS(subjectID)?.let { currNode ->
                     workspace.value = currNode
                 }
             }
         }
     }
 
-    if (toOpenStateID.workspace != null) {
+    if (type == NodeMoreMenuType.SORT_BY) {
+        SortByMenu(
+            type = ListType.DEFAULT,
+            done = { launch(NodeAction.SortBy, subjectID) },
+        )
+    } else if (subjectID.slug != null) {
         item.value?.let { myItem ->
             when {
                 myItem.isRecycle() -> RecycleParentMenu(
-                    stateID = toOpenStateID,
+                    stateID = subjectID,
                     rTreeNode = myItem,
-                    launch = launch,
+                    launch = { launch(it, subjectID) },
                 )
+
                 myItem.isInRecycle() -> RecycleMenu(
-                    stateID = toOpenStateID,
+                    stateID = subjectID,
                     rTreeNode = myItem,
-                    launch = launch,
+                    launch = { launch(it, subjectID) },
                 )
+
                 type == NodeMoreMenuType.CREATE -> CreateOrImportMenu(
-                    stateID = toOpenStateID,
+                    stateID = subjectID,
                     rTreeNode = myItem,
                     rWorkspace = workspace.value,
-                    launch = launch,
+                    launch = { launch(it, subjectID) },
                 )
+
                 type == NodeMoreMenuType.OFFLINE -> OfflineMenu(
-                    stateID = toOpenStateID,
+                    stateID = subjectID,
                     rTreeNode = myItem,
-                    launch = launch,
+                    launch = { launch(it, subjectID) },
                 )
+
                 type == NodeMoreMenuType.BOOKMARK -> BookmarkMenu(
-                    stateID = toOpenStateID,
+                    treeNodeVM = treeNodeVM,
+                    stateID = subjectID,
                     rTreeNode = myItem,
                     launch = launch,
                 )
+
                 type == NodeMoreMenuType.SEARCH -> SearchMenu(
-                    stateID = toOpenStateID,
+                    stateID = subjectID,
                     rTreeNode = myItem,
-                    launch = { launch(it) },
+                    launch = { launch(it, subjectID) },
                 )
-                type == NodeMoreMenuType.SORT_BY -> SortByMenu(
-                    type = ListType.DEFAULT,
-                    done = { launch(NodeAction.SortBy) },
-                )
+
                 type == NodeMoreMenuType.MORE ->
                     SingleNodeMenu(
-                        stateID = toOpenStateID,
+                        stateID = subjectID,
                         rTreeNode = myItem,
                         rWorkspace = workspace.value,
-                        launch = launch,
+                        launch = { launch(it, subjectID) },
                     )
+
                 else -> Spacer(modifier = Modifier.height(1.dp))
             }
         }

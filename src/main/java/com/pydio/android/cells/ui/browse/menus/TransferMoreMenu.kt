@@ -4,11 +4,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.pydio.android.cells.AppNames
+import com.pydio.android.cells.JobStatus
 import com.pydio.android.cells.R
 import com.pydio.android.cells.ui.browse.models.SingleTransferVM
 import com.pydio.android.cells.ui.core.composables.menus.BottomSheetContent
@@ -42,40 +43,58 @@ class TransferMoreMenuState @OptIn(
 
 @Composable
 fun TransferMoreMenu(
+    isRemoteServerLegacy: Boolean,
     accountID: StateID,
     transferID: Long,
     onClick: (String, Long) -> Unit
 ) {
 
     val transferVM: SingleTransferVM = koinViewModel { parametersOf(accountID) }
-    val liveItem = transferVM.getTransfer(transferID).observeAsState()
+    val liveItem = transferVM.getTransfer(transferID).collectAsState(null)
 
     liveItem.value?.let { item ->
         val simpleMenuItems: MutableList<SimpleMenuItem> = mutableListOf()
 
-        if (AppNames.JOB_STATUS_PROCESSING == item.status) {
+        if (JobStatus.PROCESSING.id == item.status && !isRemoteServerLegacy) {
             simpleMenuItems.add(
                 SimpleMenuItem(
                     CellsIcons.Pause,
                     stringResource(id = R.string.pause),
+                    onClick = { onClick(AppNames.ACTION_PAUSE, item.transferId) },
+                )
+            )
+        }
+        if (JobStatus.DONE.id != item.status && JobStatus.CANCELLED.id != item.status) {
+            simpleMenuItems.add(
+                SimpleMenuItem(
+                    CellsIcons.Cancel,
+                    stringResource(id = R.string.button_cancel),
                     onClick = { onClick(AppNames.ACTION_CANCEL, item.transferId) },
                 )
             )
         }
-        if (AppNames.JOB_STATUS_CANCELLED == item.status
-            || AppNames.JOB_STATUS_ERROR == item.status
-        ) {
+        if (JobStatus.PAUSED.id == item.status) {
             simpleMenuItems.add(
                 SimpleMenuItem(
                     CellsIcons.Resume,
+                    stringResource(id = R.string.resume),
+                    onClick = { onClick(AppNames.ACTION_RESUME, item.transferId) },
+                )
+            )
+        }
+        if (JobStatus.ERROR.id == item.status || JobStatus.CANCELLED.id == item.status) {
+            simpleMenuItems.add(
+                SimpleMenuItem(
+                    CellsIcons.Relaunch,
                     stringResource(id = R.string.relaunch),
                     onClick = { onClick(AppNames.ACTION_RESTART, item.transferId) },
                 )
             )
         }
-        if (AppNames.JOB_STATUS_DONE == item.status
-            || AppNames.JOB_STATUS_CANCELLED == item.status
-            || AppNames.JOB_STATUS_ERROR == item.status
+        if (JobStatus.DONE.id == item.status
+            || JobStatus.PAUSED.id == item.status
+            || JobStatus.CANCELLED.id == item.status
+            || JobStatus.ERROR.id == item.status
         ) {
             simpleMenuItems.add(
                 SimpleMenuItem(

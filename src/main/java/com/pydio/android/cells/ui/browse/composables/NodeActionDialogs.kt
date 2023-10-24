@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +36,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.pydio.android.cells.JobStatus
 import com.pydio.android.cells.R
 import com.pydio.android.cells.ui.browse.models.NodeActionsVM
 import com.pydio.android.cells.ui.core.composables.animations.SmoothLinearProgressIndicator
@@ -44,14 +45,17 @@ import com.pydio.android.cells.ui.core.composables.dialogs.AskForFolderName
 import com.pydio.android.cells.ui.core.composables.dialogs.AskForNewName
 import com.pydio.android.cells.ui.models.DownloadVM
 import com.pydio.android.cells.ui.theme.CellsIcons
+import com.pydio.cells.api.ErrorCodes
+import com.pydio.cells.api.SDKException
 import com.pydio.cells.transport.StateID
 import kotlinx.coroutines.delay
+import org.koin.androidx.compose.koinViewModel
 
-private const val logTag = "NodeActionDialogs.kt"
+private const val LOG_TAG = "NodeActionDialogs.kt"
 
 @Composable
 fun CreateFolder(
-    nodeActionsVM: NodeActionsVM,
+    nodeActionsVM: NodeActionsVM = koinViewModel(),
     stateID: StateID,
     dismiss: (Boolean) -> Unit,
 ) {
@@ -81,19 +85,35 @@ fun CreateFolder(
 fun Download(
     downloadVM: DownloadVM,
     stateID: StateID,
-    dismiss: (Boolean) -> Unit,
+    dismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val rTransfer = downloadVM.transfer.observeAsState()
+    val rTransfer = downloadVM.transfer.collectAsState(null)
     val rTreeNode = downloadVM.treeNode.collectAsState()
-    val cancel: (Boolean) -> Unit = {
-        downloadVM.cancelDownload()
-        dismiss(it)
+
+    LaunchedEffect(key1 = rTransfer.value?.status) {
+        val status = rTransfer.value?.status
+        if (JobStatus.DONE.id == status) {
+            try {
+                downloadVM.viewFile(context)
+            } catch (se: SDKException) {
+                if (se.code == ErrorCodes.no_local_file) {
+                    // FIXME give more time to register new file
+                    delay(2000L)
+                    try {
+                        downloadVM.viewFile(context)
+                    } catch (e: Exception) {
+                        Log.e(LOG_TAG, "File has been downloaded but is not found")
+                        e.printStackTrace()
+                    }
+                }
+            }
+            dismiss()
+        }
     }
 
     val progress = rTransfer.value?.let {
         if (it.byteSize > 0) {
-            Log.e(logTag, "got a new value ${it.byteSize}")
             it.progress.toFloat().div(it.byteSize.toFloat())
         } else {
             0f
@@ -111,14 +131,18 @@ fun Download(
                 )
             }
         },
+        dismissButton = {
+            OutlinedButton(onClick = dismiss) { Text(stringResource(R.string.button_run_in_background)) }
+        },
         confirmButton = {
             Button(
                 onClick = {
-                    cancel(false)
+                    downloadVM.cancelDownload()
+                    dismiss()
                 }
             ) { Text(stringResource(R.string.button_cancel)) }
         },
-        onDismissRequest = { cancel(false) },
+        onDismissRequest = dismiss,
         properties = DialogProperties(
             dismissOnBackPress = true,
             dismissOnClickOutside = true,
@@ -126,26 +150,22 @@ fun Download(
         )
     )
     LaunchedEffect(key1 = stateID) {
-        val isDone = downloadVM.launchDownload()
-        if (isDone) {
-            downloadVM.viewFile(context)
-            dismiss(true)
-        }
+        downloadVM.launchDownload()
     }
 }
 
 @Composable
-fun PickDestination(
+fun ChooseDestination(
     nodeActionsVM: NodeActionsVM,
     stateID: StateID,
     dismiss: (Boolean) -> Unit,
 ) {
-    Log.d(logTag, "Composing PickDestination for $stateID")
+    Log.d(LOG_TAG, "Composing ChooseDestination for $stateID")
     val alreadyLaunched = rememberSaveable { mutableStateOf(false) }
     val destinationPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument(),
+        contract = ActivityResultContracts.CreateDocument("*/*"),
         onResult = { uri ->
-            Log.e(logTag, "Got a destination for $stateID")
+            Log.e(LOG_TAG, "Got a destination for $stateID")
             if (stateID != StateID.NONE) {
                 uri?.let {
                     nodeActionsVM.download(stateID, uri)
@@ -162,9 +182,43 @@ fun PickDestination(
     )
     if (!alreadyLaunched.value) {
         LaunchedEffect(key1 = stateID) {
-            Log.e(logTag, "Launching 'pick destination' for $stateID")
+            Log.e(LOG_TAG, "Launching 'pick destination' for $stateID")
             delay(100)
             destinationPicker.launch(stateID.fileName)
+            alreadyLaunched.value = true
+        }
+    }
+}
+
+@Composable
+fun ChooseFolderDestination(
+    nodeActionsVM: NodeActionsVM,
+    stateIDs: Set<StateID>,
+    dismiss: (Boolean) -> Unit,
+) {
+    Log.d(LOG_TAG, "Composing ChooseFolderDestination for $stateIDs")
+    val alreadyLaunched = rememberSaveable { mutableStateOf(false) }
+    val destinationPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+        onResult = { uri ->
+            Log.e(LOG_TAG, "Got a folder: ${uri.toString()}")
+            uri?.let {
+                nodeActionsVM.downloadMultiple(stateIDs, uri)
+            }
+            dismiss(true)
+        }
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .alpha(0.02f),
+        content = {}
+    )
+    if (!alreadyLaunched.value) {
+        LaunchedEffect(key1 = stateIDs.toString()) {
+            Log.e(LOG_TAG, "Launching 'pick folder destination' for $stateIDs")
+            delay(100)
+            destinationPicker.launch(null)
             alreadyLaunched.value = true
         }
     }
@@ -192,7 +246,7 @@ fun ImportFile(
     )
     if (!alreadyLaunched.value) {
         LaunchedEffect(key1 = targetParentID) {
-            Log.e(logTag, "Launching 'import file' to $targetParentID")
+            Log.e(LOG_TAG, "Launching 'import file' to $targetParentID")
             delay(100)
             fileImporter.launch("*/*")
             alreadyLaunched.value = true
@@ -227,7 +281,7 @@ fun TakePicture(
     )
     if (!alreadyLaunched.value) {
         LaunchedEffect(key1 = targetParentID) {
-            Log.e(logTag, "Launching 'TakePicture' with parent $targetParentID")
+            Log.d(LOG_TAG, "Launching 'TakePicture' with parent $targetParentID")
             delay(100)
             nodeActionsVM.preparePhoto(context, targetParentID)?.also {
                 photoTaker.launch(it)
@@ -264,7 +318,7 @@ fun ConfirmDeletion(
     dismiss: (Boolean) -> Unit,
 ) {
     AskForConfirmation(
-        icon = CellsIcons.Delete,
+        // icon = CellsIcons.Delete,
         title = stringResource(id = R.string.confirm_move_to_recycle_title),
         desc = stringResource(id = R.string.confirm_move_to_recycle_desc, stateID.fileName),
         confirm = {
@@ -325,9 +379,9 @@ fun ShowQRCode(
 
     val writer = QRCodeWriter()
     LaunchedEffect(stateID) {
-        nodeActionsVM.getShareLink(stateID)?.let {
+        nodeActionsVM.getShareLink(stateID)?.let { linkStr ->
             val bitMatrix = writer.encode(
-                it,
+                linkStr,
                 BarcodeFormat.QR_CODE,
                 context.resources.getInteger(R.integer.qrcode_width),
                 context.resources.getInteger(R.integer.qrcode_width)

@@ -2,19 +2,22 @@ package com.pydio.android.cells.ui.account
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,54 +25,73 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pydio.android.cells.AppNames
+import com.pydio.android.cells.ListContext
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.accounts.RSessionView
 import com.pydio.android.cells.ui.core.composables.Decorated
 import com.pydio.android.cells.ui.core.composables.Type
+import com.pydio.android.cells.ui.core.composables.lists.EmptyList
+import com.pydio.android.cells.ui.core.composables.lists.WithListTheme
 import com.pydio.android.cells.ui.core.getFloatResource
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
 import com.pydio.cells.transport.StateID
 
 @Composable
 fun AccountList(
-    accounts: List<RSessionView>?,
+    accounts: List<RSessionView>,
     openAccount: (stateID: StateID) -> Unit,
     login: (stateID: StateID, skipVerify: Boolean, isLegacy: Boolean) -> Unit,
     logout: (stateID: StateID) -> Unit,
     forget: (stateID: StateID) -> Unit,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(0.dp),
-    verticalArrangement: Arrangement.Vertical,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
-
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = contentPadding,
-        verticalArrangement = verticalArrangement
-
-    ) {
-        items(accounts ?: listOf()) { account ->
-
-            AccountListItem(
-                title = "${account.serverLabel()}",
-                username = account.username,
-                url = account.url,
-                authStatus = account.authStatus,
-                isForeground = account.lifecycleState == AppNames.LIFECYCLE_STATE_FOREGROUND,
-                login = { login(account.getStateID(), account.skipVerify(), account.isLegacy) },
-                logout = { logout(account.getStateID()) },
-                forget = forget,
-                modifier = modifier.clickable {
-                    openAccount(StateID(account.username, account.url))
-                }
+    Box(modifier = Modifier.padding(contentPadding)) {
+        if (accounts.isEmpty()) {
+            EmptyList(
+                listContext = ListContext.ACCOUNTS,
+                desc = stringResource(R.string.account_list_none),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(.5f)
+                    .wrapContentSize(Alignment.Center)
             )
+        }
+        WithListTheme {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                items(accounts) { account ->
+
+                    AccountListItem(
+                        title = "${account.serverLabel()}",
+                        username = account.username,
+                        url = account.url,
+                        authStatus = account.authStatus,
+                        isForeground = account.lifecycleState == AppNames.LIFECYCLE_STATE_FOREGROUND,
+                        login = {
+                            login(
+                                account.getStateID(),
+                                account.skipVerify(),
+                                account.isLegacy
+                            )
+                        },
+                        logout = { logout(account.getStateID()) },
+                        forget = forget,
+                        modifier = modifier.clickable {
+                            openAccount(StateID(account.username, account.url))
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -92,25 +114,22 @@ private fun AccountListItem(
         tonalElevation = if (isForeground) dimensionResource(R.dimen.list_item_selected_elevation) else 0.dp,
         modifier = modifier
     ) {
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Decorated(Type.AUTH, authStatus) {
                 Icon(
                     imageVector = CellsIcons.Person,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(dimensionResource(R.dimen.list_thumb_size))
-                        .alpha(.8f)
+                        .wrapContentSize(Alignment.Center)
+                        .size(dimensionResource(R.dimen.list_thumb_icon_size))
+                        .alpha(buttonAlpha)
                 )
             }
 
             Spacer(modifier = Modifier.width(dimensionResource(R.dimen.list_thumb_margin)))
 
             Column(
-                modifier = modifier
+                modifier = Modifier
                     .weight(1f)
                     .padding(
                         horizontal = dimensionResource(R.dimen.card_padding),
@@ -120,54 +139,35 @@ private fun AccountListItem(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = "${username}@${url}",
-                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
-            val btnVectorImg: ImageVector
-            val btnModifier: Modifier
-            when (authStatus) {
-                AppNames.AUTH_STATUS_CONNECTED -> {
-                    btnVectorImg = CellsIcons.Logout
-                    btnModifier = Modifier.clickable { logout() }
-                }
-                else -> {
-                    btnVectorImg = CellsIcons.Login
-                    btnModifier = Modifier.clickable { login() }
-                }
-            }
-
-            Surface(
-                modifier = btnModifier
-                    .padding(horizontal = dimensionResource(id = R.dimen.margin_xsmall))
-                    .alpha(buttonAlpha)
-            ) {
+            val connected = authStatus == AppNames.AUTH_STATUS_CONNECTED
+            IconButton(onClick = if (connected) logout else login) {
                 Icon(
-                    imageVector = btnVectorImg,
+                    imageVector = if (connected) CellsIcons.Logout else CellsIcons.Login,
                     contentDescription = null,
                     modifier = Modifier.size(dimensionResource(R.dimen.list_trailing_icon_size))
                 )
             }
 
-            Surface(
-                modifier = Modifier
-                    .clickable { forget(StateID(username, url)) }
-                    .padding(
-                        start = dimensionResource(id = R.dimen.margin_xsmall),
-                        end = dimensionResource(id = R.dimen.margin_small)
-                    )
-                    .alpha(buttonAlpha)
-            ) {
+            IconButton(onClick = { forget(StateID(username, url)) }) {
                 Icon(
                     imageVector = CellsIcons.Delete,
                     contentDescription = null,
                     modifier = Modifier.size(dimensionResource(R.dimen.list_trailing_icon_size))
                 )
             }
+
         }
     }
 }
@@ -175,22 +175,17 @@ private fun AccountListItem(
 @Preview(name = "Light Mode")
 @Composable
 private fun ForegroundAccountListItemPreview() {
-    CellsTheme {
-        AccountListItem(
-            "Cells test server",
-            "lea",
-            "https://example.com",
-            //          authStatus = AppNames.AUTH_STATUS_NO_CREDS,
-//            authStatus = AppNames.AUTH_STATUS_UNAUTHORIZED,
-            authStatus = AppNames.AUTH_STATUS_CONNECTED,
-//            authStatus = AppNames.AUTH_STATUS_EXPIRED,
-//            authStatus = AppNames.AUTH_STATUS_CONNECTED,
-            isForeground = true,
-            {},
-            {},
-            {},
-            Modifier
-        )
+    UseCellsTheme {
+        WithListTheme {
+            AccountListItem(
+                "Cells test server",
+                "lea",
+                "https://example.com",
+                authStatus = AppNames.AUTH_STATUS_CONNECTED,
+                isForeground = true,
+                {}, {}, {}, Modifier
+            )
+        }
     }
 }
 
@@ -201,21 +196,19 @@ private fun ForegroundAccountListItemPreview() {
 )
 @Composable
 private fun AccountListItemPreview() {
-    CellsTheme {
-        AccountListItem(
-            "Cells test server",
-            "lea",
-            "https://example.com",
-//            authStatus = AppNames.AUTH_STATUS_NO_CREDS,
-//            authStatus = AppNames.AUTH_STATUS_UNAUTHORIZED,
-//            authStatus = AppNames.AUTH_STATUS_CONNECTED,
-            authStatus = AppNames.AUTH_STATUS_EXPIRED,
-//            authStatus = AppNames.AUTH_STATUS_CONNECTED,
-            isForeground = false,
-            {},
-            {},
-            {},
-            Modifier
-        )
+    UseCellsTheme {
+        WithListTheme {
+            AccountListItem(
+                "Cells test server",
+                "lea",
+                "https://example.com",
+                authStatus = AppNames.AUTH_STATUS_EXPIRED,
+                isForeground = false,
+                {},
+                {},
+                {},
+                Modifier
+            )
+        }
     }
 }

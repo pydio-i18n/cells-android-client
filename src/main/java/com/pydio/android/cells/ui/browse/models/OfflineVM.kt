@@ -2,129 +2,141 @@ package com.pydio.android.cells.ui.browse.models
 
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.CellsApp
 import com.pydio.android.cells.db.nodes.RLiveOfflineRoot
+import com.pydio.android.cells.db.preferences.defaultCellsPreferences
 import com.pydio.android.cells.db.runtime.RJob
-import com.pydio.android.cells.reactive.NetworkStatus
 import com.pydio.android.cells.services.JobService
 import com.pydio.android.cells.services.NetworkService
-import com.pydio.android.cells.services.NodeService
-import com.pydio.android.cells.services.PreferencesService
-import com.pydio.android.cells.ui.core.LoadingState
+import com.pydio.android.cells.services.NetworkStatus
+import com.pydio.android.cells.services.OfflineService
+import com.pydio.android.cells.services.TransferService
+import com.pydio.android.cells.ui.core.AbstractCellsVM
 import com.pydio.cells.transport.StateID
-import com.pydio.cells.utils.Str
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Expose methods used by Offline pages */
 class OfflineVM(
     stateID: StateID,
-    prefs: PreferencesService,
-    private val nodeService: NodeService,
     private val networkService: NetworkService,
-    private val jobService: JobService
-) : AbstractBrowseVM(prefs, nodeService) {
-
+    private val jobService: JobService,
+    private val transferService: TransferService,
+    private val offlineService: OfflineService,
+) : AbstractCellsVM() {
 
     private val logTag = "OfflineVM"
 
     private val accountID = stateID.account()
 
-    private val _loadingState = MutableLiveData(LoadingState.IDLE)
-    private val _errorMessage = MutableLiveData<String?>()
-    private val _syncJobID = MutableLiveData(-1L)
+    private val _syncJobID = MutableStateFlow(-1L)
 
-    val loadingState: LiveData<LoadingState> = _loadingState
-    val errorMessage: LiveData<String?> = _errorMessage
+    // Observe the defined offline roots for current account
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val offlineRoots: StateFlow<List<RLiveOfflineRoot>> =
+        defaultOrderPair.flatMapLatest { currPair ->
+            nodeService.listOfflineRoots(accountID, currPair.first, currPair.second)
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = listOf()
+        )
 
-    val offlineRoots: LiveData<List<RLiveOfflineRoot>>
-        get() = sortOrder.switchMap { currOrder ->
-            nodeService.listOfflineRoots(accountID, currOrder)
+    // Observe latest sync job
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val syncJob: StateFlow<RJob?> = _syncJobID.flatMapLatest { passedID ->
+        // Not satisfying, if the job ID is not explicitly given, we retrieve the latest not done from the DB
+        val currID = if (passedID < 1) {
+            jobService.getLatestRunning(offlineService.getSyncTemplateId(accountID))?.jobId ?: -1
+        } else {
+            passedID
         }
-
-    val syncJob: LiveData<RJob?>
-        get() = _syncJobID.switchMap { currID ->
-            if (currID < 1) {
-                jobService.getMostRecent(nodeService.getSyncTemplateId(accountID))
-            } else {
-                jobService.getLiveJob(currID)
-            }
-        }
+        jobService.getLiveJobByID(currID)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
 
     fun download(stateID: StateID, uri: Uri) {
         viewModelScope.launch {
-            nodeService.saveToSharedStorage(stateID, uri)
+            try {
+                transferService.saveToSharedStorage(stateID, uri)
+                done()
+            } catch (e: Exception) {
+                done(e)
+            }
         }
     }
 
     fun removeFromOffline(stateID: StateID) {
         viewModelScope.launch {
-            nodeService.toggleOffline(stateID, false)
+            try {
+                offlineService.toggleOffline(stateID, false)
+            } catch (e: Exception) {
+                done(e)
+            }
         }
     }
 
     fun forceFullSync() {
-        val (ok, msg) = canLaunchSync(accountID)
-        if (ok) {
-            _errorMessage.value = null
-        } else {
-            _errorMessage.value = msg
-            return
-        }
-
-        Log.e(logTag, "Setting loading state to PROCESSING")
-        _loadingState.value = LoadingState.PROCESSING
         viewModelScope.launch {
-            doForceAccountSync(accountID) // we insure the current account value is valid in the sanity check
-            // TODO handle errors
-            delay(1500)
-            Log.e(logTag, "Setting loading state to IDLE")
-            withContext(Dispatchers.Main) {
-                _loadingState.value = LoadingState.IDLE
+            try {
+                if (!checkBeforeLaunch(accountID)) {
+                    return@launch
+                }
+                doForceAccountSync(accountID) // we insure the current account value is valid in the sanity check
+                delay(1500)
+                Log.i(logTag, "Setting loading state to IDLE")
+                done()
+            } catch (e: Exception) {
+                done(e)
             }
         }
     }
 
     fun forceSync(stateID: StateID) {
-        val (ok, msg) = canLaunchSync(stateID)
-        if (ok) {
-            _errorMessage.value = null
-        } else {
-            _errorMessage.value = msg
-            return
-        }
-
-        Log.e(logTag, "Setting loading state to PROCESSING")
-        _loadingState.value = LoadingState.PROCESSING
         viewModelScope.launch {
-            doForceSingleRootSync(stateID)
-            Log.e(logTag, "Setting loading state to IDLE")
-            withContext(Dispatchers.Main) {
-                _loadingState.value = LoadingState.IDLE
+            if (!checkBeforeLaunch(stateID)) {
+                return@launch
+            }
+            try {
+                _syncJobID.value = offlineService.launchOfflineRootSync(stateID)
+                done()
+            } catch (e: Exception) {
+                done(e)
             }
         }
     }
 
-    private fun canLaunchSync(stateID: StateID?): Pair<Boolean, String?> {
-        return when (networkService.networkStatus) {
-            is NetworkStatus.Metered -> {
-                // TODO implement settings to force accept this user story
-                Pair(false, "Preventing re-sync on metered network")
-            }
-            is NetworkStatus.Roaming -> {
-                // TODO implement settings to force accept this user story
-                Pair(false, "Preventing re-sync when on roaming network")
-            }
-            is NetworkStatus.Unavailable, is NetworkStatus.Unknown -> {
-                Pair(false, "Cannot launch re-sync with no internet connection")
-            }
+    private suspend fun checkBeforeLaunch(stateID: StateID): Boolean {
+        val (ok, msg) = canLaunchSync(stateID.account())
+        if (ok) {
+            launchProcessing()
+        } else {
+            msg?.let { error(it) }
+            return false
+        }
+        return true
+    }
+
+    private suspend fun canLaunchSync(stateID: StateID?): Pair<Boolean, String?> {
+
+        val offlinePrefs = try {
+            prefs.fetchPreferences()
+        } catch (e: IllegalArgumentException) {
+            defaultCellsPreferences()
+        }
+
+        return when (networkService.fetchNetworkStatus()) {
             is NetworkStatus.Unmetered -> {
                 return stateID?.let {
                     if (it != StateID.NONE) {
@@ -134,32 +146,46 @@ class OfflineVM(
                     }
                 } ?: Pair(false, "Cannot launch re-sync without choosing a target")
             }
+
+            is NetworkStatus.Metered -> {
+                return if (offlinePrefs.meteredNetwork.applyLimits) {
+                    Pair(false, "Preventing re-sync on metered network")
+                } else {
+                    return stateID?.let {
+                        if (it != StateID.NONE) {
+                            Pair(true, null)
+                        } else {
+                            Pair(false, "Cannot launch re-sync without choosing a target")
+                        }
+                    } ?: Pair(false, "Cannot launch re-sync without choosing a target")
+                }
+            }
+
+            is NetworkStatus.Roaming -> {
+                // TODO implement settings to force accept this user story
+                Pair(false, "Preventing re-sync when on roaming network")
+            }
+
+            is NetworkStatus.Unavailable, is NetworkStatus.Captive, is NetworkStatus.Unknown -> {
+                Pair(false, "Cannot launch re-sync with no internet connection")
+            }
         }
     }
 
-    private fun doForceSingleRootSync(stateID: StateID) {
-        CellsApp.instance.appScope.launch {
-            nodeService.syncOfflineRoot(stateID)
-        }
-    }
-
-    private suspend fun doForceAccountSync(accID: StateID) {
-
-        val (jobID, error) = nodeService.prepareAccountSync(accID, AppNames.JOB_OWNER_USER)
-
-        if (Str.notEmpty(error)) {
-            _errorMessage.value = error
-            return
-        }
+    private suspend fun doForceAccountSync(accountID: StateID) {
+        val jobID = offlineService.prepareAccountSync(accountID, AppNames.JOB_OWNER_USER)
+        Log.e(logTag, "Account sync prepared, with job #$jobID")
 
         _syncJobID.value = jobID
         jobService.launched(jobID)
-        CellsApp.instance.appScope.launch {
-            nodeService.performAccountSync(
-                accID,
-                jobID,
-                CellsApp.instance.applicationContext
-            )
-        }
+        offlineService.performAccountSync(
+            accountID,
+            jobID,
+            CellsApp.instance.applicationContext
+        )
+    }
+
+    init {
+        done()
     }
 }

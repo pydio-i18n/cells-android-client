@@ -3,7 +3,7 @@ package com.pydio.android.cells.db.nodes
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.pydio.android.cells.AppNames
+import com.pydio.android.cells.JobStatus
 import com.pydio.android.cells.utils.currentTimestamp
 import com.pydio.cells.transport.StateID
 
@@ -31,6 +31,8 @@ data class RTransfer(
     // Single file: 0, Other wise the number of parts
 //    @ColumnInfo(name = "multipart") val multipart: Int = 0,
 //    @ColumnInfo(name = "parent_id") val parentId: Long = 0,
+    // Used for Cells when relying on the S3 transfer utility to perform uploads and downloads
+    @ColumnInfo(name = "external_id") var externalID: Int = -1,
 
     @ColumnInfo(name = "creation_ts") val creationTimestamp: Long,
     @ColumnInfo(name = "start_ts") var startTimestamp: Long = -1L,
@@ -42,10 +44,10 @@ data class RTransfer(
 
     @ColumnInfo(name = "error") var error: String? = null,
 
-    @ColumnInfo(name = "progress") var progress: Long = 0,
+    @ColumnInfo(name = "progress") var progress: Long = 0L,
 ) {
 
-    fun getStateId(): StateID? {
+    fun getStateID(): StateID? {
         return encodedState?.let { StateID.fromId(it) }
     }
 
@@ -57,7 +59,7 @@ data class RTransfer(
             byteSize: Long,
             mime: String,
             parentJobId: Long = 0L,
-            status: String? = AppNames.JOB_STATUS_NEW,
+            status: String? = JobStatus.NEW.id,
         ): RTransfer {
             return RTransfer(
                 encodedState = encodedState,
@@ -76,7 +78,7 @@ data class RTransfer(
             byteSize: Long,
             mime: String,
             parentJobId: Long = 0L,
-            status: String? = AppNames.JOB_STATUS_NEW,
+            status: String? = JobStatus.NEW.id,
         ): RTransfer {
             return RTransfer(
                 jobId = parentJobId,

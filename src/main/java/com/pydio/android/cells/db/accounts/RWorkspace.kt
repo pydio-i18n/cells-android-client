@@ -5,14 +5,14 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
+import com.pydio.android.cells.db.CellsConverters
 import com.pydio.cells.api.SdkNames
 import com.pydio.cells.api.ui.WorkspaceNode
 import com.pydio.cells.transport.StateID
-import com.pydio.android.cells.db.Converters
-import java.util.*
+import java.util.Properties
 
 @Entity(tableName = "workspaces")
-@TypeConverters(Converters::class)
+@TypeConverters(CellsConverters::class)
 data class RWorkspace(
 
     @PrimaryKey
@@ -42,7 +42,7 @@ data class RWorkspace(
     }
 
     companion object {
-        private val logTag = "RWorkspace"
+        private const val logTag = "RWorkspace"
 
         fun createChild(parentID: StateID, wsNode: WorkspaceNode): RWorkspace {
             val wsState = parentID.withPath("/${wsNode.slug}")

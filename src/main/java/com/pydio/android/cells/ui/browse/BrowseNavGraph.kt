@@ -1,6 +1,7 @@
 package com.pydio.android.cells.ui.browse
 
 import android.util.Log
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -26,77 +27,71 @@ import com.pydio.cells.utils.Str
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-private const val logTag = "BrowseNavGraph"
-
 fun NavGraphBuilder.browseNavGraph(
+    isExpandedScreen: Boolean,
     navController: NavHostController,
-    browseRemoteVM: BrowseRemoteVM,
-    back: () -> Unit,
     openDrawer: () -> Unit,
+    back: () -> Unit,
+    browseRemoteVM: BrowseRemoteVM,
 ) {
+
+    val logTag = "BrowseNavGraph"
 
     composable(BrowseDestinations.Open.route) { navBackStackEntry ->
         val stateID = lazyStateID(navBackStackEntry)
-        val folderVM: FolderVM = koinViewModel(parameters = { parametersOf(stateID) })
-        val helper = BrowseHelper(navController, folderVM)
-
-        Log.i(logTag, "## BrowseDestinations.open - $stateID")
         LaunchedEffect(key1 = stateID) {
-            Log.e(logTag, "  ... Also launching effect to watch $stateID")
+            Log.i(logTag, "## First Composition for: browse/open/${stateID}")
+        }
+
+        if (stateID == StateID.NONE) {
+            NoAccount(openDrawer = openDrawer, addAccount = {})
+        } else if (Str.notEmpty(stateID.slug)) {
+            val folderVM: FolderVM = koinViewModel(parameters = { parametersOf(stateID) })
+            Folder(
+                isExpandedScreen = isExpandedScreen,
+                folderID = stateID,
+                openDrawer = openDrawer,
+                openSearch = {
+                    navController.navigate(
+                        CellsDestinations.Search.createRoute("Folder", stateID)
+                    )
+                },
+                browseRemoteVM = browseRemoteVM,
+                folderVM = folderVM,
+                browseHelper = BrowseHelper(navController, folderVM),
+            )
+        } else {
+
+            val accountHomeVM: AccountHomeVM = koinViewModel(parameters = { parametersOf(stateID) })
+            val helper = BrowseHelper(navController, accountHomeVM)
+
+            AccountHome(
+                isExpandedScreen = isExpandedScreen,
+                accountID = stateID,
+                openDrawer = openDrawer,
+                openSearch = {
+                    navController.navigate(
+                        CellsDestinations.Search.createRoute(
+                            "AccountHome",
+                            stateID
+                        )
+                    )
+                },
+                browseRemoteVM = browseRemoteVM,
+                accountHomeVM = accountHomeVM,
+                browseHelper = helper,
+            )
+        }
+
+        DisposableEffect(key1 = stateID) {
             if (stateID == StateID.NONE) {
-                browseRemoteVM.pause()
+                browseRemoteVM.pause(StateID.NONE)
             } else {
                 browseRemoteVM.watch(stateID, false)
             }
-        }
-
-        when {
-            stateID == StateID.NONE ->
-                NoAccount(
-                    openDrawer = openDrawer,
-                    addAccount = {},
-                )
-            Str.notEmpty(stateID.workspace) -> {
-                Folder(
-                    stateID,
-                    openDrawer = openDrawer,
-                    openSearch = {
-                        navController.navigate(
-                            CellsDestinations.Search.createRoute(
-                                "Folder",
-                                stateID
-                            )
-                        )
-                    },
-                    browseRemoteVM = browseRemoteVM,
-                    folderVM = folderVM,
-                    browseHelper = helper,
-                )
-            }
-            else -> {
-                var i = 0
-                navController.backQueue.forEach {
-                    val currID = lazyStateID(it)
-                    Log.e(logTag, "#${i++} - ${it.destination.route} - $currID ")
-                }
-
-                val accountHomeVM: AccountHomeVM =
-                    koinViewModel(parameters = { parametersOf(stateID) })
-                AccountHome(
-                    stateID,
-                    openDrawer = openDrawer,
-                    openSearch = {
-                        navController.navigate(
-                            CellsDestinations.Search.createRoute(
-                                "AccountHome",
-                                stateID
-                            )
-                        )
-                    },
-                    browseRemoteVM = browseRemoteVM,
-                    accountHomeVM = accountHomeVM,
-                    browseHelper = helper,
-                )
+            onDispose {
+                Log.d(logTag, "onDispose for browse/open/$stateID, pause browseRemoteVM")
+                browseRemoteVM.pause(stateID)
             }
         }
     }
@@ -113,7 +108,9 @@ fun NavGraphBuilder.browseNavGraph(
 
     composable(BrowseDestinations.OfflineRoots.route) { navBackStackEntry ->
         val stateID = lazyStateID(navBackStackEntry)
-        Log.i(logTag, "... In BrowseDestinations.Offline at $stateID")
+        LaunchedEffect(key1 = stateID) {
+            Log.i(logTag, "## First Composition for: browse/offline/$stateID")
+        }
         if (stateID == StateID.NONE) {
             Log.e(logTag, "Cannot open OfflineRoots with no ID")
             back()
@@ -121,9 +118,9 @@ fun NavGraphBuilder.browseNavGraph(
             val offlineVM: OfflineVM = koinViewModel(parameters = { parametersOf(stateID) })
             val helper = BrowseHelper(navController, offlineVM)
             OfflineRoots(
-                offlineVM = offlineVM,
+                isExpandedScreen = isExpandedScreen,
                 openDrawer = openDrawer,
-                openSearch = {}, // FIXME
+                offlineVM = offlineVM,
                 browseHelper = helper,
             )
         }
@@ -131,7 +128,9 @@ fun NavGraphBuilder.browseNavGraph(
 
     composable(BrowseDestinations.Bookmarks.route) { navBackStackEntry ->
         val stateID = lazyStateID(navBackStackEntry)
-        Log.e(logTag, ".... ## In BrowseDestinations.Bookmarks at $stateID")
+        LaunchedEffect(key1 = stateID) {
+            Log.i(logTag, "## First Composition for: browse/bookmarks/$stateID")
+        }
         if (stateID == StateID.NONE) {
             Log.e(logTag, "Cannot open bookmarks with no ID")
             back()
@@ -139,10 +138,10 @@ fun NavGraphBuilder.browseNavGraph(
             val bookmarksVM: BookmarksVM = koinViewModel(parameters = { parametersOf(stateID) })
             val helper = BrowseHelper(navController, bookmarksVM)
             Bookmarks(
+                isExpandedScreen = isExpandedScreen,
                 stateID,
                 openDrawer = openDrawer,
                 browseHelper = helper,
-                browseRemoteVM = browseRemoteVM,
                 bookmarksVM = bookmarksVM,
             )
         }
@@ -154,12 +153,14 @@ fun NavGraphBuilder.browseNavGraph(
             Log.e(logTag, "Cannot open Transfers with no ID")
             back()
         } else {
-            val transfersVM: TransfersVM = koinViewModel(parameters = { parametersOf(stateID) })
+            val transfersVM: TransfersVM =
+                koinViewModel(parameters = { parametersOf(browseRemoteVM.isLegacy, stateID) })
             val helper = BrowseHelper(navController, transfersVM)
             Transfers(
+                isExpandedScreen = isExpandedScreen,
+                openDrawer = openDrawer,
                 accountID = stateID.account(),
                 transfersVM = transfersVM,
-                openDrawer = openDrawer,
                 browseHelper = helper,
             )
         }

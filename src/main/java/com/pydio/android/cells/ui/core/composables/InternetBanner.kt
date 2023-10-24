@@ -1,5 +1,6 @@
 package com.pydio.android.cells.ui.core.composables
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,82 +24,134 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.pydio.android.cells.R
-import com.pydio.android.cells.ui.ConnectionVM
+import com.pydio.android.cells.SessionStatus
+import com.pydio.android.cells.services.AccountService
+import com.pydio.android.cells.services.ConnectionService
+import com.pydio.android.cells.services.ErrorService
 import com.pydio.android.cells.ui.login.LoginDestinations
 import com.pydio.android.cells.ui.theme.CellsColor
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 private enum class Status {
     OK, WARNING, DANGER
 }
 
+private const val logTag = "InternetBanner"
+
 @Composable
 fun WithInternetBanner(
     contentPadding: PaddingValues,
-    connectionVM: ConnectionVM, // = koinViewModel(),
+    connectionService: ConnectionService,
     navigateTo: (String) -> Unit,
+    accountService: AccountService = koinInject(),
+    errorService: ErrorService = koinInject(),
     content: @Composable () -> Unit
 ) {
-//    val network = connectionVM.liveNetwork.observeAsState()
-//    val sessionStatus = connectionVM.sessionStatus.observeAsState()
-    val sessionStatus = connectionVM.sessionStatusFlow
-        .collectAsState(initial = ConnectionVM.SessionStatus.OK)
 
-    // TODO add Snackbar host
+    val localNavigateTo: (String) -> Unit =
+        {    // clean error stack before launching the relog process
+            errorService.clearStack()
+            navigateTo(it)
+        }
+
     // TODO add bottom sheet
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
     ) {
-        if (ConnectionVM.SessionStatus.OK != sessionStatus.value) {
-            when (sessionStatus.value) {
-                ConnectionVM.SessionStatus.NO_INTERNET
-                -> ConnectionStatus(
-                    icon = CellsIcons.NoInternet,
-                    desc = stringResource(R.string.no_internet)
+        InternetBanner(accountService, connectionService, localNavigateTo)
+        content()
+    }
+}
 
-                )
-                ConnectionVM.SessionStatus.METERED,
-                ConnectionVM.SessionStatus.ROAMING
-                -> ConnectionStatus(
-                    icon = CellsIcons.Metered,
-                    desc = stringResource(R.string.metered_connection),
-                    type = Status.WARNING
-                )
-                ConnectionVM.SessionStatus.CAN_RELOG
-                -> CredExpiredStatus(
-                    icon = CellsIcons.NoValidCredentials,
-                    desc = stringResource(R.string.auth_err_expired),
-                    type = Status.WARNING,
-                    onClick = {
-                        connectionVM.sessionView.value?.let {
+@Composable
+private fun InternetBanner(
+    accountService: AccountService,
+    connectionService: ConnectionService,
+    navigateTo: (String) -> Unit,
+) {
+
+    val scope = rememberCoroutineScope()
+    val currSession = connectionService.sessionView.collectAsState(initial = null)
+    val sessionStatus = connectionService.sessionStatusFlow
+        .collectAsState(initial = SessionStatus.OK)
+    val knownSessions = accountService.getLiveSessions().collectAsState(listOf())
+
+    if (SessionStatus.OK != sessionStatus.value && currSession.value != null) {
+        when (sessionStatus.value) {
+            SessionStatus.NO_INTERNET
+            -> ConnectionStatus(
+                icon = CellsIcons.NoInternet,
+                desc = stringResource(R.string.no_internet)
+            )
+
+            SessionStatus.CAPTIVE
+            -> ConnectionStatus(
+                icon = CellsIcons.CaptivePortal,
+                desc = stringResource(R.string.captive_portal)
+            )
+
+            SessionStatus.SERVER_UNREACHABLE
+            -> {
+                if (knownSessions.value.isEmpty()) {
+                    ConnectionStatus(
+                        icon = CellsIcons.ServerUnreachable,
+                        desc = stringResource(R.string.no_account)
+                    )
+                } else {
+                    ConnectionStatus(
+                        icon = CellsIcons.ServerUnreachable,
+                        desc = stringResource(R.string.server_unreachable)
+                    )
+                }
+            }
+
+            SessionStatus.METERED,
+            SessionStatus.ROAMING
+            -> ConnectionStatus(
+                icon = CellsIcons.Metered,
+                desc = stringResource(R.string.metered_connection),
+                type = Status.WARNING
+            )
+
+            SessionStatus.CAN_RELOG
+            -> CredExpiredStatus(
+                icon = CellsIcons.NoValidCredentials,
+                desc = stringResource(R.string.auth_err_expired),
+                onClick = {
+                    scope.launch {
+                        Log.e(logTag, "Launching re-log")
+                        currSession.value?.let {
                             val route = if (it.isLegacy) {
                                 LoginDestinations.P8Credentials.createRoute(
                                     it.getStateID(),
                                     it.skipVerify()
                                 )
                             } else {
-                                LoginDestinations.ProcessAuth.createRoute(
+                                Log.e(logTag, "Creating route for ${it.accountID}")
+                                LoginDestinations.LaunchAuthProcessing.createRoute(
                                     it.getStateID(),
                                     it.skipVerify()
                                 )
                             }
                             navigateTo(route)
+                        } ?: run {
+                            Log.e(logTag, "... Cannot launch, empty session view")
                         }
                     }
-                )
-                //ConnectionVM.SessionStatus.NOT_LOGGED_IN,
-                else -> ConnectionStatus(
-                    icon = CellsIcons.NoValidCredentials,
-                    desc = stringResource(id = R.string.auth_err_no_token),
-                    type = Status.DANGER
-                )
-            }
+                }
+            )
+            //ConnectionVM.SessionStatus.NOT_LOGGED_IN,
+            else -> ConnectionStatus(
+                icon = CellsIcons.NoValidCredentials,
+                desc = stringResource(id = R.string.auth_err_no_token),
+                type = Status.DANGER
+            )
         }
-        content()
     }
 }
 
@@ -107,13 +161,13 @@ private fun ConnectionStatus(icon: ImageVector, desc: String, type: Status = Sta
     val tint = when (type) {
         Status.WARNING -> CellsColor.warning
         Status.DANGER -> CellsColor.danger
-        else -> MaterialTheme.colorScheme.onSurface
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     val bg = when (type) {
         Status.WARNING -> CellsColor.warning.copy(alpha = .1f)
         Status.DANGER -> CellsColor.danger.copy(alpha = .1f)
-        else -> MaterialTheme.colorScheme.surface
+        else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
     Row(
@@ -145,21 +199,11 @@ private fun ConnectionStatus(icon: ImageVector, desc: String, type: Status = Sta
 private fun CredExpiredStatus(
     icon: ImageVector,
     desc: String,
-    type: Status = Status.WARNING,
     onClick: () -> Unit
 ) {
 
-    val tint = when (type) {
-        Status.WARNING -> CellsColor.warning
-        Status.DANGER -> CellsColor.danger
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-
-    val bg = when (type) {
-        Status.WARNING -> CellsColor.warning.copy(alpha = .1f)
-        Status.DANGER -> CellsColor.danger.copy(alpha = .1f)
-        else -> MaterialTheme.colorScheme.surface
-    }
+    val tint = CellsColor.warning
+    val bg = CellsColor.warning.copy(alpha = .1f)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -194,11 +238,10 @@ private fun CredExpiredStatus(
     }
 }
 
-
 @Preview
 @Composable
 private fun ConnectionStatusPreview() {
-    CellsTheme {
+    UseCellsTheme {
         ConnectionStatus(
             icon = CellsIcons.Metered,
             desc = stringResource(id = R.string.metered_connection),

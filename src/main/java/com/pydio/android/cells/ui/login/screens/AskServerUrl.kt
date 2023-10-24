@@ -3,13 +3,16 @@ package com.pydio.android.cells.ui.login.screens
 import android.content.res.Configuration
 import android.util.Log
 import android.view.KeyEvent
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -26,10 +29,10 @@ import com.pydio.android.cells.ui.core.composables.FormBottomButtons
 import com.pydio.android.cells.ui.core.composables.FormInput
 import com.pydio.android.cells.ui.login.LoginHelper
 import com.pydio.android.cells.ui.login.models.LoginVM
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
 import kotlinx.coroutines.launch
 
-private const val logTag = "AskServerUrl"
+private const val LOG_TAG = "AskServerUrl.kt"
 
 @Composable
 fun AskServerUrl(
@@ -37,7 +40,6 @@ fun AskServerUrl(
     loginVM: LoginVM,
 ) {
 
-    // Log.e(logTag, "Nav to Login Step")
     val scope = rememberCoroutineScope()
     val isProcessing = loginVM.isProcessing.collectAsState()
     val message = loginVM.message.collectAsState()
@@ -53,7 +55,7 @@ fun AskServerUrl(
     val doPing: (String) -> Unit = { url ->
         scope.launch {
             val res = loginVM.pingAddress(url, false)
-            Log.e(logTag, "After ping with no SkipVerify flag, res: $res")
+            Log.e(LOG_TAG, "After ping with no SkipVerify flag, res: $res")
             res?.let { helper.afterPing(it) }
         }
     }
@@ -133,6 +135,9 @@ fun AskServerUrl(
             nextBtnLabel = stringResource(id = R.string.button_next),
             next = { pingUrl(urlString) },
             isProcessing = isProcessing,
+            modifier = Modifier
+                .fillMaxHeight()
+                .wrapContentHeight(Alignment.Bottom),
         )
     }
 }
@@ -145,7 +150,7 @@ fun AskServerUrl(
 )
 @Composable
 private fun AskUrlPreview() {
-    CellsTheme {
+    UseCellsTheme {
         AskServerUrl(
             isProcessing = true,
             message = "pinging server",

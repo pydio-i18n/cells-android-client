@@ -4,6 +4,7 @@ import android.util.Log
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.db.nodes.TreeNodeDao
+import com.pydio.android.cells.services.CoroutineService
 import com.pydio.android.cells.services.FileService
 import com.pydio.android.cells.services.NetworkService
 import com.pydio.android.cells.services.NodeService
@@ -15,9 +16,7 @@ import com.pydio.cells.api.SDKException
 import com.pydio.cells.api.ui.FileNode
 import com.pydio.cells.api.ui.PageOptions
 import com.pydio.cells.transport.StateID
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
@@ -46,8 +45,8 @@ class TreeDiff(
         }
     }
 
-    private val folderDiffJob = Job()
-    private val diffScope = CoroutineScope(Dispatchers.IO + folderDiffJob)
+    private val coroutineService: CoroutineService by inject()
+    private val diffScope = coroutineService.cellsIoScope
 
     private val networkService: NetworkService by inject()
     private val nodeService: NodeService by inject()
@@ -60,19 +59,18 @@ class TreeDiff(
     /** Retrieve the meta of all readable nodes that are at the passed stateID */
     @Throws(SDKException::class)
     suspend fun compareWithRemote() = withContext(Dispatchers.IO) {
-        Log.i(logTag, "Launching diff for $baseFolderStateId (with check file: $alsoCheckFiles)")
-
+        if (alsoCheckFiles) {
+            Log.i(logTag, "Launching diff for with check file $baseFolderStateId")
+        }
         // First insure node has not been erased on the server since last visit
         val local = dao.getNode(baseFolderStateId.id)
-        var remote: FileNode? = null
-        try {
-            remote = client.nodeInfo(baseFolderStateId.workspace, baseFolderStateId.file)
+        val remote: FileNode? = try {
+            client.nodeInfo(baseFolderStateId.slug, baseFolderStateId.file)
         } catch (e: SDKException) {
-            val msg = "stat failed at ${baseFolderStateId}: ${e.message}"
+            val msg = "Stat failed at $baseFolderStateId with error ${e.code}: ${e.message}"
             Log.e(logTag, msg)
-            e.printStackTrace()
             // Corner case: connection failed, we just return with no change
-            if (e.isConnectionFailedError) {
+            if (e.isAuthorizationError || e.isNetworkError) {
                 throw e
             }
 
@@ -82,6 +80,10 @@ class TreeDiff(
                     "Cannot compare with no connection to the server"
                 )
             }
+
+            // We have an unexpected error. Yet we do not want to swallow it.
+            Log.e(logTag, "Unexpected error: $msg \n   Yet throwing forward")
+            throw e
         }
 
         if (remote == null) {
@@ -100,11 +102,13 @@ class TreeDiff(
                 local == null -> {
                     putAddChange(remote)
                 }
+
                 areNodeContentEquals(remote, local, client.isLegacy) -> {
                     if (alsoCheckFiles) {
                         checkFiles(local.getStateID(), remote)
                     }
                 }
+
                 else -> {
                     putUpdateChange(remote, local)
                 }
@@ -125,7 +129,7 @@ class TreeDiff(
 
         // Update info for current folder
         if (baseFolderStateId.file == "/") {
-            // TODO ws root specific management smells
+            // TODO we must perform better checks for workspace roots
             nodeService.getNode(baseFolderStateId)?.let {
                 it.lastCheckTS = currentTimestamp()
                 dao.update(it)
@@ -139,6 +143,11 @@ class TreeDiff(
                     RTreeNode.fromFileNode(baseFolderStateId, remote),
                     true
                 )
+            } else { // Simply update last time checked TS on local object
+                nodeService.getNode(baseFolderStateId)?.let {
+                    it.lastCheckTS = currentTimestamp()
+                    dao.update(it)
+                }
             }
         }
     }
@@ -190,7 +199,7 @@ class TreeDiff(
     }
 
     private suspend fun putAddChange(remote: FileNode) {
-        Log.d(logTag, "add for ${remote.name}")
+        // Log.d(logTag, "add for ${remote.name}")
         changeNumber++
         val childStateID = baseFolderStateId.child(remote.name)
         val rNode = RTreeNode.fromFileNode(childStateID, remote)
@@ -199,7 +208,7 @@ class TreeDiff(
     }
 
     private suspend fun putUpdateChange(remote: FileNode, local: RTreeNode) {
-        Log.d(logTag, "update for ${remote.name}")
+        // Log.d(logTag, "Updating ${remote.name} - ${remote.path}")
 
         changeNumber++
 
@@ -233,6 +242,7 @@ class TreeDiff(
             fileService.needsUpdate(stateID, remote, AppNames.LOCAL_FILE_TYPE_THUMB)
         ) {
             diffScope.launch {
+                // Log.e(logTag, "Launching thumb DL")
                 fileDL.orderDL(stateID.id, AppNames.LOCAL_FILE_TYPE_THUMB)
             }
             changeNumber++
@@ -242,6 +252,7 @@ class TreeDiff(
             fileService.needsUpdate(stateID, remote, AppNames.LOCAL_FILE_TYPE_PREVIEW)
         ) {
             diffScope.launch {
+                // Log.e(logTag, "Launching preview DL")
                 fileDL.orderDL(stateID.id, AppNames.LOCAL_FILE_TYPE_PREVIEW)
             }
             changeNumber++
@@ -251,6 +262,7 @@ class TreeDiff(
             fileService.needsUpdate(stateID, remote, AppNames.LOCAL_FILE_TYPE_FILE)
         ) {
             diffScope.launch {
+                // Log.e(logTag, "Launching file DL")
                 fileDL.orderDL(stateID.id, AppNames.LOCAL_FILE_TYPE_FILE, remote.size)
             }
             changeNumber++
@@ -312,7 +324,7 @@ class TreeDiff(
             if (client.isLegacy) {
                 getAllSorted()
             } else {
-                nextPage = client.ls(parentId.workspace, parentId.file, page) {
+                nextPage = client.ls(parentId.slug, parentId.file, page) {
                     if (it !is FileNode) {
                         Log.w(logTag, "could not store node: $it")
                     } else {
@@ -327,7 +339,7 @@ class TreeDiff(
         private fun getAllSorted() {
             val unsorted = mutableListOf<FileNode>()
             while (nextPage.currentPage != nextPage.totalPages) {
-                nextPage = client.ls(parentId.workspace, parentId.file, nextPage) {
+                nextPage = client.ls(parentId.slug, parentId.file, nextPage) {
                     if (it !is FileNode) {
                         Log.w(logTag, "could not store node: $it")
                     } else {

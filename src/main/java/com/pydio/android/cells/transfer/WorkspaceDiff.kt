@@ -6,6 +6,7 @@ import com.pydio.android.cells.db.accounts.RWorkspace
 import com.pydio.android.cells.db.accounts.WorkspaceDao
 import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.services.FileService
+import com.pydio.android.cells.services.NodeService
 import com.pydio.android.cells.services.TreeNodeRepository
 import com.pydio.android.cells.utils.areWsNodeContentEquals
 import com.pydio.cells.api.Client
@@ -26,8 +27,11 @@ class WorkspaceDiff(
 
     private val logTag = "WorkspaceDiff"
 
-    private val treeNodeRepository: TreeNodeRepository by inject()
+    private val nodeService: NodeService by inject()
     private val fileService: FileService by inject()
+
+    // TODO we should not access these object here but rather on nodeService methods
+    private val treeNodeRepository: TreeNodeRepository by inject()
     private val wsDao: WorkspaceDao by inject()
     private val nodeDB = treeNodeRepository.nodeDB(accountId)
 
@@ -43,7 +47,6 @@ class WorkspaceDiff(
 //        } else {
 //            Log.e(logTag, "Synced workspace list for $accountId, no change detected")
         }
-
         return@withContext changeNumber
     }
 
@@ -149,9 +152,9 @@ class WorkspaceDiff(
         }
 
         // delete thumbs
-        val thumbParPath =
-            fileService.dataParentPath(local.getStateID().account(), AppNames.LOCAL_FILE_TYPE_THUMB)
         //  FIXME
+//        val thumbParPath =
+//            fileService.dataParentPath(local.getStateID().account(), AppNames.LOCAL_FILE_TYPE_THUMB)
 //        for (node in nodeDB.treeNodeDao().getUnder(local.encodedState)) {
 //            node.thumbFilename?.let {
 //                Log.i(logTag, "Got a file to delete: $it")

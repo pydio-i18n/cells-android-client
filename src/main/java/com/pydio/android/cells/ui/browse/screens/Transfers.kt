@@ -22,8 +22,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,6 +34,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.pydio.android.cells.AppNames
+import com.pydio.android.cells.JobStatus
+import com.pydio.android.cells.ListContext
 import com.pydio.android.cells.ListType
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.nodes.RTransfer
@@ -60,20 +62,25 @@ private const val logTag = "TransferScreen"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Transfers(
+    isExpandedScreen: Boolean,
     accountID: StateID,
-    transfersVM: TransfersVM,
     openDrawer: () -> Unit,
+    transfersVM: TransfersVM,
     browseHelper: BrowseHelper,
 ) {
 
-    val loadingState by transfersVM.loadingState.observeAsState()
-    val currTransfers = transfersVM.transfers.observeAsState()
+    val loadingState = transfersVM.loadingState.collectAsState(LoadingState.STARTING)
+    val currTransfers = transfersVM.transfers.collectAsState(listOf())
+    val currFilter = transfersVM.liveFilter.collectAsState(JobStatus.NO_FILTER.id)
 
     WithState(
-        loadingState = loadingState ?: LoadingState.STARTING,
+        isExpandedScreen = isExpandedScreen,
+        loadingState = loadingState.value,
         forceRefresh = transfersVM::forceRefresh,
+        isRemoteLegacy = transfersVM.isRemoteServerLegacy,
         accountID = accountID,
-        transfers = currTransfers.value ?: listOf(),
+        currFilter = currFilter.value,
+        transfers = currTransfers.value,
         transfersVM = transfersVM,
         openDrawer = openDrawer,
         browseHelper = browseHelper,
@@ -87,8 +94,11 @@ fun Transfers(
 @Composable
 @ExperimentalMaterial3Api
 private fun WithState(
+    isExpandedScreen: Boolean,
     loadingState: LoadingState,
     forceRefresh: () -> Unit,
+    currFilter: String,
+    isRemoteLegacy: Boolean,
     accountID: StateID,
     transfers: List<RTransfer>,
     transfersVM: TransfersVM,
@@ -128,20 +138,28 @@ private fun WithState(
             AppNames.ACTION_MORE -> {
                 openMoreMenu(TransferMoreMenuType.MORE, transferID)
             }
-            AppNames.ACTION_CANCEL -> {
+
+            AppNames.ACTION_PAUSE -> {
                 pauseOne(transferID)
             }
+
+            AppNames.ACTION_CANCEL -> {
+                cancelOne(transferID)
+            }
+
             AppNames.ACTION_RESTART -> {
                 resumeOne(transferID)
             }
+
             AppNames.ACTION_DELETE_RECORD -> {
                 removeOne(transferID)
             }
+
             AppNames.ACTION_OPEN_PARENT_IN_WORKSPACES -> {
                 // It is always a file for the time being => we open the parent
                 scope.launch {
                     transfersVM.get(transferID)?.let { rTransfer ->
-                        rTransfer.getStateId()?.let {
+                        rTransfer.getStateID()?.let {
                             // We still have to explicitly call this otherwise the scrim is still here
                             //  when we pass here and then come back using android nav back button
                             //  (maybe just on an overloaded AVD)
@@ -155,8 +173,11 @@ private fun WithState(
     }
 
     WithBottomSheet(
+        isExpandedScreen = isExpandedScreen,
         loadingState = loadingState,
         forceRefresh = forceRefresh,
+        currFilter = currFilter,
+        isRemoteLegacy = isRemoteLegacy,
         accountID = accountID,
         transfers = transfers,
         moreMenuState = TransferMoreMenuState(
@@ -175,8 +196,11 @@ private fun WithState(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WithBottomSheet(
+    isExpandedScreen: Boolean,
     loadingState: LoadingState,
     forceRefresh: () -> Unit,
+    currFilter: String,
+    isRemoteLegacy: Boolean,
     accountID: StateID,
     transfers: List<RTransfer>,
     moreMenuState: TransferMoreMenuState,
@@ -186,6 +210,7 @@ private fun WithBottomSheet(
 ) {
 
     ModalBottomSheetLayout(
+        isExpandedScreen = isExpandedScreen,
         sheetContent = {
             when (moreMenuState.type) {
                 TransferMoreMenuType.SORT_BY ->
@@ -193,12 +218,15 @@ private fun WithBottomSheet(
                         type = ListType.TRANSFER,
                         done = moreMenuState.closeMoreMenu,
                     )
+
                 TransferMoreMenuType.FILTER_BY ->
                     FilterTransfersByMenu(
                         done = moreMenuState.closeMoreMenu,
                     )
+
                 TransferMoreMenuType.MORE -> {
                     TransferMoreMenu(
+                        isRemoteServerLegacy = isRemoteLegacy,
                         accountID = accountID,
                         transferID = moreMenuState.transferID,
                         onClick = { action, transferID ->
@@ -207,9 +235,9 @@ private fun WithBottomSheet(
                         }
                     )
                 }
+
                 else -> {
-                    // Prevent this error: java.lang.IllegalArgumentException: The initial value must have an associated anchor.
-                    // when no item is defined (default case at starting point)
+                    // Prevent java.lang.IllegalArgumentException when no item is defined (default case at starting point) -> The initial value must have an associated anchor
                     Spacer(modifier = Modifier.height(1.dp))
                 }
             }
@@ -220,6 +248,8 @@ private fun WithBottomSheet(
         WithScaffold(
             loadingState = loadingState,
             forceRefresh = forceRefresh,
+            currFilter = currFilter,
+            isRemoteLegacy = isRemoteLegacy,
             transfers = transfers,
             doAction = doAction,
             openDrawer = openDrawer,
@@ -230,11 +260,12 @@ private fun WithBottomSheet(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WithScaffold(
     loadingState: LoadingState,
     forceRefresh: () -> Unit, doAction: (String, Long) -> Unit,
+    currFilter: String,
+    isRemoteLegacy: Boolean,
     transfers: List<RTransfer>,
     moreMenuState: TransferMoreMenuState,
     openDrawer: () -> Unit,
@@ -305,8 +336,10 @@ private fun WithScaffold(
         modifier = modifier
     ) { innerPadding ->
         TransferList(
+            isRemoteLegacy,
             loadingState,
             forceRefresh,
+            currFilter,
             transfers,
             doAction,
             innerPadding,
@@ -317,8 +350,10 @@ private fun WithScaffold(
 @OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun TransferList(
+    isRemoteLegacy: Boolean,
     loadingState: LoadingState,
     forceRefresh: () -> Unit,
+    currFilter: String,
     transfers: List<RTransfer>,
     doAction: (String, Long) -> Unit,
     innerPadding: PaddingValues
@@ -329,11 +364,18 @@ private fun TransferList(
         forceRefresh()
     })
 
+    val emptyMsg =
+        if (!(currFilter == JobStatus.NO_FILTER.id || currFilter == "show_all")) { // dirty fix to address legacy filter value
+            stringResource(R.string.no_transfer_with_filter, currFilter)
+        } else {
+            stringResource(R.string.no_transfer_for_account)
+        }
+
     WithLoadingListBackground(
+        listContext = ListContext.TRANSFERS,
         loadingState = loadingState,
         isEmpty = transfers.isEmpty(),
-        emptyRefreshableDesc = stringResource(R.string.no_transfer_for_account),
-        canRefresh = true,
+        emptyRefreshableDesc = emptyMsg,
         modifier = Modifier.fillMaxSize()
     ) {
         Box(Modifier.pullRefresh(state)) {
@@ -343,8 +385,10 @@ private fun TransferList(
             ) {
                 items(transfers, key = { it.transferId }) { transfer ->
                     TransferListItem(
+                        isRemoteLegacy,
                         transfer,
-                        pause = { doAction(AppNames.ACTION_CANCEL, transfer.transferId) },
+                        pause = { doAction(AppNames.ACTION_PAUSE, transfer.transferId) },
+                        cancel = { doAction(AppNames.ACTION_CANCEL, transfer.transferId) },
                         resume = { doAction(AppNames.ACTION_RESTART, transfer.transferId) },
                         remove = { doAction(AppNames.ACTION_DELETE_RECORD, transfer.transferId) },
                         more = { doAction(AppNames.ACTION_MORE, transfer.transferId) },

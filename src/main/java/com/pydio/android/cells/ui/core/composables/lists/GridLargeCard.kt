@@ -6,14 +6,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,16 +33,32 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.integration.compose.placeholder
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.R
 import com.pydio.android.cells.transfer.glide.encodeModel
-import com.pydio.android.cells.ui.core.composables.animations.LoadingAnimation
 import com.pydio.android.cells.ui.theme.CellsIcons
 import com.pydio.android.cells.ui.theme.getIconAndColorFromType
 import com.pydio.android.cells.ui.theme.getIconTypeFromMime
 import com.pydio.cells.transport.StateID
 
-private const val logTag = "GridLargeCard"
+// private const val logTag = "GridLargeCard"
+
+@Composable
+fun LargeCardWithImage(
+    stateID: StateID,
+    eTag: String?,
+    metaHash: Int,
+    mime: String,
+    title: String,
+    desc: String,
+    modifier: Modifier = Modifier,
+    openMoreMenu: (() -> Unit)? = null,
+) {
+    LargeCard(title = title, desc = desc, modifier = modifier) {
+        LargeCardImageThumb(stateID, eTag, metaHash, mime, openMoreMenu)
+    }
+}
 
 @Composable
 fun LargeCardWithIcon(
@@ -53,104 +70,151 @@ fun LargeCardWithIcon(
     openMoreMenu: (() -> Unit)? = null,
 ) {
     LargeCard(title = title, desc = desc, modifier = modifier) {
-        getIconAndColorFromType(getIconTypeFromMime(mime, sortName)).let { t ->
-            Surface(
-                tonalElevation = dimensionResource(R.dimen.list_thumb_elevation),
-                modifier = Modifier
-                    .fillMaxWidth(1f)
-                    .size(dimensionResource(R.dimen.grid_ws_image_size))
-                    .clip(RoundedCornerShape(dimensionResource(R.dimen.grid_large_corner_radius)))
-            ) {
-                Image(
-                    painter = painterResource(t.first),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(t.second),
-                    modifier = Modifier
-                        .wrapContentSize(Alignment.Center)
-                        .size(dimensionResource(R.dimen.grid_large_icon_size))
-                )
-                openMoreMenu?.let {
-                    Icon(
-                        imageVector = CellsIcons.MoreVert,
-                        contentDescription = "open more menu for $title",
-                        modifier = Modifier
-                            .padding(
-                                top = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
-                                bottom = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
-                                start = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
-                                end = 4.dp
-                            )
-                            .wrapContentSize(Alignment.TopEnd)
-                            .size(dimensionResource(R.dimen.grid_large_more_size))
-                            .clickable { it() }
-                    )
-                }
-            }
+        LargeCardGenericIconThumb(title, mime, sortName, openMoreMenu)
+    }
+}
+
+@Composable
+fun LargeCardGenericIconThumb(
+    title: String,
+    mime: String,
+    sortName: String? = null,
+    more: (() -> Unit)? = null,
+) {
+    getIconAndColorFromType(getIconTypeFromMime(mime, sortName)).let { t ->
+        Surface(
+            tonalElevation = dimensionResource(R.dimen.list_thumb_elevation),
+            modifier = Modifier
+                .fillMaxWidth(1f)
+                .size(dimensionResource(R.dimen.grid_image_size))
+                .clip(RoundedCornerShape(dimensionResource(R.dimen.grid_large_corner_radius)))
+        ) {
+            NotSelectedContent(t, more, title)
         }
+    }
+}
+
+@Composable
+private fun SelectedContent(
+    t: Pair<Int, Color>,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(1f)
+            .size(dimensionResource(R.dimen.grid_image_selected_size))
+            .clip(RoundedCornerShape(dimensionResource(R.dimen.grid_large_corner_radius)))
+    ) {
+        Image(
+            painter = painterResource(t.first),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(t.second),
+            modifier = Modifier
+                .wrapContentSize(Alignment.Center)
+                .size(dimensionResource(R.dimen.grid_large_icon_size))
+        )
+    }
+    Icon(
+        imageVector = CellsIcons.Check,
+        contentDescription = "Selection check",
+        modifier = Modifier
+            .padding(
+                top = dimensionResource(R.dimen.grid_large_v_inner_padding),
+                bottom = dimensionResource(R.dimen.grid_large_v_inner_padding),
+                start = dimensionResource(R.dimen.grid_large_v_inner_padding).div(2),
+                end = dimensionResource(R.dimen.grid_large_v_inner_padding)
+            )
+            .wrapContentSize(Alignment.TopStart)
+            .size(dimensionResource(R.dimen.grid_large_more_size))
+    )
+}
+
+@Composable
+private fun NotSelectedContent(
+    t: Pair<Int, Color>,
+    more: (() -> Unit)?,
+    title: String
+) {
+    Image(
+        painter = painterResource(t.first),
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(t.second),
+        modifier = Modifier
+            .wrapContentSize(Alignment.Center)
+            .size(dimensionResource(R.dimen.grid_large_icon_size))
+    )
+    more?.let {
+        Icon(
+            imageVector = CellsIcons.MoreVert,
+            contentDescription = "open more menu for $title",
+            modifier = Modifier
+                .padding(
+                    top = dimensionResource(R.dimen.grid_large_v_inner_padding),
+                    bottom = dimensionResource(R.dimen.grid_large_v_inner_padding),
+                    start = dimensionResource(R.dimen.grid_large_v_inner_padding),
+                    end = dimensionResource(R.dimen.grid_large_v_inner_padding).div(2)
+                )
+                .wrapContentSize(Alignment.TopEnd)
+                .size(dimensionResource(R.dimen.grid_large_more_size))
+                .clickable { it() }
+        )
     }
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun LargeCardWithThumb(
+fun LargeCardImageThumb(
     stateID: StateID,
     eTag: String?,
+    metaHash: Int,
     title: String,
-    desc: String,
-    modifier: Modifier = Modifier,
     openMoreMenu: (() -> Unit)? = null,
 ) {
-    LargeCard(title = title, desc = desc, modifier = modifier) {
-        Surface(
-            tonalElevation = dimensionResource(R.dimen.list_thumb_elevation),
-            modifier = Modifier
-                .fillMaxWidth(1f)
-                .size(dimensionResource(R.dimen.grid_ws_image_size))
-                .clip(RoundedCornerShape(dimensionResource(R.dimen.grid_large_corner_radius)))
-        ) {
-            LoadingAnimation(
+    Surface(
+        tonalElevation = dimensionResource(R.dimen.list_thumb_elevation),
+        modifier = Modifier
+            .fillMaxWidth(1f)
+            .size(dimensionResource(R.dimen.grid_ws_image_size))
+            .clip(RoundedCornerShape(dimensionResource(R.dimen.grid_large_corner_radius)))
+    ) {
+        GlideImage(
+            model = encodeModel(AppNames.LOCAL_FILE_TYPE_THUMB, stateID, eTag, metaHash),
+            contentDescription = "$title thumbnail",
+            contentScale = ContentScale.FillWidth,
+            failure = placeholder(R.drawable.image_no_thumb_small),
+            loading = placeholder(R.drawable.loading),
+            modifier = Modifier.size(dimensionResource(id = R.dimen.grid_ws_image_size)),
+        )
+        openMoreMenu?.let {
+            Box(
                 modifier = Modifier
-                    .padding(dimensionResource(id = R.dimen.list_thumb_padding))
-                    .size(dimensionResource(id = R.dimen.grid_ws_image_size)),
-            )
-            GlideImage(
-                model = encodeModel(stateID.id, eTag, AppNames.LOCAL_FILE_TYPE_THUMB),
-                contentDescription = "$title thumbnail",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(dimensionResource(id = R.dimen.grid_ws_image_size)),
-            )
-            openMoreMenu?.let {
-                Box(
-                    modifier = Modifier
-                        .wrapContentSize(Alignment.TopEnd)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = dimensionResource(R.dimen.grid_large_corner_radius),
-                                bottomStart = dimensionResource(R.dimen.grid_large_more_size) * 2,
-                                bottomEnd = 2.dp,
-                            ),
-                        )
-                        .background(
-                            Brush.horizontalGradient(
-                                0.2f to Color.Transparent,
-                                1.0f to MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-                            )
-                        )
-                        .clickable { it() }
-                ) {
-                    Icon(
-                        imageVector = CellsIcons.MoreVert,
-                        contentDescription = "open more menu for $title",
-                        modifier = Modifier
-                            .padding(
-                                top = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
-                                bottom = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
-                                start = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
-                                end = 4.dp
-                            )
-                            .size(dimensionResource(R.dimen.grid_large_more_size))
+                    .wrapContentSize(Alignment.TopEnd)
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = dimensionResource(R.dimen.grid_large_corner_radius),
+                            bottomStart = dimensionResource(R.dimen.grid_large_more_size) * 2,
+                            bottomEnd = 2.dp,
+                        ),
                     )
-                }
+                    .background(
+                        Brush.horizontalGradient(
+                            0.2f to Color.Transparent,
+                            1.0f to MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                        )
+                    )
+                    .clickable { it() }
+            ) {
+                Icon(
+                    imageVector = CellsIcons.MoreVert,
+                    contentDescription = "open more menu for $title",
+                    modifier = Modifier
+                        .padding(
+                            top = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
+                            bottom = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
+                            start = dimensionResource(id = R.dimen.grid_large_v_inner_padding),
+                            end = 4.dp
+                        )
+                        .size(dimensionResource(R.dimen.grid_large_more_size))
+                )
             }
         }
     }
@@ -160,6 +224,7 @@ fun LargeCardWithThumb(
 fun LargeCard(
     title: String,
     desc: String,
+    isSelected: Boolean = false,
     modifier: Modifier = Modifier,
     thumbContent: @Composable () -> Unit,
 ) {
@@ -176,30 +241,53 @@ fun LargeCard(
         bottom = dimensionResource(R.dimen.grid_large_v_inner_padding),
     )
 
-    Card(
-        shape = RoundedCornerShape(dimensionResource(R.dimen.grid_large_corner_radius)),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp,// dimensionResource(R.dimen.grid_ws_card_elevation)
-        ),
-        border = BorderStroke(1.dp, SolidColor(MaterialTheme.colorScheme.outline)),
-        modifier = modifier
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize(Alignment.BottomEnd),
+        contentAlignment = Alignment.BottomStart,
     ) {
-
-        thumbContent()
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(titlePadding)
-        )
-        Text(
-            text = desc,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(descPadding)
-        )
+        Card(
+            shape = RoundedCornerShape(dimensionResource(R.dimen.grid_large_corner_radius)),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(0.8f)
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = if (isSelected) dimensionResource(R.dimen.grid_ws_card_elevation) else 0.dp,
+            ),
+            border = if (isSelected) {
+                BorderStroke(2.dp, SolidColor(MaterialTheme.colorScheme.surfaceTint))
+            } else {
+                BorderStroke(1.dp, SolidColor(MaterialTheme.colorScheme.outlineVariant))
+            },
+            modifier = modifier
+        ) {
+            thumbContent()
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(titlePadding)
+            )
+            Text(
+                text = desc,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(descPadding)
+            )
+        }
+        if (isSelected) {
+            Icon(
+                imageVector = CellsIcons.Check,
+                tint = MaterialTheme.colorScheme.surfaceTint,
+                contentDescription = "",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(all = 8.dp)
+                    .wrapContentSize(Alignment.BottomEnd)
+            )
+        }
     }
 }

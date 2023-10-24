@@ -3,6 +3,7 @@ package com.pydio.android.cells.transfer.glide
 import com.bumptech.glide.load.Options
 import com.bumptech.glide.load.model.ModelLoader
 import com.bumptech.glide.signature.ObjectKey
+import com.pydio.cells.utils.Log
 import com.pydio.cells.utils.Str
 import java.nio.ByteBuffer
 
@@ -15,12 +16,14 @@ import java.nio.ByteBuffer
  * triggering cache invalidation for this image in Glide's layers.
  */
 class CellsModelLoader : ModelLoader<String, ByteBuffer> {
+
+    private val logTag = "CellsModelLoader"
     override fun buildLoadData(
         model: String,
         width: Int,
         height: Int,
         options: Options
-    ): ModelLoader.LoadData<ByteBuffer>? {
+    ): ModelLoader.LoadData<ByteBuffer> {
         return ModelLoader.LoadData(ObjectKey(model), CellsFileFetcher(model))
     }
 
@@ -30,6 +33,7 @@ class CellsModelLoader : ModelLoader<String, ByteBuffer> {
             val res = decodeModel(model)
             Str.notEmpty(res.second)
         } catch (e: Exception) {
+            Log.e(logTag, "Unexpected exception while handling $model: ${e.message}.")
             false
         }
     }

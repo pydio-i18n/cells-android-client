@@ -34,13 +34,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.pydio.android.cells.ListContext
 import com.pydio.android.cells.ListType
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.nodes.RLiveOfflineRoot
@@ -70,13 +74,14 @@ import com.pydio.android.cells.ui.core.composables.animations.SmoothLinearProgre
 import com.pydio.android.cells.ui.core.composables.getJobStatus
 import com.pydio.android.cells.ui.core.composables.getNodeTitle
 import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithIcon
-import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithThumb
+import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithImage
 import com.pydio.android.cells.ui.core.composables.lists.WithLoadingListBackground
 import com.pydio.android.cells.ui.core.composables.menus.CellsModalBottomSheetLayout
 import com.pydio.android.cells.ui.core.composables.modal.ModalBottomSheetValue
 import com.pydio.android.cells.ui.core.composables.modal.rememberModalBottomSheetState
+import com.pydio.android.cells.ui.models.toErrorMessage
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
 import com.pydio.android.cells.utils.asAgoString
 import com.pydio.cells.transport.StateID
 import kotlinx.coroutines.launch
@@ -86,30 +91,34 @@ private const val logTag = "OfflineRoots"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OfflineRoots(
-    offlineVM: OfflineVM,
+    isExpandedScreen: Boolean,
     openDrawer: () -> Unit,
-    openSearch: () -> Unit,
+    offlineVM: OfflineVM,
     browseHelper: BrowseHelper,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackBarHostState = remember { SnackbarHostState() }
 
-    val loadingState by offlineVM.loadingState.observeAsState()
-    val syncJob = offlineVM.syncJob.observeAsState()
     val listLayout by offlineVM.layout.collectAsState(ListLayout.LIST)
-    val roots = offlineVM.offlineRoots.observeAsState()
+    val loadingState = offlineVM.loadingState.collectAsState(LoadingState.STARTING)
+    val errMsg = offlineVM.errorMessage.collectAsState(null)
+    val syncJob = offlineVM.syncJob.collectAsState()
+    val roots = offlineVM.offlineRoots.collectAsState()
+
+    LaunchedEffect(key1 = errMsg.value) {
+        errMsg.value?.let {
+            snackBarHostState.showSnackbar(
+                message = toErrorMessage(context, it),
+                withDismissAction = false,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     val localOpen: (StateID) -> Unit = { stateID ->
         scope.launch {
-            offlineVM.getNode(stateID)?.let {
-                if (it.isFolder()) {
-                    browseHelper.open(context, stateID)
-//                } else if (it.isPreViewable()) {
-                    // TODO (since v2) Open carousel for offline nodes
-                } else {
-                    browseHelper.open(context, stateID)
-                }
-            }
+            browseHelper.open(context, stateID, browseHelper.offline)
         }
     }
 
@@ -140,10 +149,7 @@ fun OfflineRoots(
     }
 
     val destinationPicker = rememberLauncherForActivityResult(
-        // TODO we have the mime of the file to download to device
-        //    but this is no trivial implementation: the contract must then be both
-        //    dynamic AND remembered.
-        contract = ActivityResultContracts.CreateDocument(),
+        contract = ActivityResultContracts.CreateDocument("*/*"),
         onResult = { uri ->
             if (nodeMoreMenuData.value.second != StateID.NONE) {
                 uri?.let {
@@ -168,26 +174,32 @@ fun OfflineRoots(
                     }
                 }
             }
+
             is NodeAction.ForceResync -> {
                 offlineVM.forceSync(stateID)
                 moreMenuDone()
             }
+
             is NodeAction.DownloadToDevice -> {
                 destinationPicker.launch(stateID.fileName)
                 // Done is called by the destination picker callback
             }
+
             is NodeAction.ToggleOffline -> {
                 offlineVM.removeFromOffline(stateID)
                 moreMenuDone()
             }
+
             is NodeAction.AsGrid -> {
                 offlineVM.setListLayout(ListLayout.GRID)
                 moreMenuDone()
             }
+
             is NodeAction.AsList -> {
                 offlineVM.setListLayout(ListLayout.LIST)
                 moreMenuDone()
             }
+
             else -> {
                 Log.e(logTag, "Unknown action $action for $stateID")
                 moreMenuDone()
@@ -196,27 +208,30 @@ fun OfflineRoots(
     }
 
     WithScaffold(
-        loadingState = loadingState ?: LoadingState.STARTING,
+        isExpandedScreen=     isExpandedScreen,
+        loadingState = loadingState.value,
         listLayout = listLayout,
         syncJob = syncJob.value,
         title = stringResource(id = R.string.action_open_offline_roots),
-        roots = roots.value ?: listOf(),
+        roots = roots.value,
         openDrawer = openDrawer,
         forceRefresh = offlineVM::forceFullSync,
         open = localOpen,
         launch = launch,
         moreMenuState = MoreMenuState(
-            nodeMoreMenuData.value.first,
             sheetState,
+            nodeMoreMenuData.value.first,
             nodeMoreMenuData.value.second,
             openMoreMenu
-        )
+        ),
+        snackBarHostState = snackBarHostState
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WithScaffold(
+    isExpandedScreen: Boolean,
     loadingState: LoadingState,
     listLayout: ListLayout,
     syncJob: RJob?,
@@ -227,6 +242,7 @@ private fun WithScaffold(
     open: (StateID) -> Unit,
     launch: (NodeAction, StateID) -> Unit,
     moreMenuState: MoreMenuState,
+    snackBarHostState: SnackbarHostState,
 ) {
 
     var isShown by remember { mutableStateOf(false) }
@@ -297,9 +313,11 @@ private fun WithScaffold(
                 content = actionMenuContent
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackBarHostState) }
     ) { padding ->
 
         CellsModalBottomSheetLayout(
+            isExpandedScreen = isExpandedScreen,
             sheetContent = {
                 if (moreMenuState.type == NodeMoreMenuType.SORT_BY) {
                     SortByMenu(
@@ -309,8 +327,8 @@ private fun WithScaffold(
                 } else {
                     NodeMoreMenuData(
                         type = NodeMoreMenuType.OFFLINE,
-                        toOpenStateID = moreMenuState.stateID,
-                        launch = { launch(it, moreMenuState.stateID) },
+                        subjectID = moreMenuState.stateID,
+                        launch = launch,
                     )
                 }
             },
@@ -363,6 +381,7 @@ private fun OfflineRootsList(
     WithLoadingListBackground(
         loadingState = loadingState,
         isEmpty = roots.isEmpty(),
+        listContext = ListContext.OFFLINE,
         canRefresh = true,
         emptyRefreshableDesc = stringResource(id = R.string.no_offline_root_for_account),
         modifier = Modifier.fillMaxSize()
@@ -388,11 +407,15 @@ private fun OfflineRootsList(
                     ) {
                         if (syncJob != null) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
-                                val percentage =
+                                val progress = if (syncJob.total <= 0) {
+                                    -1F
+                                } else {
                                     (syncJob.progress).toFloat().div(syncJob.total)
+                                }
                                 SyncStatus(
                                     desc = getJobStatus(item = syncJob),
-                                    progress = percentage,
+                                    progress = progress,
+                                    syncJob.doneTimestamp,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -402,9 +425,12 @@ private fun OfflineRootsList(
                             items = roots,
                             key = { it.encodedState }) { node ->
                             if (node.hasThumb()) {
-                                LargeCardWithThumb(
+                                LargeCardWithImage(
                                     stateID = node.getStateID(),
                                     eTag = node.etag,
+                                    // TODO fix this: we will miss some changes
+                                    metaHash = -1,
+                                    mime = node.mime,
                                     title = getNodeTitle(name = node.name, mime = node.mime),
                                     desc = getDesc(node),
                                     openMoreMenu = { openMoreMenu(node.getStateID()) },
@@ -429,6 +455,7 @@ private fun OfflineRootsList(
                         }
                     }
                 }
+
                 else -> {
 
                     LazyColumn(
@@ -437,11 +464,15 @@ private fun OfflineRootsList(
                     ) {
                         if (syncJob != null) {
                             item {
-                                val percentage =
+                                val progress = if (syncJob.total <= 0) {
+                                    -1F
+                                } else {
                                     (syncJob.progress).toFloat().div(syncJob.total)
+                                }
                                 SyncStatus(
                                     desc = getJobStatus(item = syncJob),
-                                    progress = percentage,
+                                    progress = progress,
+                                    syncJob.doneTimestamp,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -484,6 +515,7 @@ private fun OfflineRootsList(
 private fun SyncStatus(
     desc: String,
     progress: Float,
+    doneTS: Long,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -499,21 +531,23 @@ private fun SyncStatus(
                 text = desc,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            if (progress == -1f) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = dimensionResource(id = R.dimen.margin_small))
-                        .wrapContentWidth(Alignment.CenterHorizontally)
-                )
-            } else if (progress in 0.0..1.0) {
-                SmoothLinearProgressIndicator(
-                    indicatorProgress = progress,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = dimensionResource(id = R.dimen.margin_small))
-                        .wrapContentWidth(Alignment.CenterHorizontally)
-                )
+            if (doneTS <= 0) {
+                if (progress == -1f) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = dimensionResource(id = R.dimen.margin_small))
+                            .wrapContentWidth(Alignment.CenterHorizontally)
+                    )
+                } else if (progress in 0.0..1.0) {
+                    SmoothLinearProgressIndicator(
+                        indicatorProgress = progress,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = dimensionResource(id = R.dimen.margin_small))
+                            .wrapContentWidth(Alignment.CenterHorizontally)
+                    )
+                }
             }
         }
     }
@@ -540,11 +574,12 @@ private fun getDesc(item: RLiveOfflineRoot): String {
 )
 @Composable
 private fun SyncStatusPreview() {
-    CellsTheme {
+    UseCellsTheme {
         SyncStatus(
             "Pydio Cells server",
             -1f,
-            Modifier.fillMaxWidth()
+            0,
+            Modifier
         )
     }
 }

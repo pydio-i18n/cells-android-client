@@ -84,7 +84,7 @@ class LoginVM(
     }
 
     suspend fun handleOAuthResponse(state: String, code: String): Pair<StateID, String?>? {
-        Log.e(logTag, "Handling OAuth response")
+        Log.i(logTag, "Handling OAuth response")
 
         switchLoading(true)
         updateMessage("Retrieving authentication token...")
@@ -159,7 +159,7 @@ class LoginVM(
 //                triggerOAuthProcess(serverURL)
 //            }
             // FIXME this is not satisfying: error won't be processed correctly
-            return LoginDestinations.ProcessAuth.createRoute(serverID, skipVerify)
+            return LoginDestinations.LaunchAuthProcessing.createRoute(serverID, skipVerify)
         }
     }
 
@@ -172,7 +172,7 @@ class LoginVM(
         skipVerify: Boolean
     ): Pair<ServerURL?, String?> {
         return withContext(Dispatchers.IO) {
-            Log.i(logTag, "Pinging $serverAddress")
+            Log.i(logTag, "... About to ping $serverAddress")
             val tmpURL: ServerURL?
             var newURL: ServerURL? = null
             try {
@@ -238,9 +238,6 @@ class LoginVM(
                 tmpID = accountService.signUp(currURL, credentials)
                 delay(smoothActionDelay)
                 updateMessage("Connected, updating local state")
-//                withContext(Dispatchers.Main) {
-//                    setCurrentStep(LoginStep.PROCESS_AUTH)
-//                }
                 accountService.refreshWorkspaceList(tmpID)
                 delay(smoothActionDelay)
             } catch (e: SDKException) {
@@ -312,11 +309,11 @@ class LoginVM(
     }
 
     override fun onCleared() {
-        Log.e(logTag, "################## onCleared")
+        Log.i(logTag, "Cleared")
         super.onCleared()
     }
 
     init {
-        Log.e(logTag, "################## Created")
+        Log.i(logTag, "Created")
     }
 }

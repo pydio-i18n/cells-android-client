@@ -3,13 +3,11 @@ package com.pydio.android.cells.db.accounts
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverters
 import com.pydio.android.cells.AppNames
-import com.pydio.android.cells.db.Converters
+import com.pydio.cells.transport.StateID
 import java.net.URL
 
 @Entity(tableName = "sessions")
-@TypeConverters(Converters::class)
 data class RSession(
 
     @PrimaryKey
@@ -24,6 +22,12 @@ data class RSession(
 
     // We duplicate this info to ease implementation: we can do this because we won't have tons of accounts.
     @ColumnInfo(name = "is_legacy") val isRemoteLegacy: Boolean,
+
+    // Simple flag to make the UI more explicit for the end user.
+    // This flag is set to false when we have internet but cannot ping the server.
+    // It should not be used to prevent trying to reach the remote server: we should try to ping
+    // at each iteration, even when set to false.
+    @ColumnInfo(name = "is_reachable", defaultValue = "true") var isReachable: Boolean,
 ) {
 
     companion object {
@@ -38,12 +42,15 @@ data class RSession(
             }
 
             return RSession(
-                accountID = account.accountID,
+                accountID = account.accountId,
                 lifecycleState = AppNames.SESSION_STATE_NEW,
                 dirName = cleanUrl,
                 dbName = cleanDbName,
-                isRemoteLegacy = account.isLegacy
+                isRemoteLegacy = account.isLegacy,
+                isReachable = true
             )
         }
     }
+
+    fun account(): StateID = StateID.fromId(accountID)
 }

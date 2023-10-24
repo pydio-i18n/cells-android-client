@@ -25,7 +25,7 @@ import com.pydio.android.cells.ui.core.composables.FormBottomButtons
 import com.pydio.android.cells.ui.core.composables.FormInput
 import com.pydio.android.cells.ui.login.LoginHelper
 import com.pydio.android.cells.ui.login.models.LoginVM
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
 import com.pydio.cells.transport.StateID
 import kotlinx.coroutines.launch
 
@@ -43,7 +43,6 @@ fun P8Credentials(
     val errMsg = loginVM.errorMessage.collectAsState()
 
     // This might have been initialised when re-logging a P8 account
-
     val username = rememberSaveable {
         mutableStateOf(stateID.username ?: "")
     }
@@ -188,7 +187,7 @@ fun P8Credentials(
 )
 @Composable
 private fun P8CredentialsPreview() {
-    CellsTheme {
+    UseCellsTheme {
         P8Credentials(
             isProcessing = true,
             "john",

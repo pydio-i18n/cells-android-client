@@ -12,6 +12,8 @@ import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.R
 import com.pydio.cells.transport.StateID
 import com.pydio.cells.utils.Str
+import java.net.URLDecoder
+import java.net.URLEncoder
 
 private const val logTag = "core.utils"
 
@@ -32,19 +34,66 @@ fun getFloatResource(context: Context, @DimenRes id: Int): Float {
     return outValue.float
 }
 
+fun encodeStateForRoute(stateID: StateID): String {
+    return URLEncoder.encode(stateID.id, "UTF-8")
+}
+
 fun lazyStateID(
     navBackStackEntry: NavBackStackEntry?,
     key: String = AppKeys.STATE_ID,
 ): StateID {
-    return navBackStackEntry?.arguments?.getString(key)
-        ?.let {
-            // Log.e(logTag, " ... Retrieving stateID from backstack entry, found: $it")
-            StateID.fromId(it)
+    return navBackStackEntry?.arguments?.getString(key)?.let {
+        // Log.e(logTag, " ... Retrieving stateID from backstack entry, found: $it")
+        if (it.isEmpty()) {
+            return StateID.NONE
         }
-        ?: run {
-            // Log.w(logTag, " ... No stateID found in backstack entry, for key $key")
-            StateID.NONE
+        return StateID.fromId(it)
+    } ?: run {
+        Log.w(logTag, " ... No stateID found in backstack entry with key $key")
+        StateID.NONE
+    }
+}
+
+fun encodeStateSetForRoute(stateIDs: Set<StateID>): String {
+    val reduced = stateIDs.map {  URLEncoder.encode(it.id, "UTF-8")}.reduce { acc, curr ->
+        if (acc.isEmpty()) {
+            curr
+        } else {
+            "${acc}&$curr"
         }
+    }
+    return URLEncoder.encode(reduced, "UTF-8")
+}
+
+
+fun lazyStateIDs(
+    navBackStackEntry: NavBackStackEntry?,
+    key: String = AppKeys.STATE_IDS,
+): Set<StateID> {
+    return navBackStackEntry?.arguments?.getString(key)?.let {
+        // Log.e(logTag, " ... Retrieving stateID from backstack entry, found: $it")
+        if (it.isEmpty()) {
+            setOf(StateID.NONE)
+        } else {
+            val reduced = URLDecoder.decode(it, "UTF-8")
+            val ids = mutableSetOf<StateID>()
+            reduced.split("&").forEach { currEncoded ->
+                if (currEncoded.isNotEmpty()){
+                    val currID =StateID.fromId(URLDecoder.decode(currEncoded, "UTF-8"))
+                    if (currID != StateID.NONE){
+                        ids.add(currID)
+                    }
+                }
+            }
+            if (ids.isEmpty()){ // TODO double check if it is really necessary
+                ids.add(StateID.NONE)
+            }
+            ids
+        }
+    } ?: run {
+        Log.w(logTag, " ... No stateID found in backstack entry with key $key")
+        setOf(StateID.NONE)
+    }
 }
 
 fun lazyQueryContext(
@@ -57,7 +106,6 @@ fun lazyQueryContext(
             "none"
         }
 }
-
 
 fun lazySkipVerify(
     navBackStackEntry: NavBackStackEntry?,

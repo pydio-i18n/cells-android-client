@@ -1,61 +1,59 @@
 package com.pydio.android.cells.ui.browse.models
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.switchMap
+import android.util.Log
+import androidx.lifecycle.viewModelScope
 import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.services.AccountService
-import com.pydio.android.cells.services.NodeService
+import com.pydio.android.cells.ui.core.AbstractCellsVM
 import com.pydio.android.cells.utils.isPreViewable
 import com.pydio.cells.transport.StateID
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
-/** Expose methods to simplify navigation while browsing*/
+/** Hold the state for the carousel component */
 class CarouselVM(
     initialStateID: StateID,
     private val accountService: AccountService,
-    nodeService: NodeService,
-) : ViewModel() {
+) : AbstractCellsVM() {
 
-    // private val logTag = "CarouselVM"
-
-    private val viewModelJob = Job()
-    private val vmScope = CoroutineScope(Dispatchers.Main + viewModelJob)
-
-    private val parentStateID = initialStateID.parent()
-
-    // FIXME this must be the first seen index
-    val currentID: StateFlow<StateID> = MutableStateFlow(initialStateID)
-
-    private val allChildren: LiveData<List<RTreeNode>> = nodeService.listViewable(parentStateID, "")
-
-    val preViewableItems: LiveData<List<RTreeNode>>
-        get() = allChildren.switchMap { childList ->
-            val filteredChildren = MutableLiveData<List<RTreeNode>>()
-            val filteredList = childList.filter { item ->
-                val preViewable = isPreViewable(item)
-                preViewable
-            }
-            filteredChildren.value = filteredList
-            filteredChildren
-        }
+    private val logTag = "CarouselVM"
 
     private var _isRemoteLegacy = false
     val isRemoteLegacy: Boolean
         get() = _isRemoteLegacy
 
+    // Observe current folder children
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val allOrdered: Flow<List<RTreeNode>> = defaultOrderPair.flatMapLatest { currPair ->
+        try {
+            nodeService.listLiveChildren(
+                initialStateID.parent(),
+                "",
+                currPair.first,
+                currPair.second
+            )
+        } catch (e: Exception) {
+            // This should never happen but it has been seen in prod
+            // Adding a failsafe to avoid crash
+            Log.e(logTag, "Could not list children of $initialStateID: ${e.message}")
+            flow { listOf<RTreeNode>() }
+        }
+    }
+
+    val preViewableItems: Flow<List<RTreeNode>> = allOrdered.map { childList ->
+        childList.filter { item ->
+            val preViewable = isPreViewable(item)
+            preViewable
+        }
+    }
+
     init {
-        vmScope.launch {
-            withContext(Dispatchers.IO) {
-                _isRemoteLegacy = accountService.isLegacy(initialStateID)
-            }
+        viewModelScope.launch {
+            _isRemoteLegacy = accountService.isLegacy(initialStateID)
         }
     }
 }

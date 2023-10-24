@@ -5,6 +5,7 @@ import androidx.datastore.core.DataMigration
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import com.pydio.android.cells.AppNames
+import com.pydio.android.cells.JobStatus
 import com.pydio.android.cells.ui.core.ListLayout
 
 const val CELLS_PREFERENCES_NAME = "cells_preferences"
@@ -12,6 +13,7 @@ const val CELLS_PREFERENCES_NAME = "cells_preferences"
 data class CellsPreferences(
     val versionCode: Int,
     val showDebugTools: Boolean,
+    val disablePoll: Boolean,
     val list: ListPreferences,
     val meteredNetwork: MeteredNetworkPreferences,
     val sync: SyncPreferences
@@ -41,19 +43,19 @@ data class SyncPreferences(
     val onIdle: Boolean,
 )
 
-
 fun defaultCellsPreferences(): CellsPreferences {
     val currVersion = -1
     val showDebug = false
+    val disablePoll = false
 
     // List order, layout and filters
     val listPref = ListPreferences(
         order = AppNames.DEFAULT_SORT_ENCODED,
         layout = ListLayout.LIST,
         transferOrder = AppNames.TRANSFER_DEFAULT_ENCODED_ORDER,
-        transferFilter = AppNames.JOB_STATUS_NO_FILTER,
+        transferFilter = JobStatus.NO_FILTER.id,
         jobOrder = AppNames.JOB_DEFAULT_ENCODED_ORDER,
-        jobFilter = AppNames.JOB_STATUS_NO_FILTER,
+        jobFilter = JobStatus.NO_FILTER.id,
     )
     // Metered network limitations
     val meteredPref = MeteredNetworkPreferences(
@@ -70,7 +72,7 @@ fun defaultCellsPreferences(): CellsPreferences {
         onBatteryNotLow = true,
         onIdle = true
     )
-    return CellsPreferences(currVersion, showDebug, listPref, meteredPref, syncPref)
+    return CellsPreferences(currVersion, showDebug, disablePoll, listPref, meteredPref, syncPref)
 }
 
 // Migration from legacy SharedPreference system
@@ -81,36 +83,3 @@ val legacyMigrations: (Context) -> List<DataMigration<Preferences>> = { context 
     // Since we're migrating from SharedPreferences, add a migration based on the SharedPreferences name
     listOf(SharedPreferencesMigration(context, LEGACY_PREFERENCES_KEY))
 }
-
-//fun ListPreferences.orderLabel(resource: Resources): String {
-//    val labels = resource.getStringArray(R.array.order_by_labels)
-//    val keys = resource.getStringArray(R.array.order_by_values)
-//    keys.forEachIndexed { index, key ->
-//        if (key == this.order) {
-//            return labels[index]
-//        }
-//    }
-//    return "-"
-//}
-//fun SyncPreferences.frequencyLabel(resource: Resources): String {
-//    val labels = resource.getStringArray(R.array.offline_frequency_labels)
-//    val keys = resource.getStringArray(R.array.offline_frequency_values)
-//    keys.forEachIndexed { index, key ->
-//        if (key == this.frequency) {
-//            return labels[index]
-//        }
-//    }
-//    return "-"
-//}
-//
-//fun SyncPreferences.onNetworkTypeLabel(resource: Resources): String {
-//    val labels = resource.getStringArray(R.array.network_type_labels)
-//    val keys = resource.getStringArray(R.array.network_type_values)
-//    keys.forEachIndexed { index, key ->
-//        if (key == this.onNetworkType) {
-//            return labels[index]
-//        }
-//    }
-//    return "-"
-//}
-

@@ -1,8 +1,5 @@
 package com.pydio.android.cells.ui.share.models
 
-import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pydio.android.cells.AppNames
 import com.pydio.android.cells.JobStatus
@@ -10,24 +7,26 @@ import com.pydio.android.cells.db.nodes.RTransfer
 import com.pydio.android.cells.db.runtime.RJob
 import com.pydio.android.cells.services.JobService
 import com.pydio.android.cells.services.TransferService
+import com.pydio.android.cells.ui.core.AbstractCellsVM
 import com.pydio.cells.transport.StateID
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Hold a list of file uploads for the given accountID and JobID */
 class MonitorUploadsVM(
+    val isRemoteLegacy: Boolean,
     val accountID: StateID,
     val jobID: Long,
     val jobService: JobService,
     val transferService: TransferService,
-) : ViewModel() {
+) : AbstractCellsVM() {
 
-    private val logTag = "MonitorUploadsVM"
+    // private val logTag = "MonitorUploadsVM"
 
-    val currRecords: LiveData<List<RTransfer>> =
-        transferService.getTransfersRecordsForJob(accountID, jobID)
-    val parentJob: LiveData<RJob?> = jobService.getLiveJob(jobID)
+    val parentJob: Flow<RJob?> = jobService.getLiveJobByID(jobID)
+
+    val currRecords: Flow<List<RTransfer>> =
+        transferService.getChildTransfersRecords(accountID, jobID)
 
     fun getStatusFromListAndJob(job: RJob?, rTransfers: List<RTransfer>): JobStatus {
         var newStatus = JobStatus.NEW
@@ -37,7 +36,7 @@ class MonitorUploadsVM(
             } else {
                 var hasRunning = false
                 for (rTransfer in rTransfers) {
-                    if (rTransfer.status != AppNames.JOB_STATUS_DONE) {
+                    if (JobStatus.DONE.id != rTransfer.status) {
                         hasRunning = true
                         break
                     }
@@ -57,53 +56,76 @@ class MonitorUploadsVM(
     private fun markJobAsDone(job: RJob) {
         viewModelScope.launch {
             if (!job.isDone()) {
-                // TODO remove explicit context once it has been fixed in the jobService
-                withContext(Dispatchers.IO) {
-                    jobService.done(job, "All files have been uploaded", null)
-                }
+                jobService.done(job.jobId, "All files have been uploaded", null)
             }
         }
     }
 
-    // TODO add filter and sort
+    // Also add filter and sort ??
 
-    suspend fun get(transferId: Long): RTransfer? = withContext(Dispatchers.IO) {
-        transferService.getRecord(accountID, transferId)
+    suspend fun get(transferId: Long): RTransfer? {
+        return transferService.getRecord(accountID, transferId)
     }
 
-    fun pauseOne(transferId: Long) {
+    fun pauseOne(transferID: Long) {
         viewModelScope.launch {
-            // TODO improve this
-            transferService.cancelTransfer(accountID, transferId, AppNames.JOB_OWNER_USER)
-        }
-    }
-
-    fun resumeOne(transferId: Long) {
-        viewModelScope.launch {
-            // TODO improve this
-            transferService.uploadOne(accountID, transferId)
-        }
-    }
-
-    fun cancelOne(transferId: Long) {
-        viewModelScope.launch {
-            // TODO improve this
-            transferService.cancelTransfer(accountID, transferId, AppNames.JOB_OWNER_USER)
-        }
-    }
-
-    fun removeOne(transferId: Long) {
-        viewModelScope.launch {
-            transferService.deleteRecord(accountID, transferId)
-        }
-    }
-
-    fun cancelAll() {
-        currRecords.value?.forEach {
             try {
-                cancelOne(it.transferId)
+                if (isRemoteLegacy) {
+                    error("Cannot pause transfer when remote server is Pydio 8")
+                } else {
+                    transferService.pauseTransfer(
+                        accountID,
+                        transferID,
+                        AppNames.JOB_OWNER_USER,
+                        false
+                    )
+                }
             } catch (e: Exception) {
-                Log.e(logTag, "could not cancel job #$it, cause: ${e.message}")
+                done(e)
+            }
+        }
+    }
+
+    fun resumeOne(transferID: Long) {
+        viewModelScope.launch {
+            try {
+                if (isRemoteLegacy) {
+                    error("Cannot resume transfer when remote server is Pydio 8")
+                } else {
+                    transferService.resumeTransfer(
+                        accountID,
+                        transferID,
+                        false
+                    )
+                }
+            } catch (e: Exception) {
+                done(e)
+            }
+        }
+    }
+
+    fun cancelOne(transferID: Long) {
+        viewModelScope.launch {
+            try {
+                transferService.cancelTransfer(
+                    accountID,
+                    transferID,
+                    AppNames.JOB_OWNER_USER,
+                    isRemoteLegacy
+                )
+
+            } catch (e: Exception) {
+                done(e)
+            }
+        }
+    }
+
+    fun removeOne(transferID: Long) {
+        viewModelScope.launch {
+            try {
+                transferService.forgetTransfer(accountID, transferID, isRemoteLegacy)
+            } catch (e: Exception) {
+                done(e)
             }
         }
     }

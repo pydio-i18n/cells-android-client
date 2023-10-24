@@ -14,11 +14,19 @@ class SettingsVM(
     // private val nodeService: NodeService
 ) : ViewModel() {
 
+    // private val logTag = "SettingsVM"
+
     val cellsPreferences = prefs.cellsPreferencesFlow
 
     fun setShowRuntimeToolsFlag(show: Boolean) {
         viewModelScope.launch {
             prefs.setShowDebugToolsFlag(show)
+        }
+    }
+
+    fun setDisablePollFlag(disablePoll: Boolean) {
+        viewModelScope.launch {
+            prefs.setDisablePollFlag(disablePoll)
         }
     }
 
@@ -29,9 +37,10 @@ class SettingsVM(
     }
 
     fun setListLayout(layoutStr: String) {
-        val layout: ListLayout = if (ListLayout.GRID.name == layoutStr)
+        // Log.e(logTag, "About to set list layout to $layoutStr -- ${ListLayout.GRID.name}")
+        val layout: ListLayout = if (ListLayout.GRID.name == layoutStr) {
             ListLayout.GRID
-        else
+        } else
             ListLayout.LIST
         viewModelScope.launch {
             prefs.setListLayout(layout)

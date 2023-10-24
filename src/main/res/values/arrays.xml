@@ -2,7 +2,7 @@
 <resources>
 
     <string-array name="order_by_labels">
-        <item>Canonical (A to Z, folders first)</item>
+        <item>Standard (A to Z, folders first)</item>
         <item>File name (A to Z)</item>
         <item>File name (Z to A)</item>
         <item>Modified (oldest first)</item>
@@ -31,8 +31,8 @@
     </string-array>
 
     <string-array name="list_layout_values" translatable="false">
-        <item>list</item>
-        <item>grid</item>
+        <item>LIST</item>
+        <item>GRID</item>
     </string-array>
 
     <string-array name="offline_frequency_labels">
@@ -62,7 +62,7 @@
     </string-array>
 
     <string-array name="filter_transfer_by_status_values" translatable="false">
-        <item>show_all</item>
+        <item>no_filter</item>
         <item>new</item>
         <item>processing</item>
         <item>cancelled</item>
@@ -82,7 +82,7 @@
     </string-array>
 
     <string-array name="transfer_order_by_labels">
-        <item>Canonical (By creation order, newest first)</item>
+        <item>Standard (By creation order, newest first)</item>
         <item>Creation order (oldest first)</item>
         <item>Status (A to Z)</item>
         <item>Status (Z to A)</item>
@@ -100,7 +100,7 @@
     </string-array>
 
     <string-array name="job_order_by_labels">
-        <item>Canonical (By creation order, newest first)</item>
+        <item>Standard (By creation order, newest first)</item>
         <item>Creation order (oldest first)</item>
         <item>Status (A to Z)</item>
         <item>Status (Z to A)</item>
@@ -112,10 +112,5 @@
         <item>status||ASC</item>
         <item>status||DESC</item>
     </string-array>
-
-    <!--    <string-array name="job_sort_by_values" translatable="false">-->
-    <!--        <item>creation_ts_desc</item>-->
-    <!--        <item>creation_ts_asc</item>-->
-    <!--    </string-array>-->
 
 </resources>

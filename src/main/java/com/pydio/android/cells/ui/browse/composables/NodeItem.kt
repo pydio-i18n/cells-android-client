@@ -1,15 +1,15 @@
 package com.pydio.android.cells.ui.browse.composables
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,67 +24,88 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.nodes.RLiveOfflineRoot
-import com.pydio.android.cells.db.nodes.RTreeNode
-import com.pydio.android.cells.ui.UseCellsTheme
+import com.pydio.android.cells.ui.core.composables.M3IconThumb
 import com.pydio.android.cells.ui.core.composables.Thumbnail
-import com.pydio.android.cells.ui.theme.CellsColor
+import com.pydio.android.cells.ui.models.TreeNodeItem
+import com.pydio.android.cells.ui.theme.CellsIcons
+import com.pydio.android.cells.ui.theme.UseCellsTheme
+import com.pydio.cells.transport.StateID
 
 @Composable
 fun NodeItem(
-    item: RTreeNode,
+    item: TreeNodeItem,
     title: String,
     desc: String,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
     more: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     M3NodeItem(
+        stateID = item.stateID,
         title = title,
         desc = desc,
-        encodedState = item.encodedState,
         name = item.name,
         sortName = item.sortName,
         mime = item.mime,
-        eTag = item.etag,
-        hasThumb = item.hasThumb(),
-        isBookmarked = item.isBookmarked(),
-        isOfflineRoot = item.isOfflineRoot(),
-        isShared = item.isShared(),
+        eTag = item.eTag,
+        metaHash = item.metaHash,
+        hasThumb = item.hasThumb,
+        isBookmarked = item.isBookmarked,
+        isOfflineRoot = item.isOfflineRoot,
+        isShared = item.isShared,
         more = more,
         modifier = modifier,
+        isSelectionMode = isSelectionMode,
+        isSelected = isSelected,
     )
 }
 
 @Composable
 fun M3NodeItem(
+    stateID: StateID,
     title: String,
     desc: String,
-    encodedState: String,
     name: String,
     sortName: String?,
     mime: String,
     eTag: String?,
+    metaHash: Int,
     hasThumb: Boolean,
     isBookmarked: Boolean,
     isOfflineRoot: Boolean,
     isShared: Boolean,
     more: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false
 ) {
+    var lm = modifier.padding(0.dp, .2.dp)
+    if (isSelected) {
+        lm = lm.background(MaterialTheme.colorScheme.surfaceVariant)
+    }
+    lm = lm.padding(
+        top = dimensionResource(R.dimen.list_item_inner_padding),
+        bottom = dimensionResource(R.dimen.list_item_inner_padding),
+        start = dimensionResource(R.dimen.list_item_inner_padding).times(2),
+        end = dimensionResource(R.dimen.list_item_inner_padding).div(2),
+    )
 
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.list_item_inner_padding)),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .padding(
-                top = 8.dp,
-                bottom = 8.dp,
-                start = 16.dp,
-                end = 8.dp,
-            )
+        modifier = lm
     ) {
 
-        Thumbnail(encodedState, sortName, name, mime, eTag, hasThumb)
+        if (isSelected) {
+            M3IconThumb(
+                id = R.drawable.ic_baseline_check_24,
+                color = MaterialTheme.colorScheme.surfaceTint
+            )
+        } else {
 
+            Thumbnail(stateID, sortName, name, mime, eTag, metaHash, hasThumb)
+        }
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -94,8 +115,15 @@ fun M3NodeItem(
                 )
                 .wrapContentWidth(Alignment.Start)
         ) {
+            val textColor = if (isSelected) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+
             Text(
                 text = title,
+                color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyLarge,
@@ -108,42 +136,41 @@ fun M3NodeItem(
             )
         }
 
-        if (isBookmarked) {
-            Image(
-                painter = painterResource(R.drawable.ic_baseline_star_border_24),
-                colorFilter = ColorFilter.tint(CellsColor.flagBookmark),
-                modifier = Modifier.requiredSize(dimensionResource(R.dimen.list_item_flag_decorator)),
-                contentDescription = ""
-            )
-        }
-        if (isShared) {
-            Image(
-                painter = painterResource(R.drawable.ic_baseline_link_24),
-                colorFilter = ColorFilter.tint(CellsColor.flagShare),
-                contentDescription = "",
-                modifier = Modifier.requiredSize(dimensionResource(R.dimen.list_item_flag_decorator))
-            )
-        }
-        if (isOfflineRoot) {
-            Image(
-                painter = painterResource(R.drawable.ic_outline_download_done_24),
-                colorFilter = ColorFilter.tint(CellsColor.flagOffline),
-                contentDescription = "",
-                modifier = Modifier.requiredSize(dimensionResource(R.dimen.list_item_flag_decorator))
-            )
-        }
+        if (!isSelectionMode) {
 
-        Box(
-            Modifier
-                .clickable { more() }
-        ) {
-            Icon(
-                //imageVector = CellsIcons.MoreVert,
-                painter = painterResource(id = R.drawable.aa_300_more_vert_40px),
-                contentDescription = stringResource(id = R.string.open_more_menu),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.requiredSize(dimensionResource(R.dimen.list_trailing_icon_size))
-            )
+            if (isBookmarked) {
+                Image(
+                    imageVector = CellsIcons.ButtonFavorite,
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.tertiary),
+                    modifier = Modifier.requiredSize(dimensionResource(R.dimen.list_item_flag_decorator)),
+                    contentDescription = ""
+                )
+            }
+            if (isShared) {
+                Image(
+                    imageVector = CellsIcons.ButtonShare,
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.tertiary),
+                    contentDescription = "",
+                    modifier = Modifier.requiredSize(dimensionResource(R.dimen.list_item_flag_decorator))
+                )
+            }
+            if (isOfflineRoot) {
+                Image(
+                    painter = painterResource(R.drawable.cloud_download_24px),
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.tertiary),
+                    contentDescription = "",
+                    modifier = Modifier.requiredSize(dimensionResource(R.dimen.list_item_flag_decorator))
+                )
+            }
+
+            IconButton(onClick = { more() }) {
+                Icon(
+                    painter = painterResource(id = R.drawable.aa_300_more_vert_40px),
+                    contentDescription = stringResource(id = R.string.open_more_menu),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.requiredSize(dimensionResource(R.dimen.list_trailing_icon_size))
+                )
+            }
         }
     }
 }
@@ -156,137 +183,23 @@ fun OfflineRootItem(
     more: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-
     M3NodeItem(
-        encodedState = item.encodedState,
-        sortName = item.sortName,
-        name = item.name,
+        stateID = item.getStateID(),
         title = title,
         desc = desc,
+        name = item.name,
+        sortName = item.sortName,
         mime = item.mime,
         eTag = item.etag,
+        metaHash = -1,
         hasThumb = item.hasThumb(),
         isBookmarked = item.isBookmarked(),
-        isShared = item.isShared(),
         isOfflineRoot = true,
+        isShared = item.isShared(),
         more = more,
         modifier = modifier,
     )
 }
-
-//@Composable
-//fun OfflineRootItem(
-//    encodedState: String,
-//    sortName: String?,
-//    name: String,
-//    title: String,
-//    desc: String,
-//    mime: String,
-//    eTag: String?,
-//    hasThumb: Boolean,
-//    isBookmarked: Boolean,
-//    isShared: Boolean,
-//    more: () -> Unit,
-//    modifier: Modifier
-//) {
-//    Surface(
-//        modifier = modifier
-//            .fillMaxWidth()
-//            .padding(all = dimensionResource(R.dimen.card_padding))
-//    ) {
-//        Row(
-//            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.list_thumb_margin)),
-//            verticalAlignment = Alignment.CenterVertically,
-//        ) {
-//
-//            Thumbnail(encodedState, sortName, name, mime, eTag, hasThumb)
-//
-//            Column(
-//                modifier = Modifier
-//                    .weight(1f)
-//                    .padding(
-//                        horizontal = dimensionResource(R.dimen.card_padding),
-//                        vertical = dimensionResource(R.dimen.margin_xsmall)
-//                    )
-//                    .wrapContentWidth(Alignment.Start)
-//            ) {
-//                Text(
-//                    text = title,
-//                    style = MaterialTheme.typography.bodyMedium,
-//                )
-//                Text(
-//                    text = desc,
-//                    style = MaterialTheme.typography.bodySmall,
-//                )
-//            }
-//
-//            if (isBookmarked) {
-//                Image(
-//                    painter = painterResource(R.drawable.ic_baseline_star_border_24),
-//                    colorFilter = ColorFilter.tint(CellsColor.flagBookmark),
-//                    modifier = Modifier.size(dimensionResource(R.dimen.list_item_flag_decorator)),
-//                    contentDescription = ""
-//                )
-//            }
-//            if (isShared) {
-//                Image(
-//                    painter = painterResource(R.drawable.ic_baseline_link_24),
-//                    colorFilter = ColorFilter.tint(CellsColor.flagShare),
-//                    contentDescription = "",
-//                    modifier = Modifier.size(dimensionResource(R.dimen.list_item_flag_decorator))
-//                )
-//            }
-//
-//            Surface(Modifier.clickable { more() }) {
-//                Icon(
-//                    imageVector = CellsIcons.MoreVert,
-//                    contentDescription = null,
-//                    modifier = Modifier
-//                        .size(dimensionResource(R.dimen.list_trailing_icon_size))
-//                )
-//            }
-//        }
-//    }
-//}
-
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun M3ListItem(
-//    title: String,
-//    desc: String,
-//    encodedState: String,
-//    name: String,
-//    sortName: String?,
-//    mime: String,
-//    eTag: String?,
-//    hasThumb: Boolean,
-//    isBookmarked: Boolean,
-//    isOfflineRoot: Boolean,
-//    isShared: Boolean,
-//    more: () -> Unit,
-//    modifier: Modifier = Modifier
-//) {
-//    ListItem(
-//        modifier = modifier,
-//        headlineText = { Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-//        supportingText = { Text(desc, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-//        leadingContent = { Thumbnail(encodedState, sortName, name, mime, eTag, hasThumb) },
-//        trailingContent = {
-//            Surface(Modifier.clickable { more() }) {
-//                Icon(
-//                    // imageVector = CellsIcons.MoreVert,
-//                    painter = painterResource(id = R.drawable.aa_300_more_vert_40px),
-//                    contentDescription = null,
-//                    modifier = Modifier
-//                        .size(dimensionResource(R.dimen.list_trailing_icon_size))
-//                )
-//            }
-//        },
-////        colors: ListItemColors = ListItemDefaults.colors(),
-////        tonalElevation: Dp = ListItemDefaults.Elevation,
-////        shadowElevation: Dp = ListItemDefaults.Elevation
-//    )
-//}
 
 @Preview
 @Composable
@@ -299,19 +212,21 @@ fun NodeItemPreview() {
     val sortName = "3_Images with a very long name but very very very long. And this is the END!"
     val mime = "pydio/nodes-list"
     val eTag = "92a05680b0066fbf6d418b882225e0dc"
+    val metaHash = 667783986
     val hasThumb = false
     val isBookmarked = true
     val isOfflineRoot = false
     val isShared = true
     UseCellsTheme {
         M3NodeItem(
+            stateID = StateID.fromId(encodedState),
             title = title,
             desc = desc,
-            encodedState = encodedState,
             name = name,
             sortName = sortName,
             mime = mime,
             eTag = eTag,
+            metaHash = metaHash,
             hasThumb = hasThumb,
             isBookmarked = isBookmarked,
             isOfflineRoot = isOfflineRoot,
@@ -321,4 +236,3 @@ fun NodeItemPreview() {
         )
     }
 }
-

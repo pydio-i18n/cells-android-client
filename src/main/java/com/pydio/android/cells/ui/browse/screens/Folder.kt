@@ -1,15 +1,14 @@
 package com.pydio.android.cells.ui.browse.screens
 
-import android.content.res.Configuration
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,61 +26,61 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.pydio.android.cells.ListContext
 import com.pydio.android.cells.R
-import com.pydio.android.cells.db.nodes.RTreeNode
 import com.pydio.android.cells.ui.browse.BrowseHelper
 import com.pydio.android.cells.ui.browse.composables.NodeAction
 import com.pydio.android.cells.ui.browse.composables.NodeItem
 import com.pydio.android.cells.ui.browse.composables.NodeMoreMenuType
+import com.pydio.android.cells.ui.browse.composables.TreeNodeLargeCard
 import com.pydio.android.cells.ui.browse.composables.WrapWithActions
-import com.pydio.android.cells.ui.browse.menus.MoreMenuState
+import com.pydio.android.cells.ui.browse.menus.SetMoreMenuState
 import com.pydio.android.cells.ui.browse.models.FolderVM
 import com.pydio.android.cells.ui.core.ListLayout
 import com.pydio.android.cells.ui.core.LoadingState
+import com.pydio.android.cells.ui.core.composables.MultiSelectTopBar
 import com.pydio.android.cells.ui.core.composables.TopBarWithMoreMenu
 import com.pydio.android.cells.ui.core.composables.getNodeDesc
 import com.pydio.android.cells.ui.core.composables.getNodeTitle
-import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithIcon
-import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithThumb
 import com.pydio.android.cells.ui.core.composables.lists.M3BrowseUpLargeGridItem
 import com.pydio.android.cells.ui.core.composables.lists.M3BrowseUpListItem
 import com.pydio.android.cells.ui.core.composables.lists.WithLoadingListBackground
 import com.pydio.android.cells.ui.core.composables.modal.ModalBottomSheetValue
 import com.pydio.android.cells.ui.core.composables.modal.rememberModalBottomSheetState
+import com.pydio.android.cells.ui.core.getFloatResource
 import com.pydio.android.cells.ui.models.BrowseRemoteVM
+import com.pydio.android.cells.ui.models.TreeNodeItem
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
 import com.pydio.cells.transport.StateID
 import com.pydio.cells.utils.Str
 import kotlinx.coroutines.launch
 
-private const val logTag = "Folder"
+private const val LOG_TAG = "Folder"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Folder(
+    isExpandedScreen: Boolean,
     folderID: StateID,
     openDrawer: () -> Unit,
     openSearch: () -> Unit,
@@ -90,25 +89,34 @@ fun Folder(
     browseHelper: BrowseHelper,
 ) {
 
+    // UI States
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    val loadingState by browseRemoteVM.loadingState.observeAsState()
-    val forceRefresh: () -> Unit = {
-        browseRemoteVM.watch(folderID, true)
+    val loadingState = browseRemoteVM.loadingState.collectAsState()
+    val listLayout by folderVM.layout.collectAsState(ListLayout.LIST)
+    val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
+    val snackBarHostState = remember { SnackbarHostState() }
+    val multiSelectData: MutableState<Set<StateID>> = rememberSaveable {
+        mutableStateOf(setOf())
+    }
+    // State for the more Menus
+    val nodeMoreMenuData: MutableState<Pair<NodeMoreMenuType, Set<StateID>>> = remember {
+        mutableStateOf(NodeMoreMenuType.NONE to setOf())
     }
 
-    val listLayout by folderVM.layout.collectAsState(ListLayout.LIST)
+    val setMoreMenuData: (NodeMoreMenuType, Set<StateID>) -> Unit = { t, ids ->
+        Log.e(LOG_TAG, "set data for $t: $ids")
+        nodeMoreMenuData.value = t to ids
+    }
 
+    // Business States
     val treeNode by folderVM.treeNode.collectAsState()
     val workspace by folderVM.workspace.collectAsState()
-    val children by folderVM.childNodes.observeAsState()
-
+    val children = folderVM.children.collectAsState(listOf())
     val binLabel = stringResource(R.string.recycle_bin_label)
-
-    val label by remember(key1 = treeNode, key2 = workspace) {
+    val currNodeLabel by remember(key1 = treeNode, key2 = workspace) {
         derivedStateOf {
-            var tmpLabel = folderID.fileName ?: workspace?.label ?: folderID.workspace
+            var tmpLabel = folderID.fileName ?: workspace?.label ?: folderID.slug
             if (treeNode?.isRecycle() == true) {
                 tmpLabel = binLabel
             }
@@ -116,66 +124,75 @@ fun Folder(
         }
     }
 
-    val showFAB by remember(key1 = treeNode) {
-        derivedStateOf {
-            val inRecycle = treeNode?.isRecycle() == true || treeNode?.isRecycle() == true
-            !inRecycle
+    // Define specific functions
+
+    val forceRefresh: () -> Unit = {
+        browseRemoteVM.watch(folderID, true)
+    }
+
+    val itemTapped: (StateID, Boolean) -> Unit = { stateID, longPress ->
+        scope.launch {
+            if (multiSelectData.value.isEmpty()) {
+                if (longPress) { // Toggle to multi select mode and add the element
+                    multiSelectData.value = setOf(stateID)
+                } else { // short click
+                    browseHelper.open(context, stateID, browseHelper.browse)
+                }
+            } else { // Already in multiselect node, toggle current node
+                val old = multiSelectData.value
+                if (old.contains(stateID)) {
+                    multiSelectData.value = old.minus(stateID)
+                } else {
+                    multiSelectData.value = old.plus(stateID)
+                }
+            }
         }
     }
 
-    // State for the more Menus
-    val sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden)
-    val nodeMoreMenuData: MutableState<Pair<NodeMoreMenuType, StateID>> = remember {
-        mutableStateOf(
-            Pair(
-                NodeMoreMenuType.NONE,
-                StateID.NONE
-            )
-        )
+    val showFAB by remember(key1 = treeNode, key2 = multiSelectData.value.size) {
+        derivedStateOf {
+            val inRecycle = treeNode?.isRecycle() == true || treeNode?.isRecycle() == true
+            val multiselectMode = multiSelectData.value.isNotEmpty()
+            !inRecycle && !multiselectMode
+        }
     }
 
-    val openMoreMenu: (NodeMoreMenuType, StateID) -> Unit = { type, currID ->
+    val openMoreMenu: (NodeMoreMenuType, Set<StateID>) -> Unit = { type, stateIDs ->
         scope.launch {
-            Log.d(logTag, "About to open $type more menu for $currID")
-            nodeMoreMenuData.value = Pair(type, currID)
+            setMoreMenuData(type, stateIDs)
             sheetState.expand()
         }
     }
 
-    val localOpen: (StateID) -> Unit = {
+    val moreMenuDone: () -> Unit = {
         scope.launch {
-            browseHelper.open(context, it)
+            sheetState.hide()
         }
+        setMoreMenuData(NodeMoreMenuType.NONE, setOf())
+        multiSelectData.value = setOf()
     }
 
     val actionDone: (Boolean) -> Unit = {
-        scope.launch {
-            if (it) { // Also reset backoff ticker
-                browseRemoteVM.watch(folderID, true) // TODO is it a force refresh here ?
-            }
-            sheetState.hide()
-            nodeMoreMenuData.value = Pair(
-                NodeMoreMenuType.NONE,
-                StateID.NONE
-            )
+        moreMenuDone()
+        if (it) { // Also reset backoff ticker
+            browseRemoteVM.watch(folderID, true)
         }
     }
 
-    val launch: (NodeAction, StateID) -> Unit = { action, currID ->
-        when (action) {
+    val launch: (NodeAction) -> Unit = {
+        when (it) {
             is NodeAction.AsGrid -> {
                 folderVM.setListLayout(ListLayout.GRID)
                 actionDone(true)
             }
+
             is NodeAction.AsList -> {
                 folderVM.setListLayout(ListLayout.LIST)
                 actionDone(true)
             }
-            is NodeAction.SortBy -> { // The real set has already been done by the bottom sheet via its preferencesVM
-                actionDone(true)
-            }
+
             else -> {
-                Log.e(logTag, "Unknown action $action for $currID")
+                Log.e(LOG_TAG, "########### Unknown action: ${it.id}")
                 actionDone(false)
             }
         }
@@ -183,29 +200,34 @@ fun Folder(
 
     WrapWithActions(
         actionDone = actionDone,
+        isExpandedScreen = isExpandedScreen,
         type = nodeMoreMenuData.value.first,
-        toOpenStateID = nodeMoreMenuData.value.second,
+        subjectIDs = nodeMoreMenuData.value.second,
         sheetState = sheetState,
+        snackBarHostState = snackBarHostState,
     ) {
         FolderScaffold(
-            loadingState = loadingState ?: LoadingState.STARTING,
+            isExpandedScreen = isExpandedScreen,
+            loadingState = loadingState.value,
             listLayout = listLayout,
             showFAB = showFAB,
-            label = label,
+            label = currNodeLabel,
             stateID = folderID,
-            children = children ?: listOf(),
+            children = children.value,
             forceRefresh = forceRefresh,
             openDrawer = openDrawer,
             openSearch = openSearch,
-            openParent = { localOpen(folderID.parent()) },
-            open = localOpen,
+            onTap = itemTapped,
             launch = launch,
-            moreMenuState = MoreMenuState(
-                nodeMoreMenuData.value.first,
-                sheetState,
-                nodeMoreMenuData.value.second,
-                openMoreMenu
-            )
+            moreMenuState = SetMoreMenuState(
+                sheetState = sheetState,
+                type = nodeMoreMenuData.value.first,
+                stateIDs = nodeMoreMenuData.value.second,
+                openMoreMenu = openMoreMenu,
+                cancelSelection = { multiSelectData.value = setOf() }
+            ),
+            selectedItems = multiSelectData.value,
+            snackBarHostState = snackBarHostState
         )
     }
 }
@@ -213,19 +235,21 @@ fun Folder(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FolderScaffold(
+    isExpandedScreen: Boolean,
     loadingState: LoadingState,
     listLayout: ListLayout,
     showFAB: Boolean,
     label: String,
     stateID: StateID,
-    children: List<RTreeNode>,
+    children: List<TreeNodeItem>,
     forceRefresh: () -> Unit,
     openDrawer: () -> Unit,
     openSearch: () -> Unit,
-    openParent: (StateID) -> Unit,
-    open: (StateID) -> Unit,
-    launch: (NodeAction, StateID) -> Unit,
-    moreMenuState: MoreMenuState,
+    onTap: (StateID, Boolean) -> Unit,
+    launch: (NodeAction) -> Unit,
+    moreMenuState: SetMoreMenuState,
+    selectedItems: Set<StateID>,
+    snackBarHostState: SnackbarHostState,
 ) {
 
     var isShown by remember { mutableStateOf(false) }
@@ -241,10 +265,7 @@ private fun FolderScaffold(
             DropdownMenuItem(
                 text = { Text(btnLabel) },
                 onClick = {
-                    launch(
-                        NodeAction.AsList,
-                        StateID.NONE
-                    )
+                    launch(NodeAction.AsList)
                     showMenu(false)
                 },
                 leadingIcon = { Icon(CellsIcons.AsList, btnLabel) },
@@ -254,10 +275,7 @@ private fun FolderScaffold(
             DropdownMenuItem(
                 text = { Text(btnLabel) },
                 onClick = {
-                    launch(
-                        NodeAction.AsGrid,
-                        StateID.NONE
-                    )
+                    launch(NodeAction.AsGrid)
                     showMenu(false)
                 },
                 leadingIcon = { Icon(CellsIcons.AsGrid, btnLabel) },
@@ -270,7 +288,7 @@ private fun FolderScaffold(
             onClick = {
                 moreMenuState.openMoreMenu(
                     NodeMoreMenuType.SORT_BY,
-                    stateID
+                    setOf(StateID.NONE)
                 )
                 showMenu(false)
             },
@@ -280,21 +298,35 @@ private fun FolderScaffold(
 
     Scaffold(
         topBar = {
-            TopBarWithMoreMenu(
-                title = label,
-                openDrawer = openDrawer,
-                openSearch = openSearch,
-                isActionMenuShown = isShown,
-                showMenu = showMenu,
-                content = actionMenuContent
-            )
+            if (selectedItems.isNotEmpty()) {
+                MultiSelectTopBar(
+                    selected = selectedItems,
+                    cancel = moreMenuState.cancelSelection,
+                    isMoreMenuShown = moreMenuState.sheetState.isVisible,
+                    showMenu = {
+                        if (it) {
+                            moreMenuState.openMoreMenu(NodeMoreMenuType.MORE, selectedItems)
+                        }
+                    },
+                )
+            } else {
+                TopBarWithMoreMenu(
+                    isExpandedScreen = isExpandedScreen,
+                    title = label,
+                    openDrawer = openDrawer,
+                    openSearch = openSearch,
+                    isActionMenuShown = isShown,
+                    showMenu = showMenu,
+                    content = actionMenuContent
+                )
+            }
         },
         floatingActionButton = {
             if (showFAB) {
                 FloatingActionButton(onClick = {
                     moreMenuState.openMoreMenu(
                         NodeMoreMenuType.CREATE,
-                        stateID
+                        setOf(stateID)
                     )
                 }) {
                     Icon(
@@ -304,15 +336,17 @@ private fun FolderScaffold(
                 }
             }
         },
+        snackbarHost = { SnackbarHost(hostState = snackBarHostState) }
     ) { padding -> // Compulsory padding parameter. Must be applied to the topmost container/view in content:
         FolderList(
             loadingState = loadingState,
             listLayout = listLayout,
+            isSelectionMode = selectedItems.isNotEmpty(),
             stateID = stateID,
             children = children,
-            openParent = openParent,
-            open = open,
-            openMoreMenu = { moreMenuState.openMoreMenu(NodeMoreMenuType.MORE, it) },
+            selectedItems = selectedItems,
+            onTap = onTap,
+            openMoreMenu = { moreMenuState.openMoreMenu(NodeMoreMenuType.MORE, setOf(it)) },
             forceRefresh = forceRefresh,
             padding = padding,
         )
@@ -324,135 +358,100 @@ private fun FolderScaffold(
 private fun FolderList(
     loadingState: LoadingState,
     listLayout: ListLayout,
+    isSelectionMode: Boolean,
     stateID: StateID,
-    children: List<RTreeNode>,
-    openParent: (StateID) -> Unit,
-    open: (StateID) -> Unit,
+    children: List<TreeNodeItem>,
+    selectedItems: Set<StateID>,
+    onTap: (StateID, Boolean) -> Unit,
     openMoreMenu: (StateID) -> Unit,
     forceRefresh: () -> Unit,
     padding: PaddingValues,
 ) {
-
     // WARNING: pullRefresh API is:
     //   - experimental
     //   - only implemented in material "1" for the time being.
     val state = rememberPullRefreshState(loadingState == LoadingState.PROCESSING, onRefresh = {
-        Log.i(logTag, "Force refresh launched")
+        Log.d(LOG_TAG, "Force refresh launched")
         forceRefresh()
     })
 
     WithLoadingListBackground(
         loadingState = loadingState,
         isEmpty = children.isEmpty(),
-        // TODO also handle if server is unreachable
-        canRefresh = true,
+        listContext = ListContext.BROWSE,
+        canRefresh = LoadingState.SERVER_UNREACHABLE != loadingState,
         modifier = Modifier.padding(padding)
     ) {
-        Box(
+        val alpha = getFloatResource(LocalContext.current, R.dimen.disabled_list_item_alpha)
+        val parItemModifier = if (isSelectionMode) {
             Modifier
-                //   .fillMaxSize()
-                .pullRefresh(state)
-        ) {
+                .fillMaxWidth()
+                .alpha(alpha)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .clickable { onTap(stateID.parent(), false) }
+        }
+        val parDesc = when {
+            Str.empty(stateID.fileName) -> stringResource(id = R.string.switch_workspace)
+            else -> stringResource(R.string.parent_folder)
+        }
+
+        Box(Modifier.pullRefresh(state)) {
             when (listLayout) {
                 ListLayout.GRID -> {
                     val listPadding = PaddingValues(
-                        top = dimensionResource(id = R.dimen.margin_medium), // padding.calculateTopPadding(),
+                        top = dimensionResource(id = R.dimen.margin_medium),
                         bottom = padding.calculateBottomPadding()
                             .plus(dimensionResource(R.dimen.list_bottom_fab_padding)),
                         start = dimensionResource(id = R.dimen.margin_medium),
                         end = dimensionResource(id = R.dimen.margin_medium),
                     )
-
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(minSize = dimensionResource(R.dimen.grid_large_col_min_width)),
                         verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
                         horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
                         contentPadding = listPadding,
-                        // modifier = Modifier.fillMaxWidth()
                     ) {
-
                         if (Str.notEmpty(stateID.path)) {
-                            item {
-                                val parentDescription = when {
-                                    Str.empty(stateID.fileName) -> stringResource(id = R.string.switch_workspace)
-                                    else -> stringResource(R.string.parent_folder)
-                                }
-                                M3BrowseUpLargeGridItem(
-                                    parentDescription,
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable { openParent(stateID) }
-                                )
-                            }
+                            item { M3BrowseUpLargeGridItem(parDesc, parItemModifier) }
                         }
-                        items(children, key = { it.encodedState }) { node ->
-                            if (node.hasThumb()) {
-                                LargeCardWithThumb(
-                                    stateID = node.getStateID(),
-                                    eTag = node.etag,
-                                    title = getNodeTitle(name = node.name, mime = node.mime),
-                                    desc = getNodeDesc(
-                                        node.remoteModificationTS,
-                                        node.size,
-                                        node.localModificationStatus
-                                    ),
-                                    openMoreMenu = { openMoreMenu(node.getStateID()) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { open(node.getStateID()) }
-                                )
-                            } else {
-                                LargeCardWithIcon(
-                                    sortName = node.sortName,
-                                    mime = node.mime,
-                                    title = getNodeTitle(name = node.name, mime = node.mime),
-                                    desc = getNodeDesc(
-                                        node.remoteModificationTS,
-                                        node.size,
-                                        node.localModificationStatus
-                                    ),
-                                    openMoreMenu = { openMoreMenu(node.getStateID()) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { open(node.getStateID()) }
-                                )
-                            }
+                        items(
+                            items = children,
+                            key = { it.stateID.id }) { node ->
+                            TreeNodeLargeCard(
+                                item = node,
+                                more = { openMoreMenu(node.defaultStateID()) },
+                                isSelectionMode = isSelectionMode,
+                                isSelected = selectedItems.contains(node.defaultStateID()),
+                                modifier = getClickableModifier(isSelectionMode, node, onTap, alpha)
+                                    .animateItemPlacement(),
+                            )
                         }
                     }
                 }
+
                 else -> {
-//                    val width = LocalConfiguration.current.run { screenWidthDp.dp }
                     LazyColumn(
                         contentPadding = PaddingValues(bottom = dimensionResource(R.dimen.list_bottom_fab_padding)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (Str.notEmpty(stateID.path)) {
-                            item(key = "parent") {
-                                val parentDescription = when {
-                                    Str.empty(stateID.fileName) -> stringResource(id = R.string.switch_workspace)
-                                    else -> stringResource(R.string.parent_folder)
-                                }
-                                M3BrowseUpListItem(
-                                    parentDescription = parentDescription,
-                                    modifier = Modifier.clickable { openParent(stateID) }
-                                )
-                            }
+                            item(key = "parent") { M3BrowseUpListItem(parDesc, parItemModifier) }
                         }
-                        items(children, key = { it.encodedState }) { node ->
+                        items(children, key = { it.stateID.id }) { node ->
                             NodeItem(
                                 item = node,
                                 title = getNodeTitle(name = node.name, mime = node.mime),
                                 desc = getNodeDesc(
-                                    node.remoteModificationTS,
+                                    node.remoteModTs,
                                     node.size,
-                                    node.localModificationStatus
+                                    node.localModStatus
                                 ),
-                                more = { openMoreMenu(node.getStateID()) },
-                                modifier = Modifier
-                                    .padding(0.dp)
-                                    .fillMaxWidth()
-                                    .clickable { open(node.getStateID()) }
-                                    // This breaks the layout and makes the trailing buttons disappear
+                                more = { openMoreMenu(node.stateID) },
+                                isSelectionMode = isSelectionMode,
+                                isSelected = selectedItems.contains(node.defaultStateID()),
+                                modifier = getClickableModifier(isSelectionMode, node, onTap, alpha)
                                     .animateItemPlacement()
                             )
                         }
@@ -469,84 +468,28 @@ private fun FolderList(
     }
 }
 
-@Composable
-fun FolderTopBar(
-    title: String,
-    openDrawer: () -> Unit,
-    openSearch: () -> Unit,
-    modifier: Modifier
-) {
-    Surface(
-        modifier = modifier
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = dimensionResource(R.dimen.topbar_horizontal_padding),
-                    vertical = dimensionResource(R.dimen.topbar_vertical_padding),
-                )
-        ) {
-            IconButton(
-                onClick = { openDrawer() },
-                enabled = true
-            ) {
-                Icon(
-                    CellsIcons.Menu,
-                    contentDescription = stringResource(id = R.string.open_drawer)
-                )
-            }
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-            IconButton(onClick = { openSearch() }) {
-                Icon(
-                    CellsIcons.Search,
-                    contentDescription = stringResource(id = R.string.action_search)
-                )
-            }
+// Tweak the clickable behaviour depending on current node and selection mode.
+@SuppressLint("ModifierFactoryExtensionFunction")
+@OptIn(ExperimentalFoundationApi::class)
+fun getClickableModifier(
+    isSelectionMode: Boolean,
+    item: TreeNodeItem,
+    onTap: (StateID, Boolean) -> Unit,
+    alpha: Float,
+): Modifier {
+    var tmpModifier = Modifier.fillMaxWidth()
+    tmpModifier = if (item.isRecycle) {
+        if (isSelectionMode) {
+            // Do not react to click and make less visible
+            tmpModifier.alpha(alpha)
+        } else { // Recycle bin does not support multi selection
+            tmpModifier.clickable { onTap(item.defaultStateID(), false) }
         }
-    }
-}
-
-@Preview(name = "Folder Header Light Mode")
-@Preview(
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    showBackground = true,
-    name = "FolderTopBar Dark Mode"
-)
-@Composable
-private fun FolderTopBarPreview() {
-    CellsTheme {
-        FolderTopBar(
-            "alice",
-            { },
-            { },
-            Modifier.fillMaxWidth()
+    } else {
+        tmpModifier.combinedClickable(
+            onClick = { onTap(item.defaultStateID(), false) },
+            onLongClick = { onTap(item.defaultStateID(), true) },
         )
     }
-}
-
-@Preview(name = "Light Mode")
-@Preview(
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    showBackground = true,
-    name = "Dark Mode"
-)
-@Composable
-private fun TopBarPreview() {
-    CellsTheme {
-        FolderTopBar(
-            "Pydio Cells server",
-            { },
-            { },
-            Modifier.fillMaxWidth()
-        )
-    }
+    return tmpModifier
 }

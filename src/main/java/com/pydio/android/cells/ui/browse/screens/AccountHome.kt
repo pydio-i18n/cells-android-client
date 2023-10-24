@@ -7,36 +7,28 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
@@ -50,9 +42,11 @@ import com.pydio.android.cells.ui.core.LoadingState
 import com.pydio.android.cells.ui.core.composables.DefaultTopBar
 import com.pydio.android.cells.ui.core.composables.MainTitleText
 import com.pydio.android.cells.ui.core.composables.lists.LargeCardWithIcon
+import com.pydio.android.cells.ui.core.composables.lists.StartingBackground
+import com.pydio.android.cells.ui.core.composables.lists.WithListTheme
+import com.pydio.android.cells.ui.core.nav.AccountHeader
 import com.pydio.android.cells.ui.models.BrowseRemoteVM
-import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.android.cells.ui.theme.CellsTheme
+import com.pydio.android.cells.ui.theme.UseCellsTheme
 import com.pydio.cells.transport.StateID
 import kotlinx.coroutines.launch
 
@@ -60,6 +54,7 @@ private const val logTag = "AccountHome"
 
 @Composable
 fun AccountHome(
+    isExpandedScreen: Boolean,
     accountID: StateID,
     openDrawer: () -> Unit,
     openSearch: () -> Unit,
@@ -70,23 +65,24 @@ fun AccountHome(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val loadingState by browseRemoteVM.loadingState.observeAsState()
-    val sessionView by accountHomeVM.currSession.observeAsState()
-    val workspaces by accountHomeVM.wss.observeAsState()
-    val cells by accountHomeVM.cells.observeAsState()
+    val loadingState = browseRemoteVM.loadingState.collectAsState()
+    val sessionView = accountHomeVM.currSession.collectAsState(null)
+    val workspaces = accountHomeVM.wss.collectAsState(listOf())
+    val cells = accountHomeVM.cells.collectAsState(listOf())
 
-    val title = sessionView?.serverLabel() ?: "${accountID.serverUrl} - Home"
+    val title = sessionView.value?.serverLabel() ?: "${accountID.serverUrl} - Home"
 
     val forceRefresh: () -> Unit = {
         browseRemoteVM.watch(accountID, true)
     }
 
     WithScaffold(
+        isExpandedScreen = isExpandedScreen,
         stateID = accountID,
         title = title,
-        workspaces = workspaces ?: listOf(),
-        cells = cells ?: listOf(),
-        loadingState = loadingState ?: LoadingState.STARTING,
+        workspaces = workspaces.value,
+        cells = cells.value,
+        loadingState = loadingState.value,
         openDrawer = openDrawer,
         openAccounts = {
             scope.launch {
@@ -103,9 +99,9 @@ fun AccountHome(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WithScaffold(
+    isExpandedScreen: Boolean,
     stateID: StateID,
     title: String,
     workspaces: List<RWorkspace>,
@@ -120,15 +116,13 @@ private fun WithScaffold(
     Scaffold(
         topBar = {
             DefaultTopBar(
+                isExpandedScreen = isExpandedScreen,
                 title = title,
                 openDrawer = openDrawer,
                 openSearch = openSearch,
             )
         },
     ) { padding -> // Since Compose 1.2.0 it's required to use padding parameter, passed into Scaffold content composable. You should apply it to the topmost container/view in content:
-
-//        Log.e(logTag, "### About to create the list passed content padding")
-//        Log.e(logTag, "$padding")
 
         val listPadding = PaddingValues(
             top = padding.calculateTopPadding(),
@@ -171,160 +165,107 @@ private fun HomeListContent(
     })
 
     Box(modifier.pullRefresh(state)) {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = dimensionResource(R.dimen.grid_large_col_min_width)),
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
-            horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
-            contentPadding = padding,
-        ) {
+        WithListTheme {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = dimensionResource(R.dimen.grid_large_col_min_width)),
+                verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
+                horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.grid_large_padding)),
+                contentPadding = padding,
+            ) {
 
-            item(span = {
-                GridItemSpan(maxLineSpan)
-            }) {
-                HomeHeader(
-                    username = stateID.username,
-                    address = stateID.serverUrl,
-                    openAccounts = openAccounts,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = dimensionResource(id = R.dimen.margin_small))
-                )
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Divider(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = .3f),
-                    thickness = 0.3.dp,
-                )
-            }
-            if (workspaces.isNotEmpty()) {
                 item(span = {
                     GridItemSpan(maxLineSpan)
                 }) {
-                    MainTitleText(
-                        text = stringResource(R.string.category_workspaces),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                items(workspaces, key = { it.encodedState }) { ws ->
-                    LargeCardWithIcon(
-                        sortName = ws.sortName,
-                        title = ws.label ?: "",
-                        desc = ws.description ?: "",
-                        mime = ws.type,
+                    AccountHeader(
+                        username = stateID.username,
+                        address = stateID.serverUrl,
+                        openAccounts = openAccounts,
                         modifier = Modifier
-                            .wrapContentSize(align = Alignment.Center)
-                            .clickable { open(ws.getStateID()) },
+                            .fillMaxWidth()
+                            .padding(top = dimensionResource(id = R.dimen.margin_small))
                     )
                 }
-            }
-
-            if (cells.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    MainTitleText(
-                        text = stringResource(R.string.category_cells),
-                        color = MaterialTheme.colorScheme.onSurface,
+                    Divider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = .3f),
+                        thickness = 0.3.dp,
                     )
                 }
-                items(cells, key = { it.encodedState }) { ws ->
-                    LargeCardWithIcon(
-                        sortName = ws.sortName,
-                        title = ws.label ?: "",
-                        desc = ws.description
-                            ?: "", // TODO provide another string for nicer UI when the description when ws."",
-                        mime = ws.type,
-                        modifier = Modifier
-                            .wrapContentSize(align = Alignment.Center)
-                            .clickable { open(ws.getStateID()) },
-                    )
+                if (workspaces.isNotEmpty()) {
+                    item(span = {
+                        GridItemSpan(maxLineSpan)
+                    }) {
+                        MainTitleText(
+                            text = stringResource(R.string.category_workspaces),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    items(workspaces, key = { it.encodedState }) { ws ->
+                        LargeCardWithIcon(
+                            sortName = ws.sortName,
+                            title = ws.label ?: "",
+                            desc = ws.description ?: "",
+                            mime = ws.type,
+                            modifier = Modifier
+                                .wrapContentSize(align = Alignment.Center)
+                                .clickable { open(ws.getStateID()) },
+                        )
+                    }
                 }
-            }
 
-            if (workspaces.isEmpty() && cells.isEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(text = "Nothing to show (yet...)")
+                if (cells.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        MainTitleText(
+                            text = stringResource(R.string.category_cells),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    items(cells, key = { it.encodedState }) { ws ->
+                        LargeCardWithIcon(
+                            sortName = ws.sortName,
+                            title = ws.label ?: "",
+                            desc = ws.description
+                                ?: "", // TODO provide another string for nicer UI when the description when ws."",
+                            mime = ws.type,
+                            modifier = Modifier
+                                .wrapContentSize(align = Alignment.Center)
+                                .clickable { open(ws.getStateID()) },
+                        )
+                    }
+                }
+
+                if (workspaces.isEmpty() && cells.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(modifier = Modifier.fillMaxSize(1f)) {
+                            if (loadingState == LoadingState.IDLE) {
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.account_home_no_ws_title),
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.account_home_no_ws_desc),
+                                    )
+                                }
+                            } else {
+                                StartingBackground(
+                                    desc = stringResource(R.string.loading_message),
+                                    showProgressAtStartup = true,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .alpha(.5f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
         PullRefreshIndicator(
-            loadingState == LoadingState.PROCESSING,
+            loadingState == LoadingState.PROCESSING || loadingState == LoadingState.STARTING,
             state,
             Modifier.align(Alignment.TopCenter)
-        )
-    }
-}
-
-@Composable
-fun HomeHeader(
-    username: String,
-    address: String,
-    openAccounts: () -> Unit,
-    modifier: Modifier,
-) {
-//    val buttonAlpha = getFloatResource(LocalContext.current, R.dimen.list_button_alpha)
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(
-                    horizontal = dimensionResource(R.dimen.card_padding),
-                    vertical = dimensionResource(R.dimen.margin_xsmall)
-                )
-                .wrapContentWidth(Alignment.Start)
-        ) {
-            Text(
-                text = username,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = address,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-
-        Surface(
-            tonalElevation = 8.dp,
-            shadowElevation = 12.dp,
-            //shape =,
-            modifier = Modifier
-                .clickable { openAccounts() }
-                .alpha(.7f)
-                .clip(RoundedCornerShape(dimensionResource(R.dimen.glide_thumb_radius)))
-            //.alpha(buttonAlpha)
-        ) {
-            Icon(
-                imageVector = CellsIcons.SwitchAccount,
-                contentDescription = null,
-//                modifier = Modifier.size(dimensionResource(R.dimen.list_button_size))
-                modifier = Modifier
-                    .padding(
-                        all = dimensionResource(R.dimen.margin_xxsmall)
-                        //start = dimensionResource(R.dimen.margin_small),
-                        // end = dimensionResource(id = R.dimen.margin_small)
-                    )
-                    .size(36.dp)
-            )
-        }
-    }
-}
-
-@Preview(name = "HomeHeader Light Mode")
-@Preview(
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    showBackground = true,
-    name = "HomeHeader Dark Mode"
-)
-@Composable
-private fun HomeHeaderPreview() {
-    CellsTheme {
-        HomeHeader(
-            "alice",
-            "https://www.example.com",
-            { },
-            Modifier.fillMaxWidth()
         )
     }
 }
@@ -337,7 +278,7 @@ private fun HomeHeaderPreview() {
 )
 @Composable
 private fun HomeCardPreview() {
-    CellsTheme {
+    UseCellsTheme {
 //        HomeCardItem(
 //            "2_",
 //            "alice",

@@ -1,7 +1,7 @@
 package com.pydio.android.cells.ui.core.composables.menus
 
-import android.util.Log
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,21 +40,23 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pydio.android.cells.R
 import com.pydio.android.cells.db.nodes.RTreeNode
+import com.pydio.android.cells.ui.core.composables.lists.WithListTheme
 import com.pydio.android.cells.ui.core.composables.modal.ModalBottomSheetLayout
 import com.pydio.android.cells.ui.core.composables.modal.ModalBottomSheetState
 import com.pydio.android.cells.ui.theme.CellsIcons
-import com.pydio.cells.transport.StateID
 
-private const val logTag = "BottomSheet"
+// private const val logTag = "BottomSheet"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CellsModalBottomSheetLayout(
+    isExpandedScreen: Boolean,
     sheetContent: @Composable ColumnScope.() -> Unit,
     sheetState: ModalBottomSheetState,
     content: @Composable () -> Unit
 ) {
     ModalBottomSheetLayout(
+        isExpandedScreen = isExpandedScreen,
         sheetContent = sheetContent,
         sheetState = sheetState,
         sheetElevation = 3.dp,
@@ -140,59 +144,63 @@ fun GenericBottomSheetHeader(
 fun BottomSheetHeader(
     thumb: @Composable () -> Unit,
     title: String,
-    desc: String,
+    desc: String? = null,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = dimensionResource(R.dimen.bottom_sheet_start_padding),
-                    end = dimensionResource(R.dimen.bottom_sheet_start_padding),
-                    top = dimensionResource(R.dimen.bottom_sheet_header_v_padding),
-                ),
-            verticalAlignment = Alignment.CenterVertically
+    WithListTheme {
+        Column(
+            modifier = Modifier.fillMaxWidth()
         ) {
-
-            thumb()
-
-            Spacer(modifier = Modifier.width(dimensionResource(R.dimen.item_spacer_width)))
-
-            Column(
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .wrapContentWidth(Alignment.Start)
+                    .fillMaxWidth()
+                    .padding(
+                        start = dimensionResource(R.dimen.bottom_sheet_start_padding),
+                        end = dimensionResource(R.dimen.bottom_sheet_start_padding),
+                        top = dimensionResource(R.dimen.bottom_sheet_header_v_padding),
+                    ),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
 
-                Text(
-                    text = desc,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                thumb()
+
+                Spacer(modifier = Modifier.width(dimensionResource(R.dimen.item_spacer_width)))
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .wrapContentWidth(Alignment.Start)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    desc?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
+            BottomSheetDivider()
         }
-        BottomSheetDivider()
     }
 }
 
 @Composable
 fun BottomSheetListItem(
-    icon: ImageVector?,
     title: String,
     onItemClick: () -> Unit,
     selected: Boolean = false,
+    icon: ImageVector? = null,
+    @DrawableRes iconId: Int? = null,
 ) {
 
-    // TODO Make this more generic
     val (mTint, mBg) = if (selected) {
         MaterialTheme.colorScheme.onSurfaceVariant to MaterialTheme.colorScheme.surfaceVariant
     } else {
@@ -214,7 +222,6 @@ fun BottomSheetListItem(
     ) {
 
         icon?.let {
-
             // Make the list items aligned with the header. TODO rather use base line
             val pad = dimensionResource(R.dimen.list_thumb_bg_size)
                 .minus(dimensionResource(R.dimen.list_icon_size)).div(2)
@@ -222,83 +229,31 @@ fun BottomSheetListItem(
             Spacer(modifier = Modifier.width(pad))
             Icon(imageVector = it, contentDescription = title, tint = mTint)
             Spacer(modifier = Modifier.width(pad2))
+        } ?: run {
+            iconId?.let {
+                val pad = dimensionResource(R.dimen.list_thumb_bg_size)
+                    .minus(dimensionResource(R.dimen.list_icon_size)).div(2)
+                val pad2 = pad.plus(dimensionResource(R.dimen.item_spacer_width))
+                Spacer(modifier = Modifier.width(pad))
+                Icon(painter = painterResource(it), contentDescription = title, tint = mTint)
+                Spacer(modifier = Modifier.width(pad2))
+            }
         }
         Text(text = title, color = mTint)
     }
 }
 
 @Composable
-fun BottomSheetListItemWithToggle(
-    stateID: StateID,
-    icon: ImageVector,
-    title: String,
-    isSelected: Boolean,
-    onItemClick: (Boolean) -> Unit
-) {
-    Log.e(logTag, ".... Composing BottomSheet for $stateID, toggle value: $isSelected")
-
-    // FIXME: we want to also keep the state at this level so that the user has a direct feedback
-    //  in the more menu when he launches a remote call. It does not work yet.
-    var localSelected by remember(key1 = stateID) {
-        Log.e(logTag, "Setting BottomSheet Toggle value for $stateID, selected: $isSelected")
-        mutableStateOf(isSelected)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = { onItemClick(!isSelected) })
-            .padding(
-                horizontal = dimensionResource(R.dimen.bottom_sheet_start_padding),
-//                 vertical = dimensionResource(R.dimen.bottom_sheet_v_padding),
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-
-        // Make the list items aligned with the header. TODO rather use base line
-        val pad = dimensionResource(R.dimen.list_thumb_bg_size)
-            .minus(dimensionResource(R.dimen.list_icon_size)).div(2)
-        val pad2 = pad.plus(dimensionResource(R.dimen.item_spacer_width))
-        Spacer(modifier = Modifier.width(pad))
-        Icon(imageVector = icon, contentDescription = title)
-        Spacer(modifier = Modifier.width(pad2))
-
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f)
-        )
-        Switch(
-            modifier = Modifier.semantics { contentDescription = title },
-            checked = localSelected,
-            onCheckedChange = { localSelected = it; onItemClick(it) }
-        )
-    }
-}
-
-@Composable
 fun BottomSheetFlagItem(
     rTreeNode: RTreeNode?,
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    @DrawableRes iconId: Int? = null,
     title: String,
     flagType: Int,
-//     isSelected: Boolean,
     onItemClick: (Boolean) -> Unit
 ) {
-    Log.e(
-        logTag,
-        ".... Composing BottomSheet for ${rTreeNode?.getStateID()}, toggle value: ${
-            rTreeNode?.isFlag(flagType)
-        }"
-    )
-
-    // FIXME: we want to also keep the state at this level so that the user has a direct feedback
-    //  in the more menu when he launches a remote call. It does not work yet.
     var localSelected by remember(key1 = rTreeNode, key2 = flagType) {
         val selected = rTreeNode?.isFlag(flagType) ?: false
-        Log.e(
-            logTag,
-            "Setting BottomSheet Toggle value for ${rTreeNode?.getStateID()}, selected: $selected"
-        )
         mutableStateOf(selected)
     }
 
@@ -308,7 +263,6 @@ fun BottomSheetFlagItem(
             .clickable(onClick = { onItemClick(!localSelected) })
             .padding(
                 horizontal = dimensionResource(R.dimen.bottom_sheet_start_padding),
-//                 vertical = dimensionResource(R.dimen.bottom_sheet_v_padding),
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -318,7 +272,15 @@ fun BottomSheetFlagItem(
             .minus(dimensionResource(R.dimen.list_icon_size)).div(2)
         val pad2 = pad.plus(dimensionResource(R.dimen.item_spacer_width))
         Spacer(modifier = Modifier.width(pad))
-        Icon(imageVector = icon, contentDescription = title)
+
+        icon?.let {
+            Icon(imageVector = it, contentDescription = title)
+        } ?: run {
+            iconId?.let {
+                Icon(painterResource(id = it), contentDescription = title, Modifier.size(24.dp))
+            }
+        }
+
         Spacer(modifier = Modifier.width(pad2))
 
         Text(

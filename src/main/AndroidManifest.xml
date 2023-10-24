@@ -14,19 +14,30 @@
     <uses-permission android:name="android.permission.READ_PRIVILEGED_PHONE_STATE" />
     -->
 
+    <uses-sdk tools:overrideLibrary="androidx.core.splashscreen" />
+
     <application
         android:name=".CellsApp"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher2"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/application_title"
-        android:roundIcon="@mipmap/ic_launcher2_round"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/CellsV31">
+        android:theme="@style/CellsTheme">
+
+        <!-- TODO: Add
+               android:enableOnBackInvokedCallback="true"
+               see https://stackoverflow.com/questions/73782320/onbackinvokedcallback-is-not-enabled-for-the-application-in-set-androidenableo
+               Or you will get this warning:
+                        >> OnBackInvokedCallback is not enabled for the application.
+                        >> Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+           -->
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/CellsV31.SplashScreen">
+            android:theme="@style/CellsTheme.SplashScreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -58,7 +69,7 @@
         <!--        <activity-->
         <!--            android:name=".SampleActivity"-->
         <!--            android:exported="true"-->
-        <!--            android:theme="@style/Cells.Md3.SplashScreen">-->
+        <!--            android:theme="@style/CellsV31.SplashScreen">-->
         <!--            <intent-filter>-->
         <!--                <action android:name="android.intent.action.MAIN" />-->
         <!--                <category android:name="android.intent.category.LAUNCHER" />-->
@@ -67,7 +78,7 @@
 
         <!-- Also change this when using another client ID -->
         <!-- android:authorities="com.pydio.android.Client.fileprovider" -->
-        
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.pydio.android.Client.fileprovider"

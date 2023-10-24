@@ -4,13 +4,15 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pydio.android.cells.CellsApp
+import com.pydio.android.cells.services.CoroutineService
 import com.pydio.android.cells.services.FileService
-import com.pydio.android.cells.services.NodeService
+import com.pydio.android.cells.services.OfflineService
 import com.pydio.android.cells.services.TransferService
+import com.pydio.android.cells.ui.core.AbstractCellsVM
+import com.pydio.android.cells.ui.models.fromMessage
 import com.pydio.android.cells.utils.DEFAULT_FILE_PROVIDER_ID
+import com.pydio.cells.api.SDKException
 import com.pydio.cells.transport.StateID
 import com.pydio.cells.utils.Str
 import kotlinx.coroutines.Dispatchers
@@ -19,95 +21,164 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
-
 /**  Centralize methods to manage a TreeNode */
 class NodeActionsVM(
-    private val nodeService: NodeService,
+    private val coroutineService: CoroutineService,
     private val fileService: FileService,
     private val transferService: TransferService,
-) : ViewModel() {
+    private val offlineService: OfflineService,
+) : AbstractCellsVM() {
 
     private val logTag = "NodeActionsVM"
+
+    private fun localDone(err: String? = null, userMsg: String? = null) {
+        if (Str.notEmpty(err)) {
+            Log.e(logTag, "${err ?: userMsg}")
+            done(fromMessage(userMsg!!))
+        } else {
+            done()
+        }
+    }
 
     // Fire and forget in viewModelScope
     fun createFolder(parentID: StateID, name: String) {
         viewModelScope.launch {
             val errMsg = nodeService.createFolder(parentID, name)
-            if (Str.notEmpty(errMsg)) {
-                Log.e(logTag, "Could not create folder $name at $parentID: $errMsg")
-            }
+            localDone(errMsg, "Could not create folder $name at $parentID")
         }
     }
 
     fun rename(srcID: StateID, name: String) {
         viewModelScope.launch {
             val errMsg = nodeService.rename(srcID, name)
-            if (Str.notEmpty(errMsg)) {
-                Log.e(logTag, "Could not rename $srcID to $name: $errMsg")
-            }
-        }
-    }
-
-    fun delete(stateID: StateID) {
-        viewModelScope.launch {
-            val errMsg = nodeService.delete(stateID)
-            if (Str.notEmpty(errMsg)) {
-                Log.e(logTag, "Could not delete node at $stateID: $errMsg")
-            }
+            localDone(errMsg, "Could not rename $srcID to $name")
         }
     }
 
     fun copyTo(stateID: StateID, targetParentID: StateID) {
-        // TODO better handling of scope and error messages
-        CellsApp.instance.appScope.launch {
-            // TODO what do we store/show?
-            //   - source files
-            //   - target files
-            //   - processing
+        coroutineService.cellsIoScope.launch {
             val errMsg = nodeService.copy(listOf(stateID), targetParentID)
-            if (Str.notEmpty(errMsg)) {
-                Log.e(logTag, "Could not move node $stateID to $targetParentID")
-                Log.e(logTag, "Cause: $errMsg")
-            }
+            localDone(errMsg, "Could not copy node $stateID to $targetParentID")
         }
     }
 
     fun moveTo(stateID: StateID, targetParentID: StateID) {
-        // TODO better handling of scope and error messages
-        CellsApp.instance.appScope.launch {
-            // TODO what do we store/show?
-            //   - source files
-            //   - target files
-            //   - processing
+        coroutineService.cellsIoScope.launch {
             val errMsg = nodeService.move(listOf(stateID), targetParentID)
-            if (Str.notEmpty(errMsg)) {
-                Log.e(logTag, "Could not move node $stateID to $targetParentID")
-                Log.e(logTag, "Cause: $errMsg")
-            }
+            localDone(errMsg, "Could not move node [$stateID] to [$targetParentID]")
         }
     }
 
-    fun emptyRecycle(stateID: StateID) {
-        viewModelScope.launch {
-            val errMsg = nodeService.delete(stateID)
-            if (Str.notEmpty(errMsg)) {
-                Log.e(logTag, "Could not delete node at $stateID: $errMsg")
+    fun delete(stateIDs: Set<StateID>) {
+        coroutineService.cellsIoScope.launch {
+            for (stateID in stateIDs) {
+                try {
+                    nodeService.delete(stateID)
+                } catch (e: SDKException) {
+                    localDone("#${e.code} - ${e.message}", "Could not delete node at $stateID")
+                    return@launch
+                }
             }
+            done()
+        }
+    }
+
+    fun delete(stateID: StateID) {
+        coroutineService.cellsIoScope.launch {
+            try {
+                nodeService.delete(stateID)
+            } catch (e: SDKException) {
+                localDone("#${e.code} - ${e.message}", "Could not delete node at $stateID")
+                return@launch
+            }
+            done()
+        }
+    }
+
+
+    fun emptyRecycle(stateID: StateID) {
+        coroutineService.cellsIoScope.launch {
+            try {
+                nodeService.delete(stateID)
+            } catch (e: SDKException) {
+                localDone("#${e.code} - ${e.message}", "Could not empty recycle at $stateID")
+                return@launch
+            }
+            done()
+        }
+    }
+
+    fun restoreFromTrash(stateID: StateID) {
+        coroutineService.cellsIoScope.launch {
+            try {
+                nodeService.restoreNode(stateID)
+            } catch (e: SDKException) {
+                localDone("#${e.code} - ${e.message}", "Could not restore node at $stateID")
+                return@launch
+            }
+            done()
+        }
+    }
+
+    fun restoreFromTrash(stateIDs: Set<StateID>) {
+        coroutineService.cellsIoScope.launch {
+            for (stateID in stateIDs) {
+                try {
+                    nodeService.restoreNode(stateID)
+                } catch (e: SDKException) {
+                    localDone("#${e.code} - ${e.message}", "Could not restore node at $stateID")
+                    return@launch
+                }
+            }
+            done()
         }
     }
 
     fun download(stateID: StateID, uri: Uri) {
-        viewModelScope.launch {
-            nodeService.saveToSharedStorage(stateID, uri)
-            // FIXME handle exception
+        coroutineService.cellsIoScope.launch {
+            try {
+                transferService.saveToSharedStorage(stateID, uri)
+                done()
+            } catch (e: SDKException) {
+                localDone("#${e.code} - ${e.message}", "Could not save $stateID to share storage")
+            }
         }
     }
 
+    fun downloadMultiple(stateIDs: Set<StateID>, uri: Uri) {
+        coroutineService.cellsIoScope.launch {
+
+            var ok = true
+            for (stateID in stateIDs) {
+                try {
+                    val currUri = uri.buildUpon().appendPath(stateID.fileName).build()
+                    transferService.saveToSharedStorage(stateID, currUri)
+                } catch (e: SDKException) {
+                    localDone(
+                        "#${e.code} - ${e.message}",
+                        "Could not save $stateID to share storage"
+                    )
+                    ok = false
+                    break
+                }
+            }
+            if (ok) {
+                done()
+            }
+        }
+    }
+
+
     fun importFiles(stateID: StateID, uris: List<Uri>) {
-        viewModelScope.launch {
-            for (uri in uris) {
-                transferService.enqueueUpload(stateID, uri)
-            }   // FIXME handle exception
+        coroutineService.cellsIoScope.launch {
+            try {
+                for (uri in uris) {
+                    transferService.enqueueUpload(stateID, uri)
+                }
+                done()
+            } catch (e: SDKException) {
+                localDone("#${e.code} - ${e.message}", "Could import files at $stateID")
+            }
         }
     }
 
@@ -152,35 +223,47 @@ class NodeActionsVM(
 
     fun toggleBookmark(stateID: StateID, newState: Boolean) {
         viewModelScope.launch {
-            nodeService.toggleBookmark(stateID, newState)
+            try {
+                nodeService.toggleBookmark(stateID, newState)
+            } catch (e: Exception) {
+                val msg = "Cannot toggle ($newState) bookmark for $stateID, cause: ${e.message}"
+                val userMsg = if (newState) "Cannot add bookmark on $stateID"
+                else "Cannot remove bookmark on $stateID"
+                localDone(msg, userMsg)
+                e.printStackTrace()
+            }
         }
     }
 
     fun toggleOffline(stateID: StateID, newState: Boolean) {
         viewModelScope.launch {
-            nodeService.toggleOffline(stateID, newState)
+            try {
+                offlineService.toggleOffline(stateID, newState)
+            } catch (e: java.lang.Exception) {
+                val msg = "Cannot set offline flag to $newState for $stateID"
+                localDone("$msg, cause: ${e.message}", msg)
+                e.printStackTrace()
+            }
         }
     }
 
-    fun createShare(stateID: StateID) {
-        viewModelScope.launch {
+    suspend fun createShare(stateID: StateID): String? {
+        launchProcessing()
+        return try {
             nodeService.createShare(stateID)
+        } catch (e: SDKException) {
+            localDone("#${e.code}: ${e.message}, cause: ${e.cause?.message}", e.message)
+            null
         }
     }
 
     fun removeShare(stateID: StateID) {
-        viewModelScope.launch {
+        coroutineService.cellsIoScope.launch {
             nodeService.removeShare(stateID)
         }
     }
 
-    fun restoreFromTrash(stateID: StateID) {
-        viewModelScope.launch {
-            nodeService.restoreNode(stateID)
-        }
-    }
-
-    suspend fun getShareLink(stateID: StateID): String? = withContext(Dispatchers.IO) {
-        nodeService.getNode(stateID)?.getShareAddress()
+    suspend fun getShareLink(stateID: StateID): String? {
+        return nodeService.getNode(stateID)?.getShareAddress()
     }
 }

@@ -5,19 +5,12 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.WorkManager
 import com.pydio.android.cells.di.allModules
-import com.pydio.android.cells.services.PreferencesService
-import com.pydio.android.cells.services.workers.OfflineSync
+import com.pydio.android.cells.services.JobService
+import com.pydio.android.cells.services.WorkerService
 import com.pydio.android.cells.utils.timestampForLogMessage
 import com.pydio.cells.api.SDKException
 import com.pydio.cells.transport.ClientData
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.androidx.workmanager.koin.workManagerFactory
@@ -33,10 +26,6 @@ class CellsApp : Application(), KoinComponent {
 
     private val logTag = "CellsApp"
 
-    // Exposed to the whole app for tasks that must survive termination of the calling UI element
-    // Typically for actions launched from the "More" menu (copy, move...)
-    val appScope = CoroutineScope(SupervisorJob())
-
     companion object {
         lateinit var instance: CellsApp
             private set
@@ -51,7 +40,7 @@ class CellsApp : Application(), KoinComponent {
 
         val userAgent = updateClientData()
         Log.i(logTag, "... $userAgent")
-        Log.e(logTag, "... Pre-init done - Timestamp: ${timestampForLogMessage()}")
+        Log.i(logTag, "... Pre-init done - Timestamp: ${timestampForLogMessage()}")
 
         startKoin {// Launch dependency injection framework
             androidLogger(Level.INFO)
@@ -59,25 +48,9 @@ class CellsApp : Application(), KoinComponent {
             workManagerFactory()
             modules(allModules)
         }
-
-        appScope.launch { withContext(Dispatchers.IO) { configureWorkers() } }
+        configureWorkers()
+        recordLaunch()
     }
-
-    private suspend fun configureWorkers() {
-        val wManager = WorkManager.getInstance(applicationContext)
-        cancelPendingWorkManager(wManager)
-        val prefs: PreferencesService by inject()
-        wManager.enqueueUniquePeriodicWork(
-            OfflineSync.WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
-            OfflineSync.buildWorkRequest(prefs),
-        )
-        Log.e(logTag, ".... Offline as been started")
-    }
-
-    // TODO implement background cleaning, typically:
-    //  - states
-    //  - upload & downloads
 
     @Throws(SDKException::class)
     private fun updateClientData(): String {
@@ -99,10 +72,25 @@ class CellsApp : Application(), KoinComponent {
         return instance.userAgent()
     }
 
+    private fun configureWorkers() {
+        try {
+            val workerService: WorkerService by inject()
+            Log.i(logTag, "Initialised workers: $workerService")
+        } catch (e: Exception) {
+            Log.e(logTag, "Could not configure workerService start: $e")
+        }
+    }
 
-    @Suppress("DEPRECATION")
-    // We must explicitly discard warnings when using the old and new version of a given API
-    // like below that is only available in v33+ with old version that has already been deprecated
+    private fun recordLaunch() {
+        try {
+            val jobService: JobService by inject()
+            val creationMsg = "### Started ${ClientData.getInstance().userAgent()}"
+            jobService.i(logTag, creationMsg, "Cells App")
+        } catch (e: Exception) {
+            Log.e(logTag, "could not log start: $e")
+        }
+    }
+
     private fun internalGetPackageInfo(): PackageInfo {
         try {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -132,30 +120,4 @@ class CellsApp : Application(), KoinComponent {
         val sdkVersion = Build.VERSION.SDK_INT
         return "AndroidSDK" + sdkVersion + "v" + release
     }
-
-    /**
-     * If there is a pending work because of previous crash we'd like it to not run.
-     */
-    private suspend fun cancelPendingWorkManager(manager: WorkManager) {
-        Log.e(logTag, ".... cancelPendingWorkManager")
-
-        manager.cancelAllWork()
-        // manager.cancelAllWork().result.await()
-
-        // Test launch with one time worker
-        //            OneTimeWorkRequestBuilder<OfflineSyncWorker>()
-        //                .setInputData(Data.EMPTY)
-        //                .build()
-        //                .also {
-        //                    workManager
-        //                        .enqueueUniqueWork(
-        //                            OfflineSyncWorker.WORK_NAME + "_" + currentTimestamp(),
-        //                            ExistingWorkPolicy.APPEND,
-        //                            it
-        //                        )
-        //                }
-        Log.e(logTag, "One time OfflineSyncWorker created")
-    }
 }
-
-// }

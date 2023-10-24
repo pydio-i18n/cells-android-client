@@ -6,7 +6,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.pydio.android.cells.AppNames
-import com.pydio.android.cells.db.Converters
+import com.pydio.android.cells.db.CellsConverters
 import com.pydio.android.cells.utils.getMimeType
 import com.pydio.cells.api.SdkNames
 import com.pydio.cells.api.ui.FileNode
@@ -16,7 +16,7 @@ import com.pydio.cells.utils.Str
 import java.util.*
 
 @Entity(tableName = "tree_nodes")
-@TypeConverters(Converters::class)
+@TypeConverters(CellsConverters::class)
 data class RTreeNode(
 
     @PrimaryKey
@@ -125,39 +125,39 @@ data class RTreeNode(
         return fn
     }
 
-    fun isContentEquals(
-        newItem: RTreeNode
-    ): Boolean {
-        var same = remoteModificationTS == newItem.remoteModificationTS
-                && localModificationTS == newItem.localModificationTS
-                && flags == newItem.flags
-
-
-        // With Room: we should get equality based on equality of each fields (column) for free
-        // (RTreeNode is a @Data class). But this doesn't work for now, so we rather only check:
-        // remote modification timestamp and thumb filename.
-
-        // More logs to investigate
-        if (!same) {
-            Log.d(logTag, "Found new content for $encodedState")
-            Log.d(
-                logTag, "Old TS: ${remoteModificationTS}, " +
-                        "new TS: ${newItem.remoteModificationTS}"
-            )
-            Log.d(
-                logTag, "Local Old TS: ${localModificationTS}, " +
-                        "new TS: ${newItem.localModificationTS}"
-            )
-            Log.d(
-                logTag, "Old flags: ${flags.showFlags()}, " +
-                        "new flags: ${newItem.flags.showFlags()}"
-            )
-        }
-        return same
-    }
+//    fun isContentEquals(
+//        newItem: RTreeNode
+//    ): Boolean {
+//        var same = remoteModificationTS == newItem.remoteModificationTS
+//                && localModificationTS == newItem.localModificationTS
+//                && flags == newItem.flags
+//
+//
+//        // With Room: we should get equality based on equality of each fields (column) for free
+//        // (RTreeNode is a @Data class). But this doesn't work for now, so we rather only check:
+//        // remote modification timestamp and thumb filename.
+//
+//        // More logs to investigate
+//        if (!same) {
+//            Log.d(logTag, "Found new content for $encodedState")
+//            Log.d(
+//                logTag, "Old TS: ${remoteModificationTS}, " +
+//                        "new TS: ${newItem.remoteModificationTS}"
+//            )
+//            Log.d(
+//                logTag, "Local Old TS: ${localModificationTS}, " +
+//                        "new TS: ${newItem.localModificationTS}"
+//            )
+//            Log.d(
+//                logTag, "Old flags: ${flags.showFlags()}, " +
+//                        "new flags: ${newItem.flags.showFlags()}"
+//            )
+//        }
+//        return same
+//    }
 
     companion object {
-        private val logTag = "RTreeNode"
+        private const val logTag = "RTreeNode"
 
         /**
          * @param stateID use to retrieve the account ID, typically with search result,
@@ -169,16 +169,16 @@ data class RTreeNode(
             // Construct the path from file node info
             val childStateID = StateID.fromId(stateID.accountId)
                 .withPath("/${fileNode.workspace}${fileNode.path}")
-            Log.d(logTag, "... fromFileNode $childStateID")
+            // Log.d(logTag, "... fromFileNode $childStateID")
 
             try {
                 val node = RTreeNode(
                     encodedState = childStateID.id,
-                    workspace = childStateID.workspace,
+                    workspace = childStateID.slug,
                     parentPath = childStateID.parentFile ?: "",
                     name = childStateID.fileName ?: run {
                         Log.e(logTag, "Using slug instead of filename")
-                        childStateID.workspace
+                        childStateID.slug
                     },
                     uuid = fileNode.id,
                     etag = fileNode.eTag,
@@ -229,7 +229,7 @@ data class RTreeNode(
 
                 return RTreeNode(
                     encodedState = storedID.id,
-                    workspace = storedID.workspace,
+                    workspace = storedID.slug,
                     parentPath = "",
                     name = node.name,
                     uuid = nodeUuid,
@@ -312,13 +312,13 @@ data class RTreeNode(
 }
 
 // Only 5 flags are defined (TODO use bit shifting and constants)
-fun Int.showFlags(): String =
-    Integer.toBinaryString(this).padStart(5, '0')
-
-// Prints the full range of all possible flags
-fun Int.debugAsString(): String =
-    Integer.toBinaryString(this).padStart(Int.SIZE_BITS, '0')
-
-fun hasTreeNodeFlag(flags: Int, flag: Int): Boolean {
-    return flags and flag == flag
-}
+//fun Int.showFlags(): String =
+//    Integer.toBinaryString(this).padStart(5, '0')
+//
+//// Prints the full range of all possible flags
+//fun Int.debugAsString(): String =
+//    Integer.toBinaryString(this).padStart(Int.SIZE_BITS, '0')
+//
+//fun hasTreeNodeFlag(flags: Int, flag: Int): Boolean {
+//    return flags and flag == flag
+//}

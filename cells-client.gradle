@@ -9,8 +9,8 @@ android {
 
     namespace 'com.pydio.android.cells'
 
-    compileSdkVersion ownVersions['android.sdk.compile'] as int
-    buildToolsVersion ownVersions['android.build.tools']
+    compileSdk ownVersions['android.sdk.compile'] as int
+//     buildToolsVersion ownVersions['android.build.tools']
 
     // Gather overrides in a distinct folder for easier maintenance
     sourceSets.main.res.srcDir 'src/main/res-overrides'
@@ -43,16 +43,27 @@ android {
     }
 
     buildTypes {
+
         release {
             signingConfig signingConfigs.release
             resValue "string", "app_version",
                     "${defaultConfig.versionName}"
 
             minifyEnabled true
+            // If you haven't already built your app using minifyEnabled for code shrinking,
+            // then try that before enabling shrinkResources, because you might need to edit your proguard-rules.pro file
+            // to keep classes or methods that are created or invoked dynamically before you start removing resources.
             shrinkResources true
-
-//            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+            // See https://developer.android.com/build/shrink-code#android_gradle_plugin_version_41_or_later
+            // And you must have this installed in Android Studio https://developer.android.com/studio/projects/install-ndk
+            // to also generate and upload the file that enable understanding stack traces seen in production
+            // The generated mapping.txt file can than be uploaded on the store followin this:
+            // https://support.google.com/googleplay/android-developer/answer/9848633#upload_file&zippy=%2Cupload-files-using-play-console
+            ndk {
+                debugSymbolLevel 'FULL'
+            }
         }
 
         debug {
@@ -65,8 +76,20 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildFeatures {
+        compose true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.3"
     }
 
     kapt {
@@ -78,19 +101,6 @@ android {
     // We do not want that the linter makes builds fail. It is quite extremist by default.
     lintOptions {
         abortOnError false
-    }
-
-    buildFeatures {
-        // dataBinding = true
-        compose true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.4"
-    }
-
-    kotlinOptions {
-        jvmTarget = "1.8"
     }
 }
 
@@ -105,20 +115,27 @@ dependencies {
         println "[DEBUG] Retrieve java sdk from maven repo"
     }
 
+    implementation platform('androidx.compose:compose-bom:2023.10.00')
+    implementation platform('io.insert-koin:koin-bom:3.5.1')
+
     // dependencies are defined in root build.gradle file
     implementation libraries
+    implementation composeLibraries
     kapt librariesKapt
 
-    implementation platform('androidx.compose:compose-bom:2023.03.00')
-    implementation composeLibraries
-
     // Tmp addition
+    implementation "androidx.palette:palette-ktx:1.0.0"
+    // To enable legacy preferences migration
     implementation "androidx.datastore:datastore-preferences:1.0.0"
 
+    // override default platform version
+    // e.G    implementation "androidx.compose.material3:material3:1.2.0-alpha1"
 
     // Enable custom data loader for glide library (display images)
     annotationProcessor processors
 
+    testImplementation platform('io.insert-koin:koin-bom:3.5.1')
+    androidTestImplementation platform('io.insert-koin:koin-bom:3.5.1')
     testImplementation testLibraries
     androidTestImplementation androidTestLibraries
 }

@@ -6,25 +6,31 @@ import android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.lifecycleScope
+import com.pydio.android.cells.services.ConnectionService
 import com.pydio.android.cells.ui.MainApp
 import com.pydio.android.cells.ui.StartingState
-import com.pydio.android.cells.ui.UseCellsTheme
 import com.pydio.android.cells.ui.core.nav.CellsDestinations
+import com.pydio.android.cells.ui.core.screens.WhiteScreen
 import com.pydio.android.cells.ui.login.LoginDestinations
 import com.pydio.android.cells.ui.share.ShareDestination
 import com.pydio.android.cells.ui.system.models.LandingVM
+import com.pydio.cells.api.ErrorCodes
+import com.pydio.cells.api.SDKException
 import com.pydio.cells.transport.StateID
-import com.pydio.cells.utils.Str
-import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
@@ -37,76 +43,136 @@ class MainActivity : ComponentActivity() {
 
     private val logTag = "MainActivity"
 
+    private val connectionService: ConnectionService by inject()
+
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d(logTag, "onCreate: launching new main activity")
+        Log.d(logTag, "onCreate: launching main activity")
+
+        // We use androidx.core:core-splashscreen library to manage splash screen
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        // We currently still use androidx.core:core-splashscreen library to manage splash
-        // Re-add the Splash composable here? - cf system/screens/splash.kt
-        installSplashScreen()
-
         // First check if we need a migration
-        val landActivity = this
-        lifecycleScope.launch {
+        val mainActivity = this
 
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+
+        val launchTaskFor: (String, StateID) -> Unit = { action, _ ->
+            when (action) {
+                AppNames.ACTION_CANCEL -> {
+                    setResult(RESULT_CANCELED)
+                    finishAndRemoveTask()
+                }
+
+                AppNames.ACTION_DONE -> {
+                    setResult(RESULT_OK)
+                    finish()
+                }
+            }
+        }
+
+        var appIsReady = false
+        setContent {
+            Log.e(logTag, "### onCreate.setContent with intent $intent")
             val landingVM by viewModel<LandingVM>()
-            val noMigrationNeeded = landingVM.noMigrationNeeded()
-            if (!noMigrationNeeded) { // forward to migration page
-                val intent = Intent(landActivity, MigrateActivity::class.java)
-                startActivity(intent)
-                landActivity.finish()
-                return@launch
+
+            val ready = remember { mutableStateOf(false) }
+            val intentHasBeenProcessed = rememberSaveable { mutableStateOf(false) }
+            val widthSizeClass = calculateWindowSizeClass(mainActivity).widthSizeClass
+            val startingState = remember { mutableStateOf<StartingState?>(null) }
+
+            val ackStartStateProcessed: (String?, StateID) -> Unit = { _, _ ->
+                intentHasBeenProcessed.value = true
+                startingState.value = null
             }
 
-            var startingState = handleIntent(savedInstanceState, landingVM)
+            LaunchedEffect(key1 = intent.toString()) {
+                Log.e(logTag, "## Launching main effect for $intent")
+                Log.e(logTag, "\t\tIntent already processed: ${intentHasBeenProcessed.value}")
 
-            if (Str.empty(startingState.route)) {
-                // FIXME the state is not nul but we still don't know where to go.
-                Log.e(logTag, "#### TODO state is not null but we still do not see where to go")
-            }
-
-            Log.i(logTag, "#######################################")
-            Log.i(logTag, "onCreate with starting state:")
-            Log.i(logTag, "  StateID: ${startingState.stateID}")
-            Log.i(logTag, "  Route: ${startingState.route}")
-
-            // Rework this: we have the default for the time being.
-            // see e.g https://medium.com/mobile-app-development-publication/android-jetpack-compose-inset-padding-made-easy-5f156a790979
-            // WindowCompat.setDecorFitsSystemWindows(window, false)
-            WindowCompat.setDecorFitsSystemWindows(window, true)
-
-            setContent {
-
-                val widthSizeClass = calculateWindowSizeClass(landActivity).widthSizeClass
-                val intentHasBeenProcessed = rememberSaveable {
-                    mutableStateOf(false) // startingState == null)
+                // First quick check to detect necessary migration. Returns "true" in case of doubt to trigger further checks.
+                val noMigrationNeeded = landingVM.noMigrationNeeded()
+                if (!noMigrationNeeded) { // forward to migration page
+                    Log.e(logTag, "## Forwarding to migration page and closing curr activity")
+                    val intent = Intent(mainActivity, MigrateActivity::class.java)
+                    startActivity(intent)
+                    mainActivity.finish()
+                    return@LaunchedEffect
                 }
 
-                val startingStateHasBeenProcessed: (String?, StateID) -> Unit = { _, _ ->
-                    intentHasBeenProcessed.value = true
-                }
-
-                val launchTaskFor: (String, StateID) -> Unit = { action, stateID ->
-                    when (action) {
-                        AppNames.ACTION_CANCEL -> {
-                            finishAndRemoveTask()
-                        }
+                try { // We only handle intent when we have no bundle state
+                    savedInstanceState ?: run {
+                        startingState.value = handleIntent(landingVM)
+                    }
+                } catch (e: SDKException) {
+                    Log.e(logTag, "After handleIntent, error thrown: ${e.code} - ${e.message}")
+                    if (e.code == ErrorCodes.unexpected_content) { // We should never have received this
+                        Log.e(logTag, "Launch activity with un-valid state, ignoring...")
+                        mainActivity.finishAndRemoveTask()
+                        return@LaunchedEffect
+                    } else {
+                        Log.e(logTag, "Could not handle intent, aborting....")
+                        throw e
                     }
                 }
 
-                UseCellsTheme {
+                Log.i(logTag, "############################")
+                Log.d(logTag, "  onCreate with starting state:")
+                Log.d(logTag, "   StateID: ${startingState.value?.stateID}")
+                Log.d(logTag, "   Route: ${startingState.value?.route}")
+
+                // Rework this: we have the default for the time being.
+                // see e.g https://medium.com/mobile-app-development-publication/android-jetpack-compose-inset-padding-made-easy-5f156a790979
+                // WindowCompat.setDecorFitsSystemWindows(window, false)
+                // WindowCompat.setDecorFitsSystemWindows(window, true)
+                ready.value = true
+                appIsReady = true
+            }
+
+            Box {
+                if (ready.value) {
+                    Log.d(logTag, "... Now ready, composing for ${startingState.value?.route}")
                     MainApp(
-                        startingState = if (intentHasBeenProcessed.value) null else startingState,
-                        startingStateHasBeenProcessed = startingStateHasBeenProcessed,
-                        launchIntent = landActivity::launchIntent,
+                        startingState = startingState.value,
+                        ackStartStateProcessed = ackStartStateProcessed,
+                        launchIntent = mainActivity::launchIntent,
                         launchTaskFor = launchTaskFor,
                         widthSizeClass = widthSizeClass,
                     )
+                } else {
+                    WhiteScreen()
                 }
-                landingVM.recordLaunch()
             }
         }
+
+        // Set up an OnPreDrawListener to the root view.
+        val content: View = findViewById(android.R.id.content)
+        content.viewTreeObserver.addOnPreDrawListener(
+            object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    // Check whether the initial data is ready.
+                    return if (appIsReady) {
+                        // The content is ready. Start drawing.
+                        content.viewTreeObserver.removeOnPreDrawListener(this)
+                        true
+                    } else {
+                        // The content isn't ready. Suspend.
+                        false
+                    }
+                }
+            }
+        )
+    }
+
+    override fun onPause() {
+        connectionService.pauseMonitoring()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        connectionService.relaunchMonitoring()
+        super.onResume()
     }
 
     private fun launchIntent(
@@ -123,7 +189,6 @@ class MainActivity : ComponentActivity() {
                         .of(MATCH_DEFAULT_ONLY.toLong())
                     packageManager.resolveActivity(intent, flag)
                 } else {
-                    @Suppress("DEPRECATION")
                     packageManager.resolveActivity(intent, MATCH_DEFAULT_ONLY)
                 }
             // TODO better error handling
@@ -139,28 +204,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun handleIntent(
-        savedInstanceState: Bundle?,
         landingVM: LandingVM
     ): StartingState {
-        Log.e(logTag, "#############################")
-        Log.e(logTag, "Handle Intent: $intent")
-        if (intent == null) { // we then rely on saved state or defaults
-            if (savedInstanceState != null) {
-                Log.e(logTag, "No intent **BUT WE HAVE A NON NULL BUNDLE**, investigate!")
-                Log.e(logTag, "Saved state: " + savedInstanceState.describeContents())
-                Thread.dumpStack()
-            }
-            // TO BE REFINED we assume we have no starting state in such case
+        Log.d(logTag, "   => Processing intent: $intent")
+
+        // No intent => issue
+        if (intent == null) {
+            Log.e(logTag, "#############################")
+            Log.e(logTag, "No Intent and no bundle")
+            Thread.dumpStack()
+            Log.e(logTag, "#############################")
+            // TODO find how we can land here and fix.
             val state = StartingState(StateID.NONE)
             state.route = CellsDestinations.Accounts.route
             return state
-//            Log.e(logTag, "No Intent, we rely on the saved bundle: $savedInstanceState")
-//            val encodedState = savedInstanceState?.getString(AppKeys.EXTRA_STATE)
-//            val initialStateID = StateID.fromId(encodedState ?: Transport.UNDEFINED_STATE)
-//            return StartingState(initialStateID)
         }
 
-        // Intent is not null
+        // Intent with a stateID => should not happen anymore
         val encodedState = intent.getStringExtra(AppKeys.EXTRA_STATE)
         val initialStateID = encodedState?.let {
             val stateID = StateID.fromId(it)
@@ -171,15 +231,37 @@ class MainActivity : ComponentActivity() {
         } ?: StateID.NONE
         var startingState = StartingState(initialStateID)
 
+        // Handle various supported events
         when {
+
+            // Normal start
+            Intent.ACTION_MAIN == intent.action
+                    && intent.hasCategory(Intent.CATEGORY_LAUNCHER) -> {
+                startingState = landingVM.getStartingState()
+            }
+
             Intent.ACTION_VIEW == intent.action -> {
-                // Handle call back for OAuth credential flow
                 val code = intent.data?.getQueryParameter(AppNames.QUERY_KEY_CODE)
                 val state = intent.data?.getQueryParameter(AppNames.QUERY_KEY_STATE)
-                if (code != null && state != null) {
-                    startingState.route = LoginDestinations.ProcessAuth.route
+
+                if (code != null && state != null) { // Callback for OAuth credential flow
+                    val (isValid, targetStateID) = landingVM.isAuthStateValid(state)
+                    if (!isValid) {
+                        Log.e(
+                            logTag,
+                            "Received a OAuth flow callback intent, but it has already been consumed, ignoring "
+                        )
+                        throw SDKException(
+                            ErrorCodes.unexpected_content,
+                            "Passed state is wrong or already consumed"
+                        )
+                    }
                     startingState.code = code
                     startingState.state = state
+                    startingState.stateID = targetStateID
+                    startingState.route =
+                        LoginDestinations.ProcessAuthCallback.createRoute(targetStateID)
+
                 } else {
                     Log.e(logTag, "Unexpected ACTION_VIEW: $intent")
                     if (intent.extras != null) {
@@ -214,11 +296,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-            }
-
-            Intent.ACTION_MAIN == intent.action
-                    && intent.hasCategory(Intent.CATEGORY_LAUNCHER) -> {
-                startingState = landingVM.getStartingState()
             }
 
             else -> {
