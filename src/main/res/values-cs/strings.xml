@@ -17,9 +17,11 @@
     <string name="button_clear_list">Vyčistit seznam</string>
     <string name="button_resync_all">Znovu synchronizovat</string>
     <string name="button_skip">Přeskočit</string>
+    <string name="button_launch_sync">Launch Sync</string>
     <!-- Navigation labels -->
     <string name="action_home">Domů</string>
-    <string name="action_open_app">Otevřít aplikaci</string>
+    <!--    <string name="action_open_app">Open App</string>-->
+    <string name="action_open_after_migration">Start using the app!</string>
     <string name="action_choose_account">Vyberte účet</string>
     <string name="action_browse">Procházet</string>
     <string name="action_open_workspaces">Pracovní prostory</string>
@@ -41,6 +43,7 @@
     <string name="nav_open">Otevřít</string>
     <string name="nav_close">Zavřít</string>
     <!-- Various -->
+    <!-- ERRORS -->
     <string name="generic_error_message">Neočekávaná chyba…</string>
     <!-- PAGE SPECIFIC MESSAGES -->
     <!-- Welcome Page -->
@@ -98,11 +101,14 @@
     <string name="category_workspaces">Pracovní prostory</string>
     <string name="last_check">Naposledy zkontrolováno</string>
     <string name="last_check_never">nikdy</string>
+    <string name="appears_in_prefix">Inside %s</string>
     <string name="loading_message">Počkejte na načtení obsahu…</string>
     <string name="no_internet">Není k dispozici připojení k Internetu</string>
+    <string name="captive_portal">Captive portal: sign in required</string>
     <string name="metered_connection">Na připojení s účtovanými daty</string>
     <string name="roaming_connection">Použití roamingového připojení</string>
-    <string name="server_unreachable">Není spojení se serverem…</string>
+    <string name="no_account">No account, please configure at least a connection</string>
+    <string name="server_unreachable">Cannot reach server</string>
     <string name="empty_cache">Nedaří se vypsat obsah složky</string>
     <string name="cannot_download_file">Soubor se nedaří stáhnout</string>
     <string name="no_download_on_metered">Stahování na sítích s účtovanými daty jsou omezena. Toto je možné změnit vpředvolbách aplikace</string>
@@ -112,7 +118,10 @@
     <string name="empty_content_message">Zatím zde není žádný obsah</string>
     <string name="no_bookmark_for_account">Pro tento účet nebyla definována žádná záložka…</string>
     <string name="no_transfer_for_account">Není k dispozici žádný nedávný přenos, proto není co zobrazit</string>
+    <string name="no_transfer_with_filter">No transfer with \"%s\" status</string>
     <string name="no_offline_root_for_account">Nebyla označena žádná složka, aby byla pro tento účet uchovávána offline…</string>
+    <string name="account_home_no_ws_title">No workspace to list</string>
+    <string name="account_home_no_ws_desc">Either the server is unreachable, or you may have lost your permissions. In the latter case, please contact your site administrator.</string>
     <plurals name="selected_count">
         <item quantity="one">vybrána %d položka</item>
         <item quantity="few">vybrány %d položky</item>
@@ -125,26 +134,25 @@
     <string name="in_progress_moving">Přesouvání…</string>
     <string name="in_progress_restoring">Obnovování…</string>
     <!-- Search -->
+    <string name="search_label">Search…</string>
+    <string name="search_hint">Enter a term to search your files!</string>
     <!--Offline -->
     <string name="sync_in_progress">Synchronizace…</string>
     <string name="sync_downloading">Stahování souborů…</string>
-    <string name="sync_tree_walking">Procházení stromu a zjišťování změn…</string>
+    <string name="sync_tree_walking">Procházení stromu a zjišťování změn</string>
     <string name="sync_already_running">Synchronizace už právě probíhá. Vyčkejte jejího dokončení než budete spouštět další</string>
+    <string name="confirm_remove_offline_title">Confirm your choice</string>
+    <string name="confirm_remove_offline_desc">Removing the offline status of this node can lead to losing the downloaded data. Are you sure you want to proceed</string>
     <!-- Job Management -->
     <string name="job_list_title">Úlohy na pozadí</string>
+    <string name="job_list_empty_message">There is no job to show</string>
     <string name="filter_by_status_title">Filtrovat podle stavu</string>
-    <!--    <string name="filter_by_status_show_all_label">Show all (no filter)</string>-->
-    <!--    <string name="filter_by_status_new_label">New</string>-->
-    <!--    <string name="filter_by_status_processing_label">Processing</string>-->
-    <!--    <string name="filter_by_status_cancelled_label">Cancelled</string>-->
-    <!--    <string name="filter_by_status_done_label">Done</string>-->
-    <!--    <string name="filter_by_status_error_label">Error</string>-->
-    <!--    <string name="filter_by_status_timeout_label">Timeout</string>-->
     <string name="job_sort_by_title">Seřadit podle</string>
     <string name="job_sort_by_creation_ts_desc_label">Vytvoření (od nejnovějších)</string>
     <string name="job_sort_by_creation_ts_asc_label">Vytvoření (od nejstarších)</string>
     <!-- Log Management -->
     <string name="log_list_title">Application logs</string>
+    <string name="log_list_empty_message">The journal is empty</string>
     <!-- Transfer Management -->
     <string name="upload_screen_pending_title">Uploading…</string>
     <string name="upload_screen_done_title">Upload terminated</string>
@@ -171,6 +179,7 @@
     <string name="post_migration_sync_message">Máte jednu nebo více položek označených jako offline, tato migrace nyní vyžaduje úplné opětovné stažení. Chcete pokračovat? Můžete jej přeskočit a synchronizovat později.</string>
     <!-- More menus -->
     <string name="open_more_menu">Vyberte akci, kterou provést na vybraných položkách</string>
+    <string name="deselect_all">Un-select all</string>
     <string name="more_button_description">Zobrazit další akce pro tento prvek</string>
     <string name="open_in_workspaces">Otevřít umístění</string>
     <string name="open_parent_in_workspaces">Otevřít nadřazenou složku</string>
@@ -186,12 +195,14 @@
     <string name="keep_offline">Ponechat offline</string>
     <string name="remove_from_offline">Remove from offline</string>
     <string name="remove_bookmark">Remove bookmark</string>
+    <string name="remove_bookmarks">Remove bookmarks</string>
     <string name="keep_offline_content_desc">Ponechat tento prvek offline</string>
     <string name="bookmark">Záložka</string>
     <string name="bookmark_element_content_desc">Přidat tento prvek do záložek</string>
     <string name="delete">Smazat</string>
     <string name="pause">Pause</string>
     <string name="relaunch">Relaunch</string>
+    <string name="resume">Resume</string>
     <string name="empty_recycle">Vyprázdnit koš</string>
     <string name="restore_content">Obnovit</string>
     <string name="permanently_remove">Trvale odstranit</string>
@@ -206,15 +217,6 @@
     <string name="link_copy_failed">Nepodařilo se zkopírovat odkaz</string>
     <!-- Sort By -->
     <string name="sort_by">Seřadit podle</string>
-    <!--    <string name="order_by_canon">Canonical (A to Z, folders first)</string>-->
-    <!--    <string name="order_by_name_asc">File name (A to Z)</string>-->
-    <!--    <string name="order_by_name_desc">File name (Z to A)</string>-->
-    <!--    <string name="order_by_remote_ts_asc">Modified (oldest first)</string>-->
-    <!--    <string name="order_by_remote_ts_desc">Modified (newest first)</string>-->
-    <!--    <string name="order_by_mime_asc">Type (A to Z)</string>-->
-    <!--    <string name="order_by_mime_desc">Type (Z to A)</string>-->
-    <!--    <string name="order_by_size_asc">Size (smallest first)</string>-->
-    <!--    <string name="order_by_size_desc">Size (largest first)</string>-->
     <!-- Dialogs -->
     <string name="choose_external_app_title">Otevřít v…</string>
     <string name="confirm_account_deletion_title">Odstranit účet\n%s?</string>
@@ -240,14 +242,16 @@
     <string name="confirm_permanent_deletion_desc">%s bude definitivně smazán</string>
     <string name="confirm_empty_recycle_message">Toto vyprázdní koš pro %s: veškerý obsah v koši bude definitivně smazán.</string>
     <string name="rename_dialog_title">Přejmenovat</string>
-    <string name="rename_dialog_message">Zadejte nový název pro:\n%s</string>
+    <string name="rename_dialog_message">Please enter a new name for %s</string>
     <string name="rename_dialog_confirm_button">Přejmenovat</string>
     <string name="download_wait_message">Stahování – čekejte prosím…</string>
     <string name="display_as_qrcode_dialog_title">Přímý odkaz</string>
     <string name="display_as_qrcode_dialog_desc">Naskenujte kód pro přímý přístup k %s</string>
-    <string name="running_download_title">Downloading...</string>
+    <string name="running_download_title">Downloading…</string>
     <string name="confirm_download_title">Potvrdit stažení</string>
     <string name="confirm_download_desc">Tento soubor je velký (%s) a jste na síti s účtovanými daty. Opravdu chcete pokračovat?</string>
+    <!-- TextFields Labels -->
+    <string name="name_label">Name</string>
     <!-- Settings -->
     <string name="pref_category_title_recycler">Přizpůsobit si seznamy (pokud je uplatnitelné)</string>
     <string name="pref_choose_list_layout">Typ rozložení</string>
@@ -266,15 +270,17 @@
     <string name="pref_offline_constraint_charging_title">Při nabíjení</string>
     <string name="pref_offline_constraint_charging_desc">Synchronizovat pouze při nabíjení zařízení</string>
     <string name="pref_offline_constraint_idle_title">Při nečinnosti</string>
-    <string name="pref_offline_constraint_idle_desc">Když zařízení není používáno (funguje pro Android 6+)</string>
+    <string name="pref_offline_constraint_idle_desc">When the device is idle</string>
     <string name="pref_offline_constraint_batt_not_low_title">Při nevybitém akumulátoru</string>
     <string name="pref_offline_constraint_batt_not_low_desc">Když akumulátor není vybitý</string>
     <string name="pref_category_title_feedback">Zpětná vazba a nápověda</string>
     <string name="pref_feedback_send_title">Odeslat zpětnou vazbu</string>
     <string name="pref_feedback_send_desc">Nahlásit technické problémy nebo navrhnout nové funkce</string>
     <string name="pref_category_title_troubleshooting">Řešení problémů</string>
-    <string name="pref_troubleshooting_show_list_desc">Poskytuje přístup k dalším stránkám pro řešení problémů ohledně úloh na pozadí</string>
-    <string name="pref_troubleshooting_show_list_title">Zobrazit běhové tabulky</string>
+    <string name="pref_troubleshooting_show_list_title">Show advanced tools</string>
+    <string name="pref_troubleshooting_show_list_desc">Gives access to more insider info to help troubleshooting unexpected behaviours</string>
+    <string name="pref_troubleshooting_disable_poll_title">Disable poll</string>
+    <string name="pref_troubleshooting_disable_poll_desc">Turns off the automatic poll of the server while browsing. This should be used carefully: typically, you then have to explicitly refresh a page to see a new folder after creation</string>
     <string name="pref_choose_list_offline_frequency_title">Četnost synchronizace</string>
     <string name="pref_choose_list_offline_frequency_desc">Vyberte četnost synchronizace na pozadí</string>
     <!-- Accessibility various content -->
