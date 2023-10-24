@@ -4,10 +4,10 @@
     <!-- Button Labels -->
     <string name="button_ok">OK</string>
     <string name="button_confirm">Confirmer</string>
-    <string name="button_next">Next</string>
-    <string name="button_back">Back</string>
-    <string name="button_done_and_exit">Upload done. Exit</string>
-    <string name="button_run_in_background">Run in background</string>
+    <string name="button_next">Suivant</string>
+    <string name="button_back">Retour</string>
+    <string name="button_done_and_exit">Téléversement terminé. Quitter</string>
+    <string name="button_run_in_background">Exécuter en arrière-plan</string>
     <string name="button_cancel">Annuler</string>
     <string name="button_switch_to_grid_layout">Afficher sous forme de grille</string>
     <string name="button_switch_to_list_layout">Afficher sous forme de Liste</string>
@@ -17,12 +17,14 @@
     <string name="button_clear_list">Vider la liste</string>
     <string name="button_resync_all">Synchroniser</string>
     <string name="button_skip">Passer</string>
+    <string name="button_launch_sync">Lancer la synchro</string>
     <!-- Navigation labels -->
     <string name="action_home">Page d\'accueil</string>
-    <string name="action_open_app">Ouvrir l\'app.</string>
+    <!--    <string name="action_open_app">Open App</string>-->
+    <string name="action_open_after_migration">Ouvrir l\'application</string>
     <string name="action_choose_account">Choisir un compte</string>
     <string name="action_browse">Parcourir</string>
-    <string name="action_open_workspaces">Espaces de travail</string>
+    <string name="action_open_workspaces">Workspaces</string>
     <string name="action_open_offline_roots">Fichiers hors ligne</string>
     <string name="action_open_bookmarks">Favoris</string>
     <string name="action_open_transfers">Transferts</string>
@@ -33,14 +35,15 @@
     <string name="action_settings">Paramètres</string>
     <string name="action_clear_cache">Vider le cache</string>
     <!-- Main Menu (left drawer) -->
-    <string name="open_drawer">Open menu drawer</string>
+    <string name="open_drawer">Ouvrir le menu latéral</string>
     <!-- Section titles -->
-    <string name="my_workspaces">Mes espaces de travail</string>
+    <string name="my_workspaces">Workspaces</string>
     <string name="quick_access">Raccourcis</string>
     <string name="my_account">Mon Compte</string>
     <string name="nav_open">Ouvrir</string>
     <string name="nav_close">Fermer</string>
     <!-- Various -->
+    <!-- ERRORS -->
     <string name="generic_error_message">Erreur inconnue…</string>
     <!-- PAGE SPECIFIC MESSAGES -->
     <!-- Welcome Page -->
@@ -69,12 +72,12 @@
     <string name="invalid_tls_certificate">Certificat non valide</string>
     <string name="confirm_skip_verify_title">Certificat non valide</string>
     <string name="confirm_skip_verify_desc">Si vous savez ce que vous faites, vous pouvez choisir d\'ignorer l\'étape de validation du certificat TLS</string>
-    <string name="confirm_skip_verify_accept">Accept the risk and continue</string>
-    <string name="confirm_skip_verify_cancel">Go back (recommended)</string>
+    <string name="confirm_skip_verify_accept">Accepter les risques et continuer</string>
+    <string name="confirm_skip_verify_cancel">Revenir en arrière (recommandé)</string>
     <string name="button_i_understand_the_risks">Oui, je comprends les risques</string>
     <string name="p8_credentials_title">Pydio 8</string>
     <string name="p8_credentials_desc">Veuillez entrer vos informations d\'identification</string>
-    <string name="oauth_code_flow_title">Processing</string>
+    <string name="oauth_code_flow_title">En cours</string>
     <string name="oauth_code_flow_desc">Traitement en cours, veuillez patienter.</string>
     <!-- Manage connection -->
     <string name="no_connection_title">Pas de connexion active</string>
@@ -88,21 +91,24 @@
     <string name="account_list_desc">Gérer les serveurs distants déjà enregistrés</string>
     <string name="account_list_none">Aucun compte n\'a encore été configuré…</string>
     <!-- Browse management -->
-    <string name="ws_list_subtitle">Choisir un espace de travail à parcourir</string>
+    <string name="ws_list_subtitle">Choisir un workspace à parcourir</string>
     <string name="browse_list_desc">Parcourir les serveurs distants</string>
     <string name="browse_list_none">Vide</string>
     <string name="recycle_bin_label">Corbeille</string>
     <string name="account_server_label">Serveur : %s</string>
     <string name="account_logged_in_as_label">Connecté en tant que %s</string>
-    <string name="category_cells">Cellules</string>
-    <string name="category_workspaces">Espaces de travail</string>
+    <string name="category_cells">Cells</string>
+    <string name="category_workspaces">Workspaces</string>
     <string name="last_check">Dernière vérif.</string>
     <string name="last_check_never">jamais</string>
+    <string name="appears_in_prefix">Dans %s</string>
     <string name="loading_message">Veuillez patienter pendant le chargement…</string>
     <string name="no_internet">Aucune connexion internet</string>
+    <string name="captive_portal">Portail captif: connexion requise</string>
     <string name="metered_connection">Connecté à un réseau limité</string>
     <string name="roaming_connection">Connecté en itinérance</string>
-    <string name="server_unreachable">Aucune connexion au serveur distant…</string>
+    <string name="no_account">Aucun compte, veuillez en configurer au moins un !</string>
+    <string name="server_unreachable">Impossible de se connecter au serveur</string>
     <string name="empty_cache">Impossible de lister le contenu du dossier</string>
     <string name="cannot_download_file">Impossible de télécharger le fichier</string>
     <string name="no_download_on_metered">Les téléchargements sur les réseaux limités sont bridés, vous pouvez modifier cela dans les préférences de l\'application</string>
@@ -112,7 +118,10 @@
     <string name="empty_content_message">Aucun contenu n\'est disponible actuellement</string>
     <string name="no_bookmark_for_account">Aucun favori n\'a été défini pour ce compte…</string>
     <string name="no_transfer_for_account">Aucun transfert récent à afficher</string>
+    <string name="no_transfer_with_filter">Aucun transfert ayant un statut \"%s\"</string>
     <string name="no_offline_root_for_account">Aucun dossier n\'a été tagué pour être maintenu hors ligne pour ce compte…</string>
+    <string name="account_home_no_ws_title">Aucun workspace à lister</string>
+    <string name="account_home_no_ws_desc">Soit le serveur est inaccessible, soit vous avez perdu vos autorisations. Dans ce cas, prenez contact avec l\'administrateur du site.</string>
     <plurals name="selected_count">
         <item quantity="one">%d élément sélectionné</item>
         <item quantity="other">%d éléments sélectionnés</item>
@@ -123,29 +132,28 @@
     <string name="in_progress_moving">Déplacement en cours…</string>
     <string name="in_progress_restoring">Restauration en cours…</string>
     <!-- Search -->
+    <string name="search_label">Rechercher…</string>
+    <string name="search_hint">Entrez un terme pour lancer la recherche !</string>
     <!--Offline -->
     <string name="sync_in_progress">En cours de synchronisation…</string>
     <string name="sync_downloading">Téléchargement des fichiers…</string>
-    <string name="sync_tree_walking">Parcours de l\'arbre pour trouver des changements…</string>
+    <string name="sync_tree_walking">Parcours de l\'arbre pour trouver des changements</string>
     <string name="sync_already_running">Une synchronisation est déjà en cours. Veuillez patienter avant d\'en lancer une nouvelle</string>
+    <string name="confirm_remove_offline_title">Confirmer votre choix</string>
+    <string name="confirm_remove_offline_desc">La suppression du statut hors ligne de ce nœud peut conduire à la perte des données téléchargées. Êtes-vous sûr de vouloir continuer</string>
     <!-- Job Management -->
     <string name="job_list_title">Tâches de fond</string>
+    <string name="job_list_empty_message">Aucune tâche de fond à afficher</string>
     <string name="filter_by_status_title">Filtrer par statut</string>
-    <!--    <string name="filter_by_status_show_all_label">Show all (no filter)</string>-->
-    <!--    <string name="filter_by_status_new_label">New</string>-->
-    <!--    <string name="filter_by_status_processing_label">Processing</string>-->
-    <!--    <string name="filter_by_status_cancelled_label">Cancelled</string>-->
-    <!--    <string name="filter_by_status_done_label">Done</string>-->
-    <!--    <string name="filter_by_status_error_label">Error</string>-->
-    <!--    <string name="filter_by_status_timeout_label">Timeout</string>-->
     <string name="job_sort_by_title">Trier par</string>
     <string name="job_sort_by_creation_ts_desc_label">Date de création (le plus récent en premier)</string>
     <string name="job_sort_by_creation_ts_asc_label">Date de création (le plus ancien en premier)</string>
     <!-- Log Management -->
-    <string name="log_list_title">Application logs</string>
+    <string name="log_list_title">Journal d\'application</string>
+    <string name="log_list_empty_message">Le journal est vide</string>
     <!-- Transfer Management -->
-    <string name="upload_screen_pending_title">Uploading…</string>
-    <string name="upload_screen_done_title">Upload terminated</string>
+    <string name="upload_screen_pending_title">Envoi en cours…</string>
+    <string name="upload_screen_done_title">Téléversement terminé</string>
     <string name="transfer_list_title">Transferts en cours</string>
     <string name="choose_target_for_share_title">Partager avec…</string>
     <string name="choose_target_for_copy_title">Copier vers…</string>
@@ -153,22 +161,23 @@
     <!-- Target choice -->
     <string name="choose_target_subtitle">Sélectionnez un emplacement</string>
     <string name="pick_up_session">Sélectionner un compte</string>
-    <string name="pick_up_workspace">Sélectionner un espace de travail</string>
+    <string name="pick_up_workspace">Sélectionner un workspace</string>
     <string name="pick_up_folder">Choisir un dossier cible</string>
     <!--Transfers -->
     <string name="relaunch_transfer">Redémarrer le transfert</string>
     <!-- System -->
     <!-- Jobs -->
-    <string name="clear_terminated">Clear terminated</string>
+    <string name="clear_terminated">Effacés les éléments terminés</string>
     <string name="delete_record">Supprimer l\'enregistrement</string>
     <!-- Logs -->
-    <string name="clear_all_logs">Clear application logs</string>
+    <string name="clear_all_logs">Effacer le journal de l\'application</string>
     <!-- Migration-->
     <string name="migration_message">Migration des données existantes, veuillez patienter…</string>
     <string name="post_migration_title">Mise à niveau réussie !</string>
     <string name="post_migration_sync_message">Vous avez un ou plusieurs éléments marqués comme hors ligne et cette migration nécessite un retéléchargement complet. Voulez-vous procéder maintenant ? Vous pouvez l\'ignorer et effectuer la synchronisation plus tard.</string>
     <!-- More menus -->
     <string name="open_more_menu">Choisir une action à appliquer aux éléments sélectionnés</string>
+    <string name="deselect_all">Désélectionner tout</string>
     <string name="more_button_description">Afficher plus d\'actions pour cet élément</string>
     <string name="open_in_workspaces">Ouvrir l\'emplacement</string>
     <string name="open_parent_in_workspaces">Ouvrir l\'emplacement parent</string>
@@ -182,14 +191,16 @@
     <string name="public_link">Lien public</string>
     <string name="public_link_content_desc">Créer ou supprimer un lien public pour cet élément</string>
     <string name="keep_offline">Garder hors ligne</string>
-    <string name="remove_from_offline">Remove from offline</string>
-    <string name="remove_bookmark">Remove bookmark</string>
+    <string name="remove_from_offline">Supprimer de la liste Hors Ligne</string>
+    <string name="remove_bookmark">Supprimer le favori</string>
+    <string name="remove_bookmarks">Supprimer les favoris</string>
     <string name="keep_offline_content_desc">Garder cet élément hors ligne</string>
     <string name="bookmark">Favori</string>
     <string name="bookmark_element_content_desc">Ajouter cet élément aux favoris</string>
     <string name="delete">Effacer</string>
-    <string name="pause">Pause</string>
-    <string name="relaunch">Relaunch</string>
+    <string name="pause">Suspendre</string>
+    <string name="relaunch">Relancer</string>
+    <string name="resume">Reprendre</string>
     <string name="empty_recycle">Vider la corbeille</string>
     <string name="restore_content">Restaurer</string>
     <string name="permanently_remove">Supprimer définitivement</string>
@@ -204,28 +215,19 @@
     <string name="link_copy_failed">La copie du lien de partage a échoué</string>
     <!-- Sort By -->
     <string name="sort_by">Trier Par</string>
-    <!--    <string name="order_by_canon">Canonical (A to Z, folders first)</string>-->
-    <!--    <string name="order_by_name_asc">File name (A to Z)</string>-->
-    <!--    <string name="order_by_name_desc">File name (Z to A)</string>-->
-    <!--    <string name="order_by_remote_ts_asc">Modified (oldest first)</string>-->
-    <!--    <string name="order_by_remote_ts_desc">Modified (newest first)</string>-->
-    <!--    <string name="order_by_mime_asc">Type (A to Z)</string>-->
-    <!--    <string name="order_by_mime_desc">Type (Z to A)</string>-->
-    <!--    <string name="order_by_size_asc">Size (smallest first)</string>-->
-    <!--    <string name="order_by_size_desc">Size (largest first)</string>-->
     <!-- Dialogs -->
     <string name="choose_external_app_title">Ouvrir avec…</string>
     <string name="confirm_account_deletion_title">Supprimer le compte\n%s ?</string>
     <string name="confirm_account_deletion_desc">Cela effacera les informations de connexion de votre serveur distant et supprimera également toutes les données et fichiers relatifs à ce compte du cache.</string>
     <string name="confirm_account_logout_title">Se déconnecter de\n%s ?</string>
     <string name="confirm_account_logout_desc">Cela effacera vos identifiants pour ce serveur : vous devrez vous re-identifier pour vous connecter.</string>
-    <string name="confirm_cache_deletion_message">Cette action libèrera de l\'espace mais forcera le re-téléchargement des vignettes, de l\'index et du cache.</string>
+    <string name="confirm_cache_deletion_message">Cette action libèrera de l\'espace, mais forcera le re-téléchargement des vignettes, de l\'index et du cache.</string>
     <string name="confirm_cache_deletion_title">Vider le cache</string>
     <string name="create_account">Créer un compte</string>
     <string name="content_description_media">Aperçu du contenu</string>
     <string name="dialog_create_folder_title">Créer un dossier</string>
     <string name="dialog_create_folder_positive_btn">Créer</string>
-    <string name="dialog_create_folder_support_text">Please enter a name for the new folder</string>
+    <string name="dialog_create_folder_support_text">Veuillez entrer un nom pour le nouveau dossier</string>
     <string name="confirm_move_to_recycle_title">Confirmer la suppression</string>
     <string name="confirm_move_to_recycle_desc">%s va être déplacé vers la corbeille</string>
     <plurals name="confirm_multi_move_to_recycle_desc">
@@ -236,14 +238,16 @@
     <string name="confirm_permanent_deletion_desc">%s sera supprimé définitivement</string>
     <string name="confirm_empty_recycle_message">Cela va vider la corbeille pour %s, tout le contenu mis à la corbeille sera définitivement supprimé.</string>
     <string name="rename_dialog_title">Renommer</string>
-    <string name="rename_dialog_message">Veuillez saisir un nouveau nom pour:\n%s</string>
+    <string name="rename_dialog_message">Veuillez saisir un nouveau nom pour : %s</string>
     <string name="rename_dialog_confirm_button">Renommer</string>
     <string name="download_wait_message">Téléchargement en cours, veuillez patienter…</string>
     <string name="display_as_qrcode_dialog_title">Lien direct</string>
     <string name="display_as_qrcode_dialog_desc">Scannez le code pour accéder au partage vers %s</string>
-    <string name="running_download_title">Downloading...</string>
+    <string name="running_download_title">Téléchargement</string>
     <string name="confirm_download_title">Confirmer le téléchargement</string>
     <string name="confirm_download_desc">Ce fichier est volumineux (%s) et vous êtes sur un réseau limité. Êtes-vous sûr de vouloir continuer ?</string>
+    <!-- TextFields Labels -->
+    <string name="name_label">Nom</string>
     <!-- Settings -->
     <string name="pref_category_title_recycler">Personnaliser les listes (si applicable)</string>
     <string name="pref_choose_list_layout">Type de mise en page</string>
@@ -262,15 +266,17 @@
     <string name="pref_offline_constraint_charging_title">Lorsque l\'appareil est en charge</string>
     <string name="pref_offline_constraint_charging_desc">Lancer la synchronisation uniquement lorsque l\'appareil est en charge</string>
     <string name="pref_offline_constraint_idle_title">Inactif</string>
-    <string name="pref_offline_constraint_idle_desc">Lorsque l\'appareil est inactif (nécessite Android 6+)</string>
+    <string name="pref_offline_constraint_idle_desc">Quand l\'appareil est inactif</string>
     <string name="pref_offline_constraint_batt_not_low_title">Lorsque la batterie n\'est pas faible</string>
     <string name="pref_offline_constraint_batt_not_low_desc">Lorsque la batterie n\'est pas faible</string>
     <string name="pref_category_title_feedback">Commentaires et aide</string>
     <string name="pref_feedback_send_title">Envoyer des commentaires</string>
     <string name="pref_feedback_send_desc">Signaler un problème technique ou suggérer de nouvelles fonctionnalités</string>
     <string name="pref_category_title_troubleshooting">Obtenir de l\'aide</string>
-    <string name="pref_troubleshooting_show_list_desc">Donne accès à plus de pages pour aider au dépannage des tâches de fond</string>
-    <string name="pref_troubleshooting_show_list_title">Afficher les tables de diagnostic</string>
+    <string name="pref_troubleshooting_show_list_title">Afficher les outils avancés</string>
+    <string name="pref_troubleshooting_show_list_desc">Donne accès à plus d\'informations sur le système pour aider à résoudre les problèmes</string>
+    <string name="pref_troubleshooting_disable_poll_title">Désactiver la synchronisation explicite</string>
+    <string name="pref_troubleshooting_disable_poll_desc">Désactive les taches de synchronisation avec le serveur lors de la navigation. Cela doit être utilisé avec précaution : typiquement, vous devrez rafraîchir explicitement une page pour voir un nouveau dossier après sa création</string>
     <string name="pref_choose_list_offline_frequency_title">Fréquence de synchronisation</string>
     <string name="pref_choose_list_offline_frequency_desc">Choisissez une fréquence pour la synchronisation en arrière-plan</string>
     <!-- Accessibility various content -->
@@ -282,9 +288,9 @@
     <string name="thumb_description">Aperçu du contenu</string>
     <string name="folder_icon_description">Icône de dossier</string>
     <string name="empty_content_icon_description">Icône de liste vide</string>
-    <string name="choose_account">Choose an account</string>
+    <string name="choose_account">Sélectionner un compte</string>
     <string name="switch_account">Changer de compte</string>
-    <string name="switch_workspace">Changer d\'espace de travail</string>
+    <string name="switch_workspace">Changer de workspace</string>
     <string name="parent_folder">Dossier parent</string>
     <string name="order_by_title">Ordre de tri</string>
 </resources>
