@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="order_by_labels">
-        <item>Canonique (de A à Z, dossiers d\'abord)</item>
+        <item>Standard (A to Z, folders first)</item>
         <item>Par nom (de A à Z)</item>
         <item>Par nom (de Z à A)</item>
         <item>Date de modification (les plus anciens d\'abord)</item>
@@ -28,30 +28,26 @@
         <item>Connecté (dès que le serveur peut être atteint, sans prendre en compte le type de réseau)</item>
     </string-array>
     <string-array name="filter_transfer_by_status_labels">
-        <item>Show all (no filter)</item>
-        <item>New</item>
-        <item>Processing</item>
-        <item>Cancelled</item>
-        <item>Done</item>
-        <item>Error</item>
-        <item>Timeout</item>
+        <item>Tout afficher (aucun filtre)</item>
+        <item>Nouveau</item>
+        <item>En cours</item>
+        <item>Annulé</item>
+        <item>Terminé</item>
+        <item>Erreur</item>
+        <item>Expiré</item>
     </string-array>
     <string-array name="transfer_order_by_labels">
-        <item>Canonical (By creation order, newest first)</item>
-        <item>Creation order (oldest first)</item>
-        <item>Status (A to Z)</item>
-        <item>Status (Z to A)</item>
-        <item>Type (Download First)</item>
-        <item>Type (Upload First)</item>
+        <item>Standard (By creation order, newest first)</item>
+        <item>Date de création (le plus ancien en premier)</item>
+        <item>Statut (de A à Z)</item>
+        <item>Statut (Z à A)</item>
+        <item>Type (Téléchargements en premier)</item>
+        <item>Type (Téléversements d\'abord)</item>
     </string-array>
     <string-array name="job_order_by_labels">
-        <item>Canonical (By creation order, newest first)</item>
-        <item>Creation order (oldest first)</item>
-        <item>Status (A to Z)</item>
-        <item>Status (Z to A)</item>
+        <item>Standard (By creation order, newest first)</item>
+        <item>Date de création (le plus ancien en premier)</item>
+        <item>Statut (de A à Z)</item>
+        <item>Statut (de Z à A)</item>
     </string-array>
-    <!--    <string-array name="job_sort_by_values" translatable="false">-->
-    <!--        <item>creation_ts_desc</item>-->
-    <!--        <item>creation_ts_asc</item>-->
-    <!--    </string-array>-->
 </resources>
