@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="order_by_labels">
-        <item>Standard (A bis Z, zuerst Ordner)</item>
+        <item>Standard (A bis Z, Ordner zuerst)</item>
         <item>Name (A bis Z)</item>
         <item>Name (Z bis A)</item>
         <item>Geändert (älteste zuerst)</item>
