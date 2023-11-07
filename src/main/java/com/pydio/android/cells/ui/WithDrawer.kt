@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.pydio.android.cells.AppKeys
 import com.pydio.android.cells.services.ConnectionService
 import com.pydio.android.cells.ui.browse.BrowseNavigationActions
 import com.pydio.android.cells.ui.core.composables.WithInternetBanner
@@ -39,7 +40,7 @@ import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
-private const val LOG_TAG = "WithDrawer"
+private const val LOG_TAG = "WithDrawer.kt"
 
 @Composable
 fun NavHostWithDrawer(
@@ -71,9 +72,39 @@ fun NavHostWithDrawer(
         if (route == lastRoute.value) {
             Log.w(LOG_TAG, "[WARNING] Same route called twice: $route")
         }
+
+        // FIXME remove
+        val bseList = mainNavController.currentBackStack.value
+        Log.e(LOG_TAG, "... Backstack b4 navigation from DRAWER")
+        var i = 1
+        for (bse in bseList) {
+            Log.e(LOG_TAG, " #$i: ${bse.destination.route}")
+            i++
+        }
+        Log.e(LOG_TAG, "... Next destination $route")
+
         val oldRoute = mainNavController.previousBackStackEntry?.destination?.route
+        val oldState: StateID? = oldRoute?.let {
+            Log.i(LOG_TAG, "... Got an old route")
+            if (it.endsWith("{${AppKeys.STATE_ID}}")) {
+                Log.i(LOG_TAG, "... with state id suffix ")
+                lazyStateID(mainNavController.previousBackStackEntry)
+            } else {
+                null
+            }
+        }
+        val currRoute = mainNavController.currentBackStackEntry?.destination?.route
+        val currState: StateID? = currRoute?.let {
+            if (it.endsWith("{${AppKeys.STATE_ID}}")) {
+                lazyStateID(mainNavController.currentBackStackEntry)
+            } else {
+                null
+            }
+        }
+
         Log.i(LOG_TAG, "... Navigate to $route")
-        Log.d(LOG_TAG, "      - Prev. Backstack Entry route: $oldRoute")
+        Log.d(LOG_TAG, "      - Penultimate Entry route: $oldRoute, stateID: $oldState")
+        Log.d(LOG_TAG, "      - Current Entry route: $currRoute, stateID: $currState")
         Log.d(LOG_TAG, "      - Local last route: ${lastRoute.value}")
         lastRoute.value = route
         coroutineScope.launch(Main) {

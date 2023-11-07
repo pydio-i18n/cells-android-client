@@ -32,6 +32,16 @@ class CellsApp : Application(), KoinComponent {
     }
 
     override fun onCreate() {
+
+        // FIXME it seems we have some leaks and some not correctly tagged sockets
+        // Enable resource leak tracking during dev when the "A resource failed to call xxx" message shows up
+//        if (BuildConfig.DEBUG)
+//            StrictMode.enableDefaults();
+//        StrictMode.setVmPolicy(
+//            StrictMode.VmPolicy.Builder(StrictMode.getVmPolicy())
+//                .detectLeakedClosableObjects()
+//                .build()
+//        )
         Log.i(logTag, "#################################################################")
         Log.i(logTag, "#########  Launching Cells Android Client application  ##########")
         Log.i(logTag, "#################################################################")

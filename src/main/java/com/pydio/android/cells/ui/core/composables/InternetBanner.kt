@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.pydio.android.cells.R
 import com.pydio.android.cells.SessionStatus
 import com.pydio.android.cells.services.AccountService
+import com.pydio.android.cells.services.AuthService
 import com.pydio.android.cells.services.ConnectionService
 import com.pydio.android.cells.services.ErrorService
 import com.pydio.android.cells.ui.login.LoginDestinations
@@ -39,7 +40,7 @@ private enum class Status {
     OK, WARNING, DANGER
 }
 
-private const val logTag = "InternetBanner"
+private const val LOG_TAG = "InternetBanner.kt"
 
 @Composable
 fun WithInternetBanner(
@@ -124,23 +125,25 @@ private fun InternetBanner(
                 desc = stringResource(R.string.auth_err_expired),
                 onClick = {
                     scope.launch {
-                        Log.e(logTag, "Launching re-log")
                         currSession.value?.let {
                             val route = if (it.isLegacy) {
+                                Log.i(LOG_TAG, "... Launching re-log on P8 for ${it.accountID}")
                                 LoginDestinations.P8Credentials.createRoute(
                                     it.getStateID(),
-                                    it.skipVerify()
+                                    it.skipVerify(),
+                                    AuthService.LOGIN_CONTEXT_BROWSE
                                 )
                             } else {
-                                Log.e(logTag, "Creating route for ${it.accountID}")
+                                Log.i(LOG_TAG, "... Launching re-log on Cells for ${it.accountID} from ${it.getStateID()}")
                                 LoginDestinations.LaunchAuthProcessing.createRoute(
                                     it.getStateID(),
-                                    it.skipVerify()
+                                    it.skipVerify(),
+                                    AuthService.LOGIN_CONTEXT_BROWSE
                                 )
                             }
                             navigateTo(route)
                         } ?: run {
-                            Log.e(logTag, "... Cannot launch, empty session view")
+                            Log.e(LOG_TAG, "... Cannot launch, empty session view")
                         }
                     }
                 }
