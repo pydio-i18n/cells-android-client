@@ -267,8 +267,8 @@
     <!-- Metered networks -->
     <string name="pref_apply_metered_limits_title">Beschränkungen anwenden</string>
     <string name="pref_apply_metered_limits_desc">Warnung: Deaktivieren überspringt alle Einschränkungen, wenn in einem gemessenen Netzwerk. Dies kann zu Kostenerhöhungen führen</string>
-    <string name="pref_metered_show_warning_title">Custom colors</string>
-    <string name="pref_metered_show_warning_desc">Adapt color themes to network status, like mobile data or roaming.</string>
+    <string name="pref_metered_show_warning_title">Dynamische Farben</string>
+    <string name="pref_metered_show_warning_desc">Farbthemen an den Netzwerkstatus anpassen, wie z. B. mobile Daten oder Roaming.</string>
     <string name="pref_metered_dl_thumbs_title">Daumen herunterladen</string>
     <string name="pref_metered_dl_thumbs_desc">Thumbnails auch im gemessenen Netzwerk abrufen</string>
     <string name="pref_on_metered_ask_before_dl_files_title">Vor dem Herunterladen fragen</string>
@@ -302,8 +302,8 @@
     <string name="pref_clean_cache_include_offline_desc">Lösche auch Dateien, die in Teilen des Baumes als offline markiert sind</string>
     <string name="pref_clean_cache_forget_accounts_title">Anmeldedaten vergessen</string>
     <string name="pref_clean_cache_forget_accounts_desc">Vergessen Sie auch die gespeicherten Zugangsdaten: Sie müssen sich erneut anmelden</string>
-    <string name="pref_clean_cache_all_accounts_title">Extend to all accounts</string>
-    <string name="pref_clean_cache_all_accounts_desc">Apply the above cleaning strategy to *all* accounts</string>
+    <string name="pref_clean_cache_all_accounts_title">Auf alle Konten erweitern</string>
+    <string name="pref_clean_cache_all_accounts_desc">Die obige Reinigungsstrategie auf *alle* Konten anwenden</string>
     <string name="pref_clean_cache_clean_all_title">Alles löschen</string>
     <string name="pref_clean_cache_clean_all_desc">DANGER: Sie werden alle App Datei vom lokalen Gerät entfernen</string>
     <!-- Accessibility various content -->
