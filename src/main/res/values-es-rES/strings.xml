@@ -267,8 +267,8 @@
     <!-- Metered networks -->
     <string name="pref_apply_metered_limits_title">Aplicar limitaciones</string>
     <string name="pref_apply_metered_limits_desc">Advertencia: Desactivar esto omitirá todas las limitaciones cuando esté en una red medida. Esto podría llevar a aumentar los costos</string>
-    <string name="pref_metered_show_warning_title">Custom colors</string>
-    <string name="pref_metered_show_warning_desc">Adapt color themes to network status, like mobile data or roaming.</string>
+    <string name="pref_metered_show_warning_title">Colores personalizados</string>
+    <string name="pref_metered_show_warning_desc">Adaptar temas de color al estado de la red, como datos móviles o roaming.</string>
     <string name="pref_metered_dl_thumbs_title">Descargar miniaturas</string>
     <string name="pref_metered_dl_thumbs_desc">Recuperar miniaturas en la red medida</string>
     <string name="pref_on_metered_ask_before_dl_files_title">Preguntar antes de descargar</string>
@@ -302,8 +302,8 @@
     <string name="pref_clean_cache_include_offline_desc">Eliminar también archivos que están en partes del árbol marcadas como offline</string>
     <string name="pref_clean_cache_forget_accounts_title">Olvidar credenciales</string>
     <string name="pref_clean_cache_forget_accounts_desc">Olvidar también las credenciales almacenadas: tendrás que iniciar sesión de nuevo</string>
-    <string name="pref_clean_cache_all_accounts_title">Extend to all accounts</string>
-    <string name="pref_clean_cache_all_accounts_desc">Apply the above cleaning strategy to *all* accounts</string>
+    <string name="pref_clean_cache_all_accounts_title">Extender a todas las cuentas</string>
+    <string name="pref_clean_cache_all_accounts_desc">Aplicar la estrategia de limpieza anterior a *todas* las cuentas</string>
     <string name="pref_clean_cache_clean_all_title">Borrar todo</string>
     <string name="pref_clean_cache_clean_all_desc">PELIGRO: eliminarás todo del dispositivo local</string>
     <!-- Accessibility various content -->
