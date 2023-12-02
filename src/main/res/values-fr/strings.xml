@@ -267,8 +267,8 @@
     <!-- Metered networks -->
     <string name="pref_apply_metered_limits_title">Appliquer les limitations</string>
     <string name="pref_apply_metered_limits_desc">Attention : désactiver cette option desactive tous les garde-fous sur les réseaux limités/payants. Cela peut entrainer une explosion de l\'usage \"data\" et selon votre abonnement, générer des coûts supplémentaires</string>
-    <string name="pref_metered_show_warning_title">Custom colors</string>
-    <string name="pref_metered_show_warning_desc">Adapt color themes to network status, like mobile data or roaming.</string>
+    <string name="pref_metered_show_warning_title">Couleurs dynamiques</string>
+    <string name="pref_metered_show_warning_desc">Adapter la couleur de base du thème en fonction du type de réseau (que ce soit les données mobiles ou l\'itinérance).</string>
     <string name="pref_metered_dl_thumbs_title">Télécharger les vignettes</string>
     <string name="pref_metered_dl_thumbs_desc">Récupérer également les vignettes lorsque le réseau est limité</string>
     <string name="pref_on_metered_ask_before_dl_files_title">Demander confirmation avant de télécharger</string>
@@ -302,8 +302,8 @@
     <string name="pref_clean_cache_include_offline_desc">Supprimer également les fichiers qui se trouvent dans des parties de l\'arborescence qui ont été marquées comme hors ligne</string>
     <string name="pref_clean_cache_forget_accounts_title">Oublier les identifiants de connexion</string>
     <string name="pref_clean_cache_forget_accounts_desc">Effacer également les identifiants stockés : vous devrez vous connecter de nouveau</string>
-    <string name="pref_clean_cache_all_accounts_title">Extend to all accounts</string>
-    <string name="pref_clean_cache_all_accounts_desc">Apply the above cleaning strategy to *all* accounts</string>
+    <string name="pref_clean_cache_all_accounts_title">Étendre à tous les comptes</string>
+    <string name="pref_clean_cache_all_accounts_desc">Appliquer la stratégie de nettoyage ci-dessus à *tous* les comptes</string>
     <string name="pref_clean_cache_clean_all_title">Tout effacer</string>
     <string name="pref_clean_cache_clean_all_desc">DANGER : ceci va effacer toutes les données locales de l\'application</string>
     <!-- Accessibility various content -->
