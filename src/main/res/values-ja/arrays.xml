@@ -1,53 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="order_by_labels">
-        <item>Standard (A to Z, folders first)</item>
-        <item>File name (A to Z)</item>
-        <item>File name (Z to A)</item>
-        <item>Modified (oldest first)</item>
-        <item>Modified (newest first)</item>
-        <item>Size (smallest first)</item>
-        <item>Size (largest first)</item>
+        <item>標準 (AからZまで、最初にフォルダ)</item>
+        <item>ファイル名 (A to Z)</item>
+        <item>ファイル名 (A to Z)</item>
+        <item>変更された（古い順）</item>
+        <item>変更された(新しい順)</item>
+        <item>サイズ (小さい順)</item>
+        <item>サイズ (大きい順)</item>
     </string-array>
     <!-- Mime type ordering does not mean anything for the time  being. -->
     <!--        <item>Type (A to Z)</item>-->
     <!--        <item>Type (Z to A)</item>-->
     <string-array name="list_layout_labels">
-        <item>List</item>
-        <item>Grid</item>
+        <item>リスト</item>
+        <item>グリッド</item>
     </string-array>
     <string-array name="offline_frequency_labels">
-        <item>Every week</item>
-        <item>Every day</item>
-        <item>Every hour</item>
-        <item>Every 15 minutes</item>
+        <item>毎週</item>
+        <item>毎日</item>
+        <item>毎時</item>
+        <item>15分毎</item>
     </string-array>
     <string-array name="network_type_labels">
-        <item>Unmetered</item>
-        <item>Not Roaming</item>
-        <item>Connected (run as soon as we can reach the server, no matter the network type)</item>
+        <item>従量制</item>
+        <item>ローミングなし</item>
+        <item>接続済み (ネットワークの種類に関係なく、サーバーに到達するとすぐに実行されます)</item>
     </string-array>
     <string-array name="filter_transfer_by_status_labels">
-        <item>Show all (no filter)</item>
-        <item>New</item>
-        <item>Processing</item>
-        <item>Cancelled</item>
-        <item>Done</item>
-        <item>Error</item>
-        <item>Timeout</item>
+        <item>すべて表示 (フィルターなし)</item>
+        <item>新規作成</item>
+        <item>処理中</item>
+        <item>キャンセルしました</item>
+        <item>完了</item>
+        <item>エラー</item>
+        <item>タイムアウト</item>
     </string-array>
     <string-array name="transfer_order_by_labels">
-        <item>Standard (By creation order, newest first)</item>
-        <item>Creation order (oldest first)</item>
-        <item>Status (A to Z)</item>
-        <item>Status (Z to A)</item>
-        <item>Type (Download First)</item>
-        <item>Type (Upload First)</item>
+        <item>標準 (作成順、最新順)</item>
+        <item>作成順 (古い順)</item>
+        <item>状態 (A to Z)</item>
+        <item>状態 (Z to A)</item>
+        <item>タイプ (ダウンロード順)</item>
+        <item>タイプ（アップロード順）</item>
     </string-array>
     <string-array name="job_order_by_labels">
-        <item>Standard (By creation order, newest first)</item>
-        <item>Creation order (oldest first)</item>
-        <item>Status (A to Z)</item>
-        <item>Status (Z to A)</item>
+        <item>標準 (作成順、最新順)</item>
+        <item>作成順 (古い順)</item>
+        <item>状態 (A to Z)</item>
+        <item>状態 (Z to A)</item>
     </string-array>
 </resources>
