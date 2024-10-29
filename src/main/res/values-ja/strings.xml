@@ -2,16 +2,16 @@
 <resources>
     <!-- Welcome Page -->
     <string name="welcome_title">Pydioへようこそ！</string>
-    <string name="welcome_subtitle">Android 用ライト Cells クライアント</string>
+    <string name="welcome_subtitle">軽量化 Cells クライアント for Android</string>
     <string name="welcome_text">いつでもどこでも、あなたのデバイス上のすべてのデータにアクセス!</string>
     <string name="welcome_no_account_instructions">まず、リモートの Pydio サーバーへの接続を設定します。</string>
     <string name="welcome_add_account_button">接続の設定</string>
     <!-- About Page -->
     <string name="about_page_version_title">Pydio</string>
-    <string name="about_version_title">Pydio Client for Android</string>
-    <string name="about_help_title">Troubleshooting</string>
-    <string name="about_page_copyright">Pydio is a trademark of Abstrium SAS.</string>
-    <string name="version_name_display">Version name: %s</string>
+    <string name="about_version_title">Pydio クライアント for Android</string>
+    <string name="about_help_title">トラブルシューティング</string>
+    <string name="about_page_copyright">PydioはAbstrium SASの商標です。</string>
+    <string name="version_name_display">バージョン名：%s</string>
     <string name="version_code_display">Version code: %s</string>
     <string name="last_update_time_display">Version date: %s</string>
     <string name="about_page_get_help">If you cannot get this application to work correctly, please send an email with a complete description of the problem you are facing so that we can help you.</string>
